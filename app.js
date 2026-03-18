@@ -25,7 +25,7 @@ const SEASON3 =
         sources: []
       };
 
-const VIEW_KEYS = ["power", "character", "skill", "synergy", "board"];
+const VIEW_KEYS = ["power", "character", "skill", "synergy", "builder", "board"];
 
 const STAT_DEFS = [
   { key: "attack", label: "攻撃" },
@@ -204,6 +204,28 @@ const S3_SLOT_FOCUS_DEFS = [
   { key: "balanced", label: "総合" }
 ];
 
+const BUILDER_SLOT_DEFS = [
+  { key: "commander", label: "主将", tacticSlot: true, roleCondition: "main" },
+  { key: "vice1", label: "副将1", tacticSlot: true, roleCondition: "vice" },
+  { key: "vice2", label: "副将2", tacticSlot: true, roleCondition: "vice" },
+  { key: "aide1", label: "補佐1", tacticSlot: false, roleCondition: "aide" },
+  { key: "aide2", label: "補佐2", tacticSlot: false, roleCondition: "aide" }
+];
+
+const BUILDER_ROW_DEFS = [
+  { key: "front", label: "前列" },
+  { key: "middle", label: "中列" },
+  { key: "back", label: "後列" }
+];
+
+const TACTIC_ORDER_SCORES = {
+  commander: { 早い: 1, 普通: 4, 遅い: 7 },
+  vice1: { 早い: 2, 普通: 5, 遅い: 8 },
+  vice2: { 早い: 3, 普通: 6, 遅い: 9 }
+};
+
+const TACTIC_TONE_PRIORITY = ["support", "damage", "debuff", "heal", "utility"];
+
 const LIVE_FEATURES = [
   {
     title: "戦力検索",
@@ -236,6 +258,14 @@ const LIVE_FEATURES = [
     description: "指定武将を主将に置いたときの副将連鎖率と共通個性を軸に候補を並べる。",
     actionLabel: "相性検索を開く",
     view: "synergy"
+  },
+  {
+    title: "編成ツールβ",
+    status: "LIVE",
+    statusClass: "is-live",
+    description: "1部隊の主将・副将・補佐を置いて、連鎖順、技能条件、重複技能をまとめて確認する。",
+    actionLabel: "編成ツールを開く",
+    view: "builder"
   }
 ];
 
@@ -399,6 +429,9 @@ const S3_HERO_RAW_BY_NAME = Object.fromEntries(SEASON3.heroes.map((hero) => [her
 const S3_SKILL_RAW_BY_NAME = Object.fromEntries(SEASON3.skills.map((skill) => [skill.name, skill]));
 const S3_ROLE_BUCKETS = SEASON3.roleBuckets?.objectives ?? {};
 const S3_UPDATES = SEASON3.updates ?? [];
+const BUILDER_SLOT_MAP = Object.fromEntries(BUILDER_SLOT_DEFS.map((slot) => [slot.key, slot]));
+const BUILDER_ROW_MAP = Object.fromEntries(BUILDER_ROW_DEFS.map((row) => [row.key, row]));
+const TACTIC_SLOT_DEFS = BUILDER_SLOT_DEFS.filter((slot) => slot.tacticSlot);
 
 const defaultRarities = RARITY_DEFS.map((rarity) => rarity.key);
 const defaultTypes = TYPE_DEFS.map((type) => type.key);
@@ -504,6 +537,113 @@ function collectSkillEffectText(skillRecords) {
 
 function collectTacticText(character) {
   return [character.battleArtName, ...(character.battleArtEffects ?? [])].filter(Boolean).join(" ");
+}
+
+function deriveBattleArtMeta(character) {
+  const effectLines = character.battleArtEffects ?? [];
+  const text = collectTacticText(character);
+  const tags = [];
+  const allyScopes = [];
+  const enemyScopes = [];
+  const rowBoosts = [];
+
+  if (/攻撃を\d+％上昇/u.test(text)) {
+    tags.push("攻撃上昇");
+  }
+  if (/防御を\d+％上昇/u.test(text)) {
+    tags.push("防御上昇");
+  }
+  if (/戦威を\d+％上昇/u.test(text)) {
+    tags.push("戦威上昇");
+  }
+  if (/策略を\d+％上昇/u.test(text)) {
+    tags.push("策略上昇");
+  }
+  if (/対物を\d+％上昇/u.test(text)) {
+    tags.push("対物上昇");
+  }
+  if (/攻撃速度上昇/u.test(text)) {
+    tags.push("攻速上昇");
+  }
+  if (/攻撃速度低下/u.test(text)) {
+    tags.push("攻速低下", "弱化");
+  }
+  if (/会心/u.test(text)) {
+    tags.push("会心");
+  }
+  if (/反撃/u.test(text)) {
+    tags.push("反撃");
+  }
+  if (/堅固/u.test(text)) {
+    tags.push("堅固");
+  }
+  if (/回復/u.test(text)) {
+    tags.push("回復");
+  }
+  if (/(低下|恐怖|病毒)/u.test(text)) {
+    tags.push("弱化");
+  }
+  if (/(解除|悠然|無効)/u.test(text)) {
+    tags.push("解除・無効");
+  }
+  if (/(攻撃|戦威|対物)\d+％の攻撃/u.test(text)) {
+    tags.push("ダメージ");
+  }
+
+  if (/前列にいる場合/u.test(text)) {
+    rowBoosts.push("front");
+  }
+  if (/中列にいる場合/u.test(text)) {
+    rowBoosts.push("middle");
+  }
+  if (/後列にいる場合/u.test(text)) {
+    rowBoosts.push("back");
+  }
+
+  for (const line of effectLines) {
+    if (/軍勢全体/u.test(line)) {
+      allyScopes.push("軍勢全体");
+    }
+    if (/自部隊/u.test(line)) {
+      allyScopes.push("自部隊");
+    }
+    if (/攻撃対象と同じ横列の部隊/u.test(line)) {
+      enemyScopes.push("敵横列");
+    }
+    if (/攻撃対象と同じ縦列の部隊/u.test(line)) {
+      enemyScopes.push("敵縦列");
+    }
+    if (!/攻撃対象/.test(line) && /同じ横列の部隊/u.test(line)) {
+      allyScopes.push("味方横列");
+    }
+    if (!/攻撃対象/.test(line) && /同じ縦列の部隊/u.test(line)) {
+      allyScopes.push("味方縦列");
+    }
+    if (/攻撃対象/u.test(line) && !/同じ(横列|縦列)の部隊/u.test(line)) {
+      enemyScopes.push("単体");
+    }
+  }
+
+  const toneChecks = {
+    support: tags.some((tag) =>
+      ["攻撃上昇", "防御上昇", "戦威上昇", "策略上昇", "対物上昇", "攻速上昇", "会心", "反撃", "堅固"].includes(tag)
+    ),
+    damage: tags.includes("ダメージ") || ["攻撃", "戦威", "対物"].includes(character.battleArtType),
+    debuff: tags.some((tag) => ["弱化", "攻速低下"].includes(tag)),
+    heal: tags.includes("回復"),
+    utility: tags.includes("解除・無効")
+  };
+  const tone = TACTIC_TONE_PRIORITY.find((key) => toneChecks[key]) ?? "utility";
+
+  return {
+    type: character.battleArtType ?? "",
+    chainOrder: character.battleArtChainOrder ?? "",
+    tags: uniqueValues(tags),
+    allyScopes: uniqueValues(allyScopes),
+    enemyScopes: uniqueValues(enemyScopes),
+    rowBoosts: uniqueValues(rowBoosts),
+    tone
+  };
 }
 
 function deriveFeatureTags(character, skillRecords, season3) {
@@ -685,6 +825,7 @@ const preparedCharacters = RAW_CHARACTERS.map((character) => {
     (condition) => conditionIndex[condition.key].length > 0
   ).map((condition) => condition.label);
   const battleArtText = collectTacticText(character);
+  const battleArtMeta = deriveBattleArtMeta(character);
   const featureTags = deriveFeatureTags(character, skillRecords, season3);
   const objectiveTags = deriveObjectiveTags(featureTags, season3);
   const guide = {
@@ -735,6 +876,12 @@ const preparedCharacters = RAW_CHARACTERS.map((character) => {
       ...objectiveTags.map(objectiveLabelFor),
       character.battleArtName ?? "",
       ...(character.battleArtEffects ?? []),
+      character.battleArtType ?? "",
+      character.battleArtChainOrder ?? "",
+      ...battleArtMeta.tags,
+      ...battleArtMeta.allyScopes,
+      ...battleArtMeta.enemyScopes,
+      ...battleArtMeta.rowBoosts.map((rowKey) => BUILDER_ROW_MAP[rowKey]?.label ?? rowKey),
       battleArtText,
       ...character.skills,
       ...skillRecords.map((skill) => skill.summary),
@@ -767,6 +914,7 @@ const preparedCharacters = RAW_CHARACTERS.map((character) => {
       (condition) => condition.key
     ),
     battleArtText,
+    battleArtMeta,
     featureTags,
     objectiveTags,
     displayTags,
@@ -908,6 +1056,24 @@ const elements = {
   synergyCount: document.querySelector("#synergyCount"),
   synergyList: document.querySelector("#synergyList"),
 
+  builderView: document.querySelector("#view-builder"),
+  builderRow: document.querySelector("#builderRow"),
+  builderCommander: document.querySelector("#builderCommander"),
+  builderVice1: document.querySelector("#builderVice1"),
+  builderVice2: document.querySelector("#builderVice2"),
+  builderAide1: document.querySelector("#builderAide1"),
+  builderAide2: document.querySelector("#builderAide2"),
+  builderVice1Enabled: document.querySelector("#builderVice1Enabled"),
+  builderVice2Enabled: document.querySelector("#builderVice2Enabled"),
+  builderLoadGuideButton: document.querySelector("#builderLoadGuideButton"),
+  builderResetButton: document.querySelector("#builderResetButton"),
+  builderSummary: document.querySelector("#builderSummary"),
+  builderValidation: document.querySelector("#builderValidation"),
+  builderTimelineCount: document.querySelector("#builderTimelineCount"),
+  builderTimeline: document.querySelector("#builderTimeline"),
+  builderOverviewGrid: document.querySelector("#builderOverviewGrid"),
+  builderSlotGrid: document.querySelector("#builderSlotGrid"),
+
   s3HeroSeasonLabel: document.querySelector("#s3HeroSeasonLabel"),
   s3ThemeLabel: document.querySelector("#s3ThemeLabel"),
   s3RevisionLabel: document.querySelector("#s3RevisionLabel"),
@@ -951,6 +1117,23 @@ function populateSimpleSelect(select, definitions, defaultValue) {
     .map((definition) => `<option value="${definition.key}">${definition.label}</option>`)
     .join("");
   select.value = defaultValue ?? definitions[0]?.key ?? "";
+}
+
+function populateCharacterSelect(select, placeholder) {
+  if (!select) {
+    return;
+  }
+
+  const options = [`<option value="">${placeholder}</option>`].concat(
+    preparedCharacters.map(
+      (character) =>
+        `<option value="${escapeHtml(character.name)}">${escapeHtml(character.rarity)} / ${escapeHtml(
+          character.name
+        )} / ${escapeHtml(character.type || "-")} / 天賦 ${character.tenpu}</option>`
+    )
+  );
+
+  select.innerHTML = options.join("");
 }
 
 function renderCheckboxGroup(container, definitions, name, checkedValues) {
@@ -1254,10 +1437,20 @@ function renderBattleArtBlock(character) {
     return "";
   }
 
+  const battleArtMetaChips = [
+    character.battleArtMeta?.type ? `<span class="meta-chip">系統 ${escapeHtml(character.battleArtMeta.type)}</span>` : "",
+    character.battleArtMeta?.chainOrder
+      ? `<span class="meta-chip">連鎖順 ${escapeHtml(character.battleArtMeta.chainOrder)}</span>`
+      : ""
+  ]
+    .filter(Boolean)
+    .join("");
+
   return `
     <div class="battle-art-box">
       <p class="skill-group-title">戦法</p>
       <h4>${escapeHtml(character.battleArtName || "戦法名なし")}</h4>
+      ${battleArtMetaChips ? `<div class="meta-chip-list">${battleArtMetaChips}</div>` : ""}
       <ul class="bullet-list">
         ${(character.battleArtEffects ?? [])
           .map((effect) => `<li>${escapeHtml(effect)}</li>`)
@@ -1545,6 +1738,13 @@ function renderCardActions(character) {
       <button
         type="button"
         class="mini-button"
+        data-use-builder-commander="${escapeHtml(character.name)}"
+      >
+        この武将を主将に編成する
+      </button>
+      <button
+        type="button"
+        class="mini-button"
         data-use-synergy-reference="${escapeHtml(character.name)}"
       >
         この武将を基準に相性を見る
@@ -1698,6 +1898,609 @@ function renderEmptyState(message) {
       <p>${escapeHtml(message)}</p>
     </div>
   `;
+}
+
+function builderSlotLabelFor(slotKey) {
+  return BUILDER_SLOT_MAP[slotKey]?.label ?? slotKey;
+}
+
+function builderRowLabelFor(rowKey) {
+  return BUILDER_ROW_MAP[rowKey]?.label ?? rowKey;
+}
+
+function getBuilderSlotInputs() {
+  return {
+    commander: elements.builderCommander,
+    vice1: elements.builderVice1,
+    vice2: elements.builderVice2,
+    aide1: elements.builderAide1,
+    aide2: elements.builderAide2
+  };
+}
+
+function getBuilderToggleMap() {
+  return {
+    vice1: elements.builderVice1Enabled,
+    vice2: elements.builderVice2Enabled
+  };
+}
+
+function evaluateBuilderSkills(character, slotKey, rowKey) {
+  return character.skillRecords.map((skill) => {
+    const rowConditions = skill.conditions.filter((conditionKey) =>
+      ["front", "middle", "back"].includes(conditionKey)
+    );
+    const roleConditions = skill.conditions.filter((conditionKey) =>
+      ["main", "vice", "aide"].includes(conditionKey)
+    );
+    const unmetConditions = [];
+
+    if (rowConditions.length && !rowConditions.includes(rowKey)) {
+      unmetConditions.push(...rowConditions);
+    }
+
+    if (
+      roleConditions.length &&
+      !roleConditions.includes(BUILDER_SLOT_MAP[slotKey]?.roleCondition)
+    ) {
+      unmetConditions.push(...roleConditions);
+    }
+
+    return {
+      ...skill,
+      active: unmetConditions.length === 0,
+      unmetConditions
+    };
+  });
+}
+
+function describeBuilderPairing(commander, partner, rowKey, chainStats) {
+  if (!commander || !partner || commander.id === partner.id) {
+    return [];
+  }
+
+  const notes = [];
+  const commanderType = commander.battleArtMeta?.type ?? "";
+  const partnerType = partner.battleArtMeta?.type ?? "";
+
+  if (commanderType && partnerType && commanderType === partnerType) {
+    notes.push(`同系統: 両方とも${commanderType}系`);
+  }
+
+  if (commanderType && partner.battleArtMeta?.tags.includes(`${commanderType}上昇`)) {
+    notes.push(`主将補助: ${commanderType}上昇を付与`);
+  }
+
+  if (
+    partner.battleArtMeta?.enemyScopes.some((scope) =>
+      (commander.battleArtMeta?.enemyScopes ?? []).includes(scope)
+    )
+  ) {
+    notes.push("狙う範囲が近く、同じ敵列に重ねやすい");
+  }
+
+  if (partner.battleArtMeta?.rowBoosts.includes(rowKey)) {
+    notes.push(`${builderRowLabelFor(rowKey)}で戦法が強化される`);
+  }
+
+  if (chainStats?.rate != null) {
+    if (chainStats.rate >= 32) {
+      notes.push("連鎖率はかなり高め");
+    } else if (chainStats.rate >= 28) {
+      notes.push("連鎖率は実用圏");
+    } else {
+      notes.push("連鎖率は低め");
+    }
+  }
+
+  if (partner.battleArtMeta?.tags.includes("弱化") && commander.battleArtMeta?.tags.includes("ダメージ")) {
+    notes.push("弱化のあとに主将火力を重ねやすい");
+  }
+
+  if (partner.battleArtMeta?.tags.includes("攻速上昇") && commander.battleArtMeta?.tags.includes("会心")) {
+    notes.push("攻速上昇で主将の会心運用を補助");
+  }
+
+  return uniqueValues(notes).slice(0, 4);
+}
+
+function guessBuilderRowFromGuide(character) {
+  if (!character) {
+    return "";
+  }
+
+  const guideText = [
+    ...(character.guide?.evaluationPoints ?? []),
+    ...(character.guide?.latestFormation?.focusTitles ?? [])
+  ].join(" ");
+
+  if (guideText.includes("前列")) {
+    return "front";
+  }
+  if (guideText.includes("中列")) {
+    return "middle";
+  }
+  if (guideText.includes("後列")) {
+    return "back";
+  }
+
+  if (character.conditionKeys.includes("front")) {
+    return "front";
+  }
+  if (character.conditionKeys.includes("middle")) {
+    return "middle";
+  }
+  if (character.conditionKeys.includes("back")) {
+    return "back";
+  }
+
+  return "";
+}
+
+function buildBuilderState() {
+  const rowKey = elements.builderRow?.value || "front";
+  const slotInputs = getBuilderSlotInputs();
+  const toggleMap = getBuilderToggleMap();
+  const commander = characterByName[slotInputs.commander?.value] ?? null;
+
+  const slotEntries = BUILDER_SLOT_DEFS.map((slot) => {
+    const character = characterByName[slotInputs[slot.key]?.value] ?? null;
+    const toggleInput = toggleMap[slot.key];
+    const tacticEnabled = slot.key === "commander" ? true : toggleInput ? toggleInput.checked : true;
+    const chainStats =
+      commander && character && slot.roleCondition === "vice" ? getChainStats(commander, character) : null;
+
+    return {
+      ...slot,
+      character,
+      tacticEnabled,
+      chainStats,
+      skillStates: character ? evaluateBuilderSkills(character, slot.key, rowKey) : [],
+      orderScore:
+        slot.tacticSlot && character
+          ? TACTIC_ORDER_SCORES[slot.key]?.[character.battleArtMeta?.chainOrder] ?? Number.MAX_SAFE_INTEGER
+          : null
+    };
+  });
+
+  const selectedEntries = slotEntries.filter((entry) => entry.character);
+  const selectedCharacters = selectedEntries.map((entry) => entry.character);
+  const duplicateMap = selectedEntries.reduce((map, entry) => {
+    map.set(entry.character.name, (map.get(entry.character.name) ?? 0) + 1);
+    return map;
+  }, new Map());
+  const duplicateNames = [...duplicateMap.entries()]
+    .filter(([, count]) => count > 1)
+    .map(([name, count]) => ({ name, count }));
+
+  const duplicateSkillMap = new Map();
+  for (const entry of selectedEntries) {
+    for (const skill of entry.character.skillRecords) {
+      if (!duplicateSkillMap.has(skill.name)) {
+        duplicateSkillMap.set(skill.name, []);
+      }
+      duplicateSkillMap.get(skill.name).push(entry.label);
+    }
+  }
+  const duplicateSkills = [...duplicateSkillMap.entries()]
+    .filter(([, slots]) => slots.length > 1)
+    .map(([name, slots]) => ({ name, slots }));
+
+  const typeCounts = selectedCharacters.reduce((map, character) => {
+    map.set(character.type || "-", (map.get(character.type || "-") ?? 0) + 1);
+    return map;
+  }, new Map());
+  const typeSummary = [...typeCounts.entries()].map(([type, count]) => `${typeLabelFor(type)}${count}`);
+
+  const activeSkillCount = slotEntries.reduce(
+    (sum, entry) => sum + entry.skillStates.filter((skill) => skill.active).length,
+    0
+  );
+  const inactiveSkillCount = slotEntries.reduce(
+    (sum, entry) => sum + entry.skillStates.filter((skill) => !skill.active).length,
+    0
+  );
+
+  const timelineEntries = slotEntries
+    .filter((entry) => entry.tacticSlot && entry.character && (entry.key === "commander" || entry.tacticEnabled))
+    .map((entry) => ({
+      ...entry,
+      pairingNotes:
+        commander && entry.key !== "commander"
+          ? describeBuilderPairing(commander, entry.character, rowKey, entry.chainStats)
+          : []
+    }))
+    .sort((left, right) => left.orderScore - right.orderScore || compareCharactersBase(left.character, right.character));
+
+  const overviewNotes = [];
+  if (!commander && selectedEntries.length) {
+    overviewNotes.push("主将を選ぶと副将の連鎖率と発動順を計算できます。");
+  }
+  if (duplicateNames.length) {
+    overviewNotes.push("同じ武将を重ねる編成はゲーム内では組めません。");
+  }
+  if (duplicateSkills.length) {
+    overviewNotes.push("同一技能が重なると補佐も含めて効果量を伸ばしやすくなります。");
+  }
+  if (timelineEntries.some((entry) => entry.character?.battleArtMeta?.rowBoosts.includes(rowKey))) {
+    overviewNotes.push(`${builderRowLabelFor(rowKey)}で追加効果が入る戦法があります。`);
+  }
+  overviewNotes.push("タイムラインは秒数ではなく、GameWith の連鎖順ルールを 1〜9 の順番に並べています。");
+
+  return {
+    rowKey,
+    commander,
+    slotEntries,
+    selectedEntries,
+    selectedCharacters,
+    duplicateNames,
+    duplicateSkills,
+    typeSummary,
+    activeSkillCount,
+    inactiveSkillCount,
+    timelineEntries,
+    overviewNotes: uniqueValues(overviewNotes)
+  };
+}
+
+function renderBuilderTimeline(state) {
+  if (!state.commander) {
+    return renderEmptyState("主将を選ぶと、主将→副将の連鎖順タイムラインを表示します。");
+  }
+
+  if (!state.timelineEntries.length) {
+    return renderEmptyState("戦法を表示できる武将がまだ選ばれていません。");
+  }
+
+  const axisMarkup = Array.from({ length: 9 }, (_, index) => `<span>${index + 1}</span>`).join("");
+  const rowMarkup = state.timelineEntries
+    .map((entry) => {
+      const rowBoostText = entry.character.battleArtMeta?.rowBoosts.includes(state.rowKey)
+        ? `${builderRowLabelFor(state.rowKey)}で効果拡張`
+        : "列依存なし";
+      const chainText =
+        entry.key === "commander"
+          ? "主将戦法は必ず発動"
+          : `連鎖率 ${formatPercent(entry.chainStats?.rate ?? 0)} / ${rowBoostText}`;
+
+      return `
+        <article class="timeline-row-card">
+          <div class="timeline-row-head">
+            <div>
+              <p class="skill-group-title">${escapeHtml(entry.label)}</p>
+              <h3>${escapeHtml(entry.character.name)}</h3>
+              <p class="subline">${escapeHtml(entry.character.battleArtName || "戦法名なし")} / ${escapeHtml(
+                entry.character.battleArtMeta?.type || "-"
+              )}</p>
+            </div>
+            <div class="meta-chip-list">
+              <span class="meta-chip">連鎖順 ${escapeHtml(entry.character.battleArtMeta?.chainOrder || "-")}</span>
+              ${entry.key !== "commander" ? `<span class="meta-chip">${escapeHtml(chainText)}</span>` : ""}
+            </div>
+          </div>
+          <div class="timeline-track tone-${escapeHtml(entry.character.battleArtMeta?.tone || "utility")}">
+            <div class="timeline-event" style="--order:${entry.orderScore}">
+              <strong>${escapeHtml(entry.orderScore)}</strong>
+              <span>${escapeHtml(entry.character.battleArtName || entry.character.name)}</span>
+            </div>
+          </div>
+          ${
+            entry.pairingNotes.length
+              ? `<ul class="bullet-list">${entry.pairingNotes
+                  .map((note) => `<li>${escapeHtml(note)}</li>`)
+                  .join("")}</ul>`
+              : ""
+          }
+        </article>
+      `;
+    })
+    .join("");
+
+  return `
+    <div class="timeline-shell">
+      <div class="timeline-axis">${axisMarkup}</div>
+      <div class="timeline-list">${rowMarkup}</div>
+    </div>
+  `;
+}
+
+function renderBuilderOverview(state) {
+  const rowLabel = builderRowLabelFor(state.rowKey);
+  const selectionText = `${state.selectedEntries.length}/${BUILDER_SLOT_DEFS.length}枠`;
+  const chainRows = state.slotEntries
+    .filter((entry) => entry.roleCondition === "vice" && entry.character)
+    .map((entry) => {
+      const sharedText = entry.chainStats?.shared.length
+        ? entry.chainStats.shared.map((row) => row.name).join(" / ")
+        : "共通個性なし";
+      return `<li>${escapeHtml(entry.label)} ${escapeHtml(entry.character.name)}: ${escapeHtml(
+        formatPercent(entry.chainStats?.rate ?? 0)
+      )} / ${escapeHtml(sharedText)}</li>`;
+    })
+    .join("");
+  const duplicateSkillRows = state.duplicateSkills.length
+    ? state.duplicateSkills
+        .map(
+          (row) => `<li>${escapeHtml(row.name)} ×${row.slots.length}: ${escapeHtml(row.slots.join(" / "))}</li>`
+        )
+        .join("")
+    : "<li>重複技能なし</li>";
+  const noteRows = state.overviewNotes.map((note) => `<li>${escapeHtml(note)}</li>`).join("");
+
+  return `
+    <article class="info-card">
+      <h2>部隊サマリー</h2>
+      <ul class="bullet-list">
+        <li>列: ${escapeHtml(rowLabel)}</li>
+        <li>選択枠: ${escapeHtml(selectionText)}</li>
+        <li>タイプ構成: ${escapeHtml(state.typeSummary.join(" / ") || "未選択")}</li>
+        <li>有効技能 ${state.activeSkillCount} / 条件未達 ${state.inactiveSkillCount}</li>
+      </ul>
+    </article>
+    <article class="info-card">
+      <h2>副将連鎖率</h2>
+      <ul class="bullet-list">${chainRows || "<li>副将を選ぶと表示します。</li>"}</ul>
+    </article>
+    <article class="info-card">
+      <h2>重複技能</h2>
+      <ul class="bullet-list">${duplicateSkillRows}</ul>
+    </article>
+    <article class="info-card">
+      <h2>チェックポイント</h2>
+      <ul class="bullet-list">${noteRows}</ul>
+    </article>
+  `;
+}
+
+function renderBuilderSkillButtons(skillRows, active) {
+  if (!skillRows.length) {
+    return `<p class="field-note">${active ? "有効技能なし" : "条件未達の技能なし"}</p>`;
+  }
+
+  return `
+    <div class="skill-chip-list">
+      ${skillRows
+        .map((skill) => {
+          const caption = active
+            ? skill.conditions.map(conditionLabelFor).join(" / ") || "常時"
+            : skill.unmetConditions.map(conditionLabelFor).join(" / ");
+          return `
+            <button
+              type="button"
+              class="skill-chip ${active ? "is-matched" : "is-inactive"}"
+              data-skill-name="${escapeHtml(skill.name)}"
+            >
+              <strong>${escapeHtml(skill.name)}</strong>
+              <small>${escapeHtml(caption)}</small>
+            </button>
+          `;
+        })
+        .join("")}
+    </div>
+  `;
+}
+
+function renderBuilderSlotCard(entry, rowKey) {
+  if (!entry.character) {
+    return `
+      <article class="builder-slot-card is-empty">
+        <h3>${escapeHtml(entry.label)}</h3>
+        <p>未選択</p>
+      </article>
+    `;
+  }
+
+  const activeSkills = entry.skillStates.filter((skill) => skill.active);
+  const inactiveSkills = entry.skillStates.filter((skill) => !skill.active);
+  const scopeText = entry.tacticSlot
+    ? uniqueValues([
+        ...(entry.character.battleArtMeta?.allyScopes ?? []).map((scope) => `味方:${scope}`),
+        ...(entry.character.battleArtMeta?.enemyScopes ?? []).map((scope) => `敵:${scope}`)
+      ])
+    : [];
+  const rowBoostText = entry.tacticSlot
+    ? (entry.character.battleArtMeta?.rowBoosts ?? []).map((row) => `${builderRowLabelFor(row)}で追加効果`)
+    : [];
+  const chainMarkup =
+    entry.chainStats?.rate != null
+      ? `
+          <div class="chain-box">
+            <div class="chain-head">
+              <span class="chain-pill">連鎖率 ${escapeHtml(formatPercent(entry.chainStats.rate))}</span>
+              <span class="chain-pill chain-pill-muted">
+                基礎 ${escapeHtml(formatPercent(entry.chainStats.base))} + 個性加算 ${escapeHtml(
+                  formatPercent(entry.chainStats.bonus)
+                )}
+              </span>
+            </div>
+            <p class="chain-traits">${escapeHtml(
+              entry.chainStats.shared.length
+                ? entry.chainStats.shared.map((row) => row.name).join(" / ")
+                : "共通個性なし"
+            )}</p>
+          </div>
+        `
+      : "";
+
+  return `
+    <article class="builder-slot-card">
+      <div class="builder-slot-head">
+        <div class="character-thumb-wrap">
+          <img
+            class="character-thumb"
+            src="${escapeHtml(entry.character.imageUrl)}"
+            alt="${escapeHtml(entry.character.name)}"
+            loading="lazy"
+          >
+        </div>
+        <div class="builder-slot-main">
+          <div class="card-header">
+            <div>
+              <p class="skill-group-title">${escapeHtml(entry.label)}</p>
+              <h3>${escapeHtml(entry.character.name)}</h3>
+              <p class="subline">
+                ${escapeHtml(entry.character.rarity)} / ${escapeHtml(entry.character.type || "-")}タイプ / 天賦 ${entry.character.tenpu}
+              </p>
+            </div>
+            <button type="button" class="mini-button" data-open-character="${escapeHtml(entry.character.name)}">
+              武将DBで開く
+            </button>
+          </div>
+          <div class="meta-chip-list">
+            ${
+              entry.tacticSlot
+                ? `<span class="meta-chip">系統 ${escapeHtml(entry.character.battleArtMeta?.type || "-")}</span>`
+                : ""
+            }
+            ${
+              entry.tacticSlot
+                ? `<span class="meta-chip">連鎖順 ${escapeHtml(entry.character.battleArtMeta?.chainOrder || "-")}</span>`
+                : ""
+            }
+            ${entry.tacticSlot && entry.key !== "commander" && !entry.tacticEnabled ? '<span class="meta-chip">戦法オフ</span>' : ""}
+            ${scopeText.map((text) => `<span class="meta-chip">${escapeHtml(text)}</span>`).join("")}
+            ${rowBoostText.map((text) => `<span class="meta-chip">${escapeHtml(text)}</span>`).join("")}
+          </div>
+          ${
+            entry.tacticSlot
+              ? `
+                  <div class="battle-art-box">
+                    <p class="skill-group-title">戦法</p>
+                    <h4>${escapeHtml(entry.character.battleArtName || "戦法名なし")}</h4>
+                    <ul class="bullet-list">
+                      ${(entry.character.battleArtEffects ?? [])
+                        .map((effect) => `<li>${escapeHtml(effect)}</li>`)
+                        .join("")}
+                    </ul>
+                  </div>
+                `
+              : ""
+          }
+          ${chainMarkup}
+          <div class="skill-group">
+            <p class="skill-group-title">有効技能</p>
+            ${renderBuilderSkillButtons(activeSkills, true)}
+          </div>
+          <div class="skill-group">
+            <p class="skill-group-title">条件未達の技能</p>
+            ${renderBuilderSkillButtons(inactiveSkills, false)}
+          </div>
+          <dl class="stats-grid">${renderStatsGrid(entry.character, [])}</dl>
+        </div>
+      </div>
+    </article>
+  `;
+}
+
+function setBuilderValidation(message) {
+  elements.builderValidation.textContent = message;
+  elements.builderValidation.hidden = !message;
+}
+
+function renderBuilderView() {
+  if (!elements.builderView) {
+    return;
+  }
+
+  const state = buildBuilderState();
+  const validationMessages = [];
+
+  if (state.duplicateNames.length) {
+    validationMessages.push(
+      `重複武将: ${state.duplicateNames.map((row) => `${row.name} ×${row.count}`).join(" / ")}`
+    );
+  }
+
+  if (!state.commander && state.selectedEntries.length) {
+    validationMessages.push("主将を選ぶと連鎖率とタイムラインを計算できます。");
+  }
+
+  elements.builderSummary.textContent = formatSummaryText(
+    [
+      `列: ${builderRowLabelFor(state.rowKey)}`,
+      `主将: ${state.commander?.name ?? "未選択"}`,
+      `選択枠: ${state.selectedEntries.length}/${BUILDER_SLOT_DEFS.length}`,
+      `戦法表示: ${state.timelineEntries.length}件`
+    ],
+    "編成条件を指定してください。"
+  );
+  setBuilderValidation(validationMessages.join(" / "));
+  elements.builderTimelineCount.textContent = `${state.timelineEntries.length}件`;
+  elements.builderTimeline.innerHTML = renderBuilderTimeline(state);
+  elements.builderOverviewGrid.innerHTML = renderBuilderOverview(state);
+  elements.builderSlotGrid.innerHTML = BUILDER_SLOT_DEFS.map((slot) => {
+    const entry = state.slotEntries.find((row) => row.key === slot.key);
+    return renderBuilderSlotCard(entry, state.rowKey);
+  }).join("");
+}
+
+function resetBuilderView() {
+  if (!elements.builderView) {
+    return;
+  }
+
+  elements.builderRow.value = "front";
+  Object.values(getBuilderSlotInputs()).forEach((input) => {
+    if (input) {
+      input.value = "";
+    }
+  });
+  Object.values(getBuilderToggleMap()).forEach((input) => {
+    if (input) {
+      input.checked = true;
+    }
+  });
+  renderBuilderView();
+}
+
+function loadBuilderGuideFormation() {
+  if (!elements.builderView) {
+    return;
+  }
+
+  const commander = characterByName[elements.builderCommander?.value] ?? null;
+  if (!commander) {
+    setBuilderValidation("おすすめ編成を読み込む前に主将を選んでください。");
+    return;
+  }
+
+  const slotInputs = getBuilderSlotInputs();
+  const placementMap = Object.fromEntries(
+    (commander.guide?.latestFormation?.placements ?? []).map((row) => [row.slot, row.name])
+  );
+  const slotByLabel = {
+    主将: "commander",
+    副将1: "vice1",
+    副将2: "vice2",
+    補佐1: "aide1",
+    補佐2: "aide2"
+  };
+
+  for (const [slotLabel, slotKey] of Object.entries(slotByLabel)) {
+    if (!slotInputs[slotKey]) {
+      continue;
+    }
+
+    const nextName = placementMap[slotLabel] ?? (slotKey === "commander" ? commander.name : "");
+    slotInputs[slotKey].value = characterByName[nextName] ? nextName : "";
+  }
+
+  const guessedRow = guessBuilderRowFromGuide(commander);
+  if (guessedRow) {
+    elements.builderRow.value = guessedRow;
+  }
+
+  renderBuilderView();
+}
+
+function openBuilderWithCommander(name) {
+  if (!elements.builderCommander) {
+    return;
+  }
+
+  elements.builderCommander.value = name;
+  setActiveView("builder");
+  renderBuilderView();
 }
 
 function setPowerValidation(message) {
@@ -2658,6 +3461,12 @@ function bindGlobalActions() {
     const synergyButton = event.target.closest("[data-use-synergy-reference]");
     if (synergyButton) {
       openSynergyWithReference(synergyButton.dataset.useSynergyReference);
+      return;
+    }
+
+    const builderButton = event.target.closest("[data-use-builder-commander]");
+    if (builderButton) {
+      openBuilderWithCommander(builderButton.dataset.useBuilderCommander);
     }
   });
 
@@ -2711,6 +3520,12 @@ function boot() {
     SEASON3.objectives[0]?.key ?? "pvp"
   );
   populateSimpleSelect(elements.s3SlotFocus, S3_SLOT_FOCUS_DEFS, "balanced");
+  populateSimpleSelect(elements.builderRow, BUILDER_ROW_DEFS, "front");
+  populateCharacterSelect(elements.builderCommander, "主将を選択");
+  populateCharacterSelect(elements.builderVice1, "副将1を選択");
+  populateCharacterSelect(elements.builderVice2, "副将2を選択");
+  populateCharacterSelect(elements.builderAide1, "補佐1を選択");
+  populateCharacterSelect(elements.builderAide2, "補佐2を選択");
 
   renderCheckboxGroup(elements.rarityFilters, RARITY_DEFS, "power-rarity", defaultRarities);
   renderCheckboxGroup(elements.conditionFilters, CONDITION_DEFS, "power-condition", []);
@@ -2754,6 +3569,11 @@ function boot() {
   elements.synergyKeyword.addEventListener("input", renderSynergy);
   elements.synergyView.addEventListener("change", renderSynergy);
   elements.synergyResetButton.addEventListener("click", resetSynergy);
+  if (elements.builderView) {
+    elements.builderView.addEventListener("change", renderBuilderView);
+    elements.builderLoadGuideButton?.addEventListener("click", loadBuilderGuideFormation);
+    elements.builderResetButton?.addEventListener("click", resetBuilderView);
+  }
   elements.s3Objective.addEventListener("change", renderFeatureBoard);
   elements.s3SlotFocus.addEventListener("change", renderFeatureBoard);
   elements.s3ResetButton.addEventListener("click", resetS3Board);
@@ -2763,6 +3583,7 @@ function boot() {
   renderCharacterDb();
   renderSkillDb();
   renderSynergy();
+  renderBuilderView();
   renderFeatureBoard();
 
   const initialView = window.location.hash.replace(/^#/, "") || "power";
