@@ -528,6 +528,18 @@
         font-weight: 700;
       }
 
+      .battle-art-box {
+        margin-top: 14px;
+        padding: 16px 18px;
+        border-radius: 18px;
+        border: 1px solid rgba(109, 57, 17, 0.14);
+        background: rgba(246, 239, 229, 0.72);
+      }
+
+      .battle-art-box h4 {
+        font-size: 1rem;
+      }
+
       .skill-chip-list {
         display: flex;
         flex-wrap: wrap;
@@ -838,6 +850,11 @@
         color: var(--muted);
         font-size: 0.82rem;
         line-height: 1.2;
+      }
+
+      .meta-chip.is-feature {
+        background: rgba(54, 90, 116, 0.08);
+        border-color: rgba(54, 90, 116, 0.12);
       }
 
       .meta-chip.is-highlight {
@@ -1170,6 +1187,11 @@
               <legend>技能条件</legend>
               <div class="chip-grid" id="conditionFilters" role="group" aria-label="技能条件"></div>
             </fieldset>
+
+            <fieldset class="chip-fieldset">
+              <legend>特徴</legend>
+              <div class="chip-grid" id="powerFeatureFilters" role="group" aria-label="戦力検索の特徴検索"></div>
+            </fieldset>
           </div>
         </form>
 
@@ -1187,6 +1209,10 @@
           <article class="info-card">
             <h2>技能条件と技能順</h2>
             <p>前列・中列・後列、主将・副将・補佐で絞り込めます。技能条件を使った場合は、同じ技能を持つ武将どうしがまとまるように並びます。</p>
+          </article>
+          <article class="info-card">
+            <h2>特徴タグ</h2>
+            <p>対物、弱化効果付与、回復、反撃などを AND 条件で絞れます。技能だけでなく戦法と S3 タグも使って判定しています。</p>
           </article>
           <article class="info-card">
             <h2>連鎖率ソート</h2>
@@ -1228,8 +1254,8 @@
             <div>
               <h2>武将DB</h2>
               <p>
-                武将名、技能名、個性、上位ステータス、役割タグをまとめて検索できます。
-                タグ検索は AND 条件、全文検索は名前だけでなく技能要約と個性にも効きます。
+                武将名、戦法、技能名、個性、上位ステータス、役割タグ、特徴タグをまとめて検索できます。
+                タグ検索も特徴検索も AND 条件で、全文検索は戦法要約や技能要約にも効きます。
               </p>
             </div>
           </div>
@@ -1238,7 +1264,7 @@
             <div class="field">
               <label for="characterKeyword">全文検索</label>
               <input id="characterKeyword" type="text" placeholder="例: 王騎 / 攻陣 / 対物 / 弱化効果付与">
-              <p class="field-note">武将名、技能名、技能説明、個性、役割タグ、特徴タグまでまとめて検索します。</p>
+              <p class="field-note">武将名、戦法、技能名、技能説明、個性、役割タグ、特徴タグまでまとめて検索します。</p>
             </div>
 
             <div class="field">
