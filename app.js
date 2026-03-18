@@ -19,6 +19,9 @@ const SEASON3 =
         skills: [],
         tags: [],
         objectives: [],
+        builderWeights: {},
+        roleBuckets: {},
+        updates: [],
         sources: []
       };
 
@@ -43,6 +46,20 @@ const CONDITION_DEFS = [
 const RARITY_DEFS = [
   { key: "SSR", label: "SSR" },
   { key: "SR", label: "SR" }
+];
+
+const TYPE_DEFS = [
+  { key: "闘", label: "闘" },
+  { key: "援", label: "援" },
+  { key: "護", label: "護" },
+  { key: "妨", label: "妨" }
+];
+
+const OBJECTIVE_FILTER_DEFS = [
+  { key: "pvp", label: "対人" },
+  { key: "siege", label: "攻城" },
+  { key: "defense", label: "防衛" },
+  { key: "gathering", label: "調達" }
 ];
 
 const CHARACTER_TAG_DEFS = [
@@ -148,6 +165,19 @@ const TACTIC_FEATURE_RULES = [
   { feature: "回避", pattern: /回避/u },
   { feature: "兵力条件", pattern: /兵力が\d+[%％](以上|以下)/u },
   { feature: "強化効果付与", pattern: /付与|反撃強化/u }
+];
+
+const SKILL_EFFECT_DEFS = [
+  { key: "structure", label: "対物関連", hint: "対物上昇や攻城寄り" },
+  { key: "counter", label: "反撃関連", hint: "反撃ダメージや反撃支援" },
+  { key: "speed", label: "攻撃速度関連", hint: "攻撃速度上昇 / 低下" },
+  { key: "debuff", label: "弱化関連", hint: "低下、恐怖、病毒など" },
+  { key: "cleanse", label: "解除関連", hint: "強化解除 / 弱化解除" },
+  { key: "heal", label: "回復関連", hint: "負傷兵回復など" },
+  { key: "guard", label: "堅固関連", hint: "堅固付与や堅固活用" },
+  { key: "support", label: "強化付与", hint: "各種上昇や付与系" },
+  { key: "logistics", label: "調達関連", hint: "調達や任命で価値がある" },
+  { key: "season3", label: "S3注目", hint: "Season 3 starter に含まれる技能" }
 ];
 
 const CHARACTER_SORT_DEFS = [
@@ -281,12 +311,67 @@ const SOURCE_LABELS = {
   simulator: "編成シミュレーター"
 };
 
+const SCORE_LABELS = {
+  offenseScore: "攻撃性能",
+  defenseScore: "防御性能",
+  controlScore: "妨害性能",
+  tempoScore: "テンポ",
+  synergyScore: "相性",
+  counterScore: "対策性能",
+  structureDamageScore: "対物性能",
+  normalAttackScore: "通常火力",
+  consistencyScore: "安定性",
+  utilityScore: "汎用性",
+  speedScore: "速度",
+  survivalScore: "生存力",
+  slotFitScore: "スロット適性",
+  objectiveFitScore: "目的適性",
+  pressureScore: "圧力",
+  sustainScore: "継戦力",
+  investmentScore: "育成効率",
+  armyPowerScore: "軍勢総合",
+  roleCoverageScore: "役割充足",
+  commanderQualityScore: "主将品質",
+  synergyCoverageScore: "シナジー充足",
+  stabilityScore: "安定性",
+  objectivePurityScore: "目的純度",
+  investmentEfficiencyScore: "投資効率"
+};
+
+const PENALTY_LABELS = {
+  badAideUsage: "補佐に不向きな武将起用",
+  missingFrontline: "前列不足",
+  missingControlInPvp: "対人で妨害不足",
+  missingSiegeCore: "攻城で対物不足",
+  tooManyUntrainedCommanders: "未育成主将が多い",
+  duplicateWeaknessCluster: "弱点の重なり"
+};
+
+const INVESTMENT_TIER_LABELS = {
+  trained: "育成済み",
+  usable: "実用圏",
+  untrained: "未育成"
+};
+
+const LOCK_STATE_LABELS = {
+  locked: "固定したい",
+  neutral: "通常",
+  excluded: "除外"
+};
+
+const EQUIPMENT_STATE_LABELS = {
+  none: "未入力",
+  matched: "適正装備あり",
+  mismatched: "装備ミスマッチ"
+};
+
 const STAT_MAP = Object.fromEntries(STAT_DEFS.map((stat) => [stat.key, stat]));
 const CONDITION_MAP = Object.fromEntries(CONDITION_DEFS.map((condition) => [condition.key, condition]));
 const CONDITION_LABEL_TO_KEY = Object.fromEntries(
   CONDITION_DEFS.map((condition) => [condition.label, condition.key])
 );
 const RARITY_MAP = Object.fromEntries(RARITY_DEFS.map((rarity) => [rarity.key, rarity]));
+const TYPE_MAP = Object.fromEntries(TYPE_DEFS.map((type) => [type.key, type]));
 const RARITY_RANK = Object.fromEntries(RARITY_DEFS.map((rarity, index) => [rarity.key, index]));
 const SKILL_RANK = Object.fromEntries(SKILL_ORDER.map((skillName, index) => [skillName, index]));
 const CHARACTER_SORT_MAP = Object.fromEntries(
@@ -295,6 +380,12 @@ const CHARACTER_SORT_MAP = Object.fromEntries(
 const SKILL_SORT_MAP = Object.fromEntries(
   SKILL_SORT_DEFS.map((definition) => [definition.key, definition.label])
 );
+const OBJECTIVE_FILTER_MAP = Object.fromEntries(
+  OBJECTIVE_FILTER_DEFS.map((definition) => [definition.key, definition.label])
+);
+const SKILL_EFFECT_MAP = Object.fromEntries(
+  SKILL_EFFECT_DEFS.map((definition) => [definition.key, definition.label])
+);
 const CHARACTER_FEATURE_MAP = Object.fromEntries(
   CHARACTER_FEATURE_DEFS.map((definition) => [definition.key, definition])
 );
@@ -302,8 +393,11 @@ const S3_TAG_MAP = Object.fromEntries(SEASON3.tags.map((tag) => [tag.key, tag]))
 const S3_OBJECTIVE_MAP = Object.fromEntries(SEASON3.objectives.map((objective) => [objective.key, objective]));
 const S3_HERO_RAW_BY_NAME = Object.fromEntries(SEASON3.heroes.map((hero) => [hero.name, hero]));
 const S3_SKILL_RAW_BY_NAME = Object.fromEntries(SEASON3.skills.map((skill) => [skill.name, skill]));
+const S3_ROLE_BUCKETS = SEASON3.roleBuckets?.objectives ?? {};
+const S3_UPDATES = SEASON3.updates ?? [];
 
 const defaultRarities = RARITY_DEFS.map((rarity) => rarity.key);
+const defaultTypes = TYPE_DEFS.map((type) => type.key);
 
 function escapeHtml(value) {
   return String(value)
@@ -337,6 +431,14 @@ function conditionLabelFor(conditionKey) {
   return CONDITION_MAP[conditionKey]?.label ?? "";
 }
 
+function typeLabelFor(typeKey) {
+  return TYPE_MAP[typeKey]?.label ?? typeKey ?? "";
+}
+
+function objectiveLabelFor(objectiveKey) {
+  return OBJECTIVE_FILTER_MAP[objectiveKey] ?? S3_OBJECTIVE_MAP[objectiveKey]?.label ?? objectiveKey;
+}
+
 function getConditionKeysFromLabels(labels) {
   return labels.map((label) => CONDITION_LABEL_TO_KEY[label]).filter(Boolean);
 }
@@ -347,6 +449,34 @@ function formatPercent(value) {
   }
 
   return Number.isInteger(value) ? `${value}%` : `${value.toFixed(1)}%`;
+}
+
+function formatRatioPercent(value) {
+  if (value == null) {
+    return "";
+  }
+
+  return formatPercent(value * 100);
+}
+
+function formatMultiplier(value) {
+  if (value == null) {
+    return "";
+  }
+
+  if (value <= 0) {
+    return "除外";
+  }
+
+  return `${value.toFixed(2)}x`;
+}
+
+function scoreLabelFor(scoreKey) {
+  return SCORE_LABELS[scoreKey] ?? scoreKey;
+}
+
+function penaltyLabelFor(penaltyKey) {
+  return PENALTY_LABELS[penaltyKey] ?? penaltyKey;
 }
 
 function seasonTagLabel(tagKey) {
@@ -402,6 +532,78 @@ function deriveFeatureTags(character, skillRecords, season3) {
   return uniqueValues(featureTags);
 }
 
+function deriveObjectiveTags(featureTags, season3) {
+  const objectiveTags = [];
+
+  for (const definition of OBJECTIVE_FILTER_DEFS) {
+    const seasonScore = season3?.objectiveScores?.[definition.key] ?? 0;
+    if (seasonScore >= 60 || season3?.tags?.includes(`obj.${definition.key}`)) {
+      objectiveTags.push(definition.key);
+    }
+  }
+
+  if (featureTags.includes("対物")) {
+    objectiveTags.push("siege");
+  }
+  if (featureTags.includes("調達")) {
+    objectiveTags.push("gathering");
+  }
+  if (
+    featureTags.some((tag) =>
+      ["被ダメ軽減", "回復", "堅固", "反撃", "デバフ無効", "弱化解除"].includes(tag)
+    )
+  ) {
+    objectiveTags.push("defense");
+  }
+  if (
+    featureTags.some((tag) =>
+      ["弱化効果付与", "攻速低下", "会心", "反撃", "強化解除", "継続削り"].includes(tag)
+    )
+  ) {
+    objectiveTags.push("pvp");
+  }
+
+  return uniqueValues(objectiveTags);
+}
+
+function deriveSkillFeatureTags(skill, season3) {
+  const text = [skill.name, skill.summary, skill.initialEffect, skill.maxEffect].filter(Boolean).join(" ");
+  const featureTags = [];
+
+  if (/対物/u.test(text) || season3?.tags?.includes("siege.structure-damage-up")) {
+    featureTags.push("structure");
+  }
+  if (/反撃/u.test(text) || season3?.tags?.includes("role.counter-enabler")) {
+    featureTags.push("counter");
+  }
+  if (/攻撃速度(上昇|低下)/u.test(text) || hasSeason3Tags(season3, ["tempo.attack-speed-up", "tempo.attack-speed-down"])) {
+    featureTags.push("speed");
+  }
+  if (/(低下|恐怖|病毒)/u.test(text) || hasSeason3Tags(season3, ["control.fear", "control.dot"])) {
+    featureTags.push("debuff");
+  }
+  if (/解除/u.test(text) || hasSeason3Tags(season3, ["control.buff-strip"])) {
+    featureTags.push("cleanse");
+  }
+  if (/回復/u.test(text)) {
+    featureTags.push("heal");
+  }
+  if (/堅固/u.test(text)) {
+    featureTags.push("guard");
+  }
+  if (/付与|上昇/u.test(text)) {
+    featureTags.push("support");
+  }
+  if (/調達|任命/u.test(text)) {
+    featureTags.push("logistics");
+  }
+  if (season3) {
+    featureTags.push("season3");
+  }
+
+  return uniqueValues(featureTags);
+}
+
 function compareCharactersBase(left, right) {
   return (
     RARITY_RANK[left.rarity] - RARITY_RANK[right.rarity] ||
@@ -452,6 +654,7 @@ const preparedCharacters = RAW_CHARACTERS.map((character) => {
   ).map((condition) => condition.label);
   const battleArtText = collectTacticText(character);
   const featureTags = deriveFeatureTags(character, skillRecords, season3);
+  const objectiveTags = deriveObjectiveTags(featureTags, season3);
 
   const displayTags = uniqueValues([
     character.rarity,
@@ -459,6 +662,8 @@ const preparedCharacters = RAW_CHARACTERS.map((character) => {
     `${rankedStats[0].label}1位`,
     `${rankedStats[1].label}2位`,
     character.type ? `${character.type}タイプ` : "",
+    ...objectiveTags.map(objectiveLabelFor),
+    season3 ? "S3注目" : "",
     ...conditionLabels,
     ...(season3 ? [season3.type, ...season3.bestUseCases, ...season3.tags.map(seasonTagLabel)] : [])
   ]);
@@ -471,6 +676,7 @@ const preparedCharacters = RAW_CHARACTERS.map((character) => {
       `天賦${character.tenpu}`,
       ...displayTags,
       ...featureTags,
+      ...objectiveTags.map(objectiveLabelFor),
       character.battleArtName ?? "",
       ...(character.battleArtEffects ?? []),
       battleArtText,
@@ -499,6 +705,7 @@ const preparedCharacters = RAW_CHARACTERS.map((character) => {
     ),
     battleArtText,
     featureTags,
+    objectiveTags,
     displayTags,
     searchText,
     personalitySet: new Set(character.personalities),
@@ -517,6 +724,7 @@ const preparedSkills = Object.values(RAW_SKILLS)
       .filter((character) => character.skills.includes(skill.name))
       .sort(compareCharactersBase);
     const conditionLabels = skill.conditions.map(conditionLabelFor);
+    const featureTags = deriveSkillFeatureTags(skill, season3);
     const searchText = normalizeSearchText(
       [
         skill.name,
@@ -524,6 +732,7 @@ const preparedSkills = Object.values(RAW_SKILLS)
         skill.initialEffect,
         skill.maxEffect,
         ...conditionLabels,
+        ...featureTags.map((featureKey) => SKILL_EFFECT_MAP[featureKey] ?? featureKey),
         ...holders.map((holder) => holder.name),
         season3?.category ?? "",
         season3?.trigger?.type ?? "",
@@ -538,6 +747,7 @@ const preparedSkills = Object.values(RAW_SKILLS)
       holders,
       holderCount: holders.length,
       conditionLabels,
+      featureTags,
       searchText,
       season3
     };
@@ -602,6 +812,8 @@ const elements = {
   characterKeyword: document.querySelector("#characterKeyword"),
   characterSort: document.querySelector("#characterSort"),
   characterRarityFilters: document.querySelector("#characterRarityFilters"),
+  characterTypeFilters: document.querySelector("#characterTypeFilters"),
+  characterObjectiveFilters: document.querySelector("#characterObjectiveFilters"),
   characterTagFilters: document.querySelector("#characterTagFilters"),
   characterFeatureFilters: document.querySelector("#characterFeatureFilters"),
   characterResetButton: document.querySelector("#characterResetButton"),
@@ -613,6 +825,7 @@ const elements = {
   skillKeyword: document.querySelector("#skillKeyword"),
   skillSort: document.querySelector("#skillSort"),
   skillConditionFilters: document.querySelector("#skillConditionFilters"),
+  skillEffectFilters: document.querySelector("#skillEffectFilters"),
   skillResetButton: document.querySelector("#skillResetButton"),
   skillSummary: document.querySelector("#skillSummary"),
   skillDbCount: document.querySelector("#skillDbCount"),
@@ -642,10 +855,19 @@ const elements = {
   s3HeroList: document.querySelector("#s3HeroList"),
   s3UpgradeGrid: document.querySelector("#s3UpgradeGrid"),
   s3SkillCount: document.querySelector("#s3SkillCount"),
-  s3SkillList: document.querySelector("#s3SkillList")
+  s3SkillList: document.querySelector("#s3SkillList"),
+  s3WeightGrid: document.querySelector("#s3WeightGrid"),
+  s3RoleRuleGrid: document.querySelector("#s3RoleRuleGrid"),
+  s3PopularSkillList: document.querySelector("#s3PopularSkillList"),
+  s3CoreGrid: document.querySelector("#s3CoreGrid"),
+  s3UpdateList: document.querySelector("#s3UpdateList")
 };
 
 function populateStatSelect(select, placeholder) {
+  if (!select) {
+    return;
+  }
+
   const options = [`<option value="">${placeholder}</option>`];
 
   for (const stat of STAT_DEFS) {
@@ -656,13 +878,21 @@ function populateStatSelect(select, placeholder) {
 }
 
 function populateSimpleSelect(select, definitions, defaultValue) {
+  if (!select) {
+    return;
+  }
+
   select.innerHTML = definitions
     .map((definition) => `<option value="${definition.key}">${definition.label}</option>`)
     .join("");
-  select.value = defaultValue;
+  select.value = defaultValue ?? definitions[0]?.key ?? "";
 }
 
 function renderCheckboxGroup(container, definitions, name, checkedValues) {
+  if (!container) {
+    return;
+  }
+
   const checkedSet = new Set(checkedValues);
 
   container.innerHTML = definitions
@@ -726,6 +956,10 @@ function setActiveView(viewKey, options = {}) {
 }
 
 function populateCommanderDatalist() {
+  if (!elements.commanderOptions) {
+    return;
+  }
+
   elements.commanderOptions.innerHTML = preparedCharacters
     .map(
       (character) =>
@@ -1241,6 +1475,11 @@ function renderSkillCard(skill) {
   const conditionMarkup = skill.conditionLabels.length
     ? skill.conditionLabels.map((label) => `<span class="meta-chip">${escapeHtml(label)}</span>`).join("")
     : `<span class="meta-chip">条件なし</span>`;
+  const featureMarkup = skill.featureTags.length
+    ? skill.featureTags
+        .map((feature) => `<span class="meta-chip is-feature">${escapeHtml(SKILL_EFFECT_MAP[feature] ?? feature)}</span>`)
+        .join("")
+    : "";
 
   const holderMarkup = skill.holders.length
     ? skill.holders
@@ -1267,7 +1506,7 @@ function renderSkillCard(skill) {
           </button>
           <p class="subline">所持武将 ${skill.holderCount}体 / 技能Lv ${skill.level || 0}</p>
         </div>
-        <div class="meta-chip-list">${conditionMarkup}</div>
+        <div class="meta-chip-list">${conditionMarkup}${featureMarkup}</div>
       </div>
       <p class="skill-summary">${escapeHtml(skill.summary || "概要データはありません。")}</p>
       ${renderSeason3SkillBlock(skill)}
@@ -1569,6 +1808,8 @@ function renderCharacterDb() {
   const keyword = elements.characterKeyword.value.trim();
   const sortKey = elements.characterSort.value;
   const rarities = readCheckedValuesIn(elements.characterView, "db-rarity");
+  const types = readCheckedValuesIn(elements.characterView, "db-type");
+  const objectives = readCheckedValuesIn(elements.characterView, "db-objective");
   const tags = readCheckedValuesIn(elements.characterView, "db-tag");
   const features = readCheckedValuesIn(elements.characterView, "db-feature");
   const selectedConditionKeys = getConditionKeysFromLabels(tags);
@@ -1576,6 +1817,8 @@ function renderCharacterDb() {
   const filtered = preparedCharacters.filter(
     (character) =>
       rarities.includes(character.rarity) &&
+      types.includes(character.type) &&
+      objectives.every((objective) => character.objectiveTags.includes(objective)) &&
       tags.every((tag) => character.displayTags.includes(tag)) &&
       features.every((feature) => character.featureTags.includes(feature)) &&
       keywordMatches(character.searchText, keyword)
@@ -1586,6 +1829,8 @@ function renderCharacterDb() {
   elements.characterSummary.textContent = formatSummaryText(
     [
       keyword ? `全文: ${keyword}` : "",
+      types.length !== TYPE_DEFS.length ? `タイプ: ${types.map(typeLabelFor).join(" / ")}` : "",
+      objectives.length ? `目的: ${objectives.map(objectiveLabelFor).join(" / ")}` : "",
       tags.length ? `タグ: ${tags.join(" / ")}` : "",
       features.length ? `特徴: ${features.join(" / ")}` : "",
       rarities.length !== RARITY_DEFS.length ? `レアリティ: ${rarities.join(" / ")}` : "",
@@ -1611,6 +1856,10 @@ function resetCharacterDb() {
   document
     .querySelectorAll('input[name="db-rarity"]')
     .forEach((input) => (input.checked = defaultRarities.includes(input.value)));
+  document
+    .querySelectorAll('input[name="db-type"]')
+    .forEach((input) => (input.checked = defaultTypes.includes(input.value)));
+  document.querySelectorAll('input[name="db-objective"]').forEach((input) => (input.checked = false));
   document.querySelectorAll('input[name="db-tag"]').forEach((input) => (input.checked = false));
   document.querySelectorAll('input[name="db-feature"]').forEach((input) => (input.checked = false));
   renderCharacterDb();
@@ -1620,10 +1869,12 @@ function renderSkillDb() {
   const keyword = elements.skillKeyword.value.trim();
   const sortKey = elements.skillSort.value;
   const conditions = readCheckedValuesIn(elements.skillView, "skill-condition");
+  const effects = readCheckedValuesIn(elements.skillView, "skill-effect");
 
   const filtered = preparedSkills.filter(
     (skill) =>
       conditions.every((condition) => skill.conditions.includes(condition)) &&
+      effects.every((effect) => skill.featureTags.includes(effect)) &&
       keywordMatches(skill.searchText, keyword)
   );
 
@@ -1633,6 +1884,7 @@ function renderSkillDb() {
     [
       keyword ? `全文: ${keyword}` : "",
       conditions.length ? `条件: ${conditions.map(conditionLabelFor).join(" / ")}` : "",
+      effects.length ? `効果種別: ${effects.map((effect) => SKILL_EFFECT_MAP[effect] ?? effect).join(" / ")}` : "",
       `並び順: ${SKILL_SORT_MAP[sortKey]}`
     ].filter(Boolean),
     "技能DBでは、技能名、効果文、所持武将までまとめて検索できます。"
@@ -1646,6 +1898,7 @@ function resetSkillDb() {
   elements.skillKeyword.value = "";
   elements.skillSort.value = "order";
   document.querySelectorAll('input[name="skill-condition"]').forEach((input) => (input.checked = false));
+  document.querySelectorAll('input[name="skill-effect"]').forEach((input) => (input.checked = false));
   renderSkillDb();
 }
 
@@ -1825,12 +2078,226 @@ function renderS3UpgradeCard(character, objectiveKey, slotFocus) {
   `;
 }
 
+function getSeason3RoleNeedScore(character, objectiveKey) {
+  const objectiveConfig = S3_ROLE_BUCKETS[objectiveKey] ?? {};
+  const allRules = [...(objectiveConfig.required ?? []), ...(objectiveConfig.preferred ?? [])];
+  return allRules.reduce((total, rule) => {
+    return total + (character.season3?.tags?.includes(rule.tag) ? rule.weight * 100 : 0);
+  }, 0);
+}
+
+function buildSeason3ObjectiveCore(objectiveKey) {
+  const commanders = [...season3FeaturedCharacters].sort((left, right) => {
+    const rightScore =
+      getSeason3ObjectiveValue(right, objectiveKey) * 0.48 +
+      (right.season3?.commanderScore ?? 0) * 0.32 +
+      getSeason3RoleNeedScore(right, objectiveKey) * 0.2;
+    const leftScore =
+      getSeason3ObjectiveValue(left, objectiveKey) * 0.48 +
+      (left.season3?.commanderScore ?? 0) * 0.32 +
+      getSeason3RoleNeedScore(left, objectiveKey) * 0.2;
+    return rightScore - leftScore || compareCharactersBase(left, right);
+  });
+  const commander = commanders[0] ?? null;
+  if (!commander) {
+    return null;
+  }
+
+  const partners = season3FeaturedCharacters
+    .filter((character) => character.id !== commander.id)
+    .sort((left, right) => {
+      const rightChain = getChainStats(commander, right).rate ?? 0;
+      const leftChain = getChainStats(commander, left).rate ?? 0;
+      const rightScore =
+        getSeason3ObjectiveValue(right, objectiveKey) * 0.4 +
+        (right.season3?.viceScore ?? 0) * 0.26 +
+        getSeason3RoleNeedScore(right, objectiveKey) * 0.22 +
+        rightChain * 0.12;
+      const leftScore =
+        getSeason3ObjectiveValue(left, objectiveKey) * 0.4 +
+        (left.season3?.viceScore ?? 0) * 0.26 +
+        getSeason3RoleNeedScore(left, objectiveKey) * 0.22 +
+        leftChain * 0.12;
+      return rightScore - leftScore || compareCharactersBase(left, right);
+    })
+    .slice(0, 3);
+
+  const objectiveConfig = S3_ROLE_BUCKETS[objectiveKey] ?? {};
+  const selected = [commander, ...partners];
+  const coveredRequired = (objectiveConfig.required ?? []).filter((rule) =>
+    selected.some((character) => character.season3?.tags?.includes(rule.tag))
+  );
+  const focusWeights = Object.entries(SEASON3.builderWeights?.armyWeights?.[objectiveKey] ?? {})
+    .sort((left, right) => right[1] - left[1])
+    .slice(0, 3)
+    .map(([key, value]) => `${key.replace(/Score$/u, "")} ${Math.round(value * 100)}%`);
+
+  return {
+    objectiveKey,
+    commander,
+    partners,
+    coveredRequired,
+    totalRequired: (objectiveConfig.required ?? []).length,
+    focusWeights
+  };
+}
+
+function renderSeason3CoreCard(core) {
+  if (!core) {
+    return renderEmptyState("Season 3 コア提案データがありません。");
+  }
+
+  const commanderChainText = core.partners.length
+    ? core.partners
+        .map((partner) => `${partner.name} ${formatPercent(getChainStats(core.commander, partner).rate)}`)
+        .join(" / ")
+    : "連携候補なし";
+
+  return `
+    <article class="quick-card">
+      <h3>${escapeHtml(objectiveLabelFor(core.objectiveKey))}コア</h3>
+      <p>${escapeHtml(core.commander.name)} を軸にした Season 3 コア案</p>
+      <ul>
+        <li><span>主将候補</span><strong>${escapeHtml(core.commander.name)}</strong></li>
+        <li><span>副将候補</span><strong>${escapeHtml(core.partners[0]?.name ?? "-")}</strong></li>
+        <li><span>支援候補</span><strong>${escapeHtml(core.partners[1]?.name ?? core.partners[2]?.name ?? "-")}</strong></li>
+        <li><span>必須役割充足</span><strong>${core.coveredRequired.length}/${core.totalRequired}</strong></li>
+      </ul>
+      <p>${escapeHtml(commanderChainText)}</p>
+      <p>${escapeHtml(`重点評価: ${core.focusWeights.join(" / ")}`)}</p>
+    </article>
+  `;
+}
+
+function renderSeason3UpdateCard(update) {
+  return `
+    <article class="module-card">
+      <div class="module-card-head">
+        <h3>${escapeHtml(update.revisionKey)}</h3>
+        <span class="status-pill is-live">${escapeHtml(update.effectiveAt)}</span>
+      </div>
+      <p>${escapeHtml(update.title)}</p>
+      <div class="meta-chip-list">
+        ${update.changedHeroes.map((name) => `<span class="meta-chip">${escapeHtml(name)}</span>`).join("")}
+      </div>
+      <div class="meta-chip-list">
+        ${update.changedSkills.map((name) => `<span class="meta-chip is-feature">${escapeHtml(name)}</span>`).join("")}
+      </div>
+      <ul class="bullet-list">
+        ${update.changedFormulas.map((row) => `<li>${escapeHtml(row)}</li>`).join("")}
+        ${update.notes.map((row) => `<li>${escapeHtml(row)}</li>`).join("")}
+      </ul>
+    </article>
+  `;
+}
+
+function buildWeightEntries(weightMap) {
+  return Object.entries(weightMap ?? {})
+    .sort((left, right) => right[1] - left[1])
+    .map(([key, value]) => ({
+      label: scoreLabelFor(key),
+      value: formatRatioPercent(value)
+    }));
+}
+
+function buildPenaltyEntries(penaltyMap) {
+  return Object.entries(penaltyMap ?? {})
+    .sort((left, right) => right[1] - left[1])
+    .map(([key, value]) => ({
+      label: penaltyLabelFor(key),
+      value: `${value}点`
+    }));
+}
+
+function renderSeason3WeightCard(title, description, entries) {
+  const listMarkup = entries.length
+    ? `<ul class="bullet-list">${entries
+        .map((entry) => `<li>${escapeHtml(entry.label)}: ${escapeHtml(entry.value)}</li>`)
+        .join("")}</ul>`
+    : `<p>表示できるデータがありません。</p>`;
+
+  return `
+    <article class="module-card">
+      <h3>${escapeHtml(title)}</h3>
+      <p>${escapeHtml(description)}</p>
+      ${listMarkup}
+    </article>
+  `;
+}
+
+function renderSeason3RuleCard(title, description, entries) {
+  const listMarkup = entries.length
+    ? `<ul>${entries
+        .map(
+          (entry) => `
+            <li>
+              <span>${escapeHtml(entry.label)}</span>
+              <strong>${escapeHtml(entry.value)}</strong>
+            </li>
+          `
+        )
+        .join("")}</ul>`
+    : `<p>該当データなし</p>`;
+
+  return `
+    <article class="quick-card">
+      <h3>${escapeHtml(title)}</h3>
+      <p>${escapeHtml(description)}</p>
+      ${listMarkup}
+    </article>
+  `;
+}
+
 function renderFeatureBoard() {
   const objectiveKey = elements.s3Objective?.value || SEASON3.objectives[0]?.key || "pvp";
   const slotFocus = elements.s3SlotFocus?.value || "balanced";
   const objectiveLabel = S3_OBJECTIVE_MAP[objectiveKey]?.label ?? objectiveKey;
   const sortedHeroes = sortSeason3Heroes(objectiveKey, slotFocus);
   const topUpgrades = sortedHeroes.slice(0, 4);
+  const objectiveConfig = S3_ROLE_BUCKETS[objectiveKey] ?? {};
+  const objectiveWeights = buildWeightEntries(S3_OBJECTIVE_MAP[objectiveKey]?.weights).slice(0, 6);
+  const unitWeights = buildWeightEntries(SEASON3.builderWeights?.unitWeights?.[objectiveKey]).slice(0, 6);
+  const armyWeights = buildWeightEntries(SEASON3.builderWeights?.armyWeights?.[objectiveKey]).slice(0, 6);
+  const penaltyEntries = buildPenaltyEntries(SEASON3.builderWeights?.penalties).slice(0, 5);
+  const requiredRoleEntries = (objectiveConfig.required ?? []).map((rule) => ({
+    label: seasonTagLabel(rule.tag),
+    value: `${rule.minUnits}枠 / 重み ${formatRatioPercent(rule.weight)}`
+  }));
+  const preferredRoleEntries = (objectiveConfig.preferred ?? []).map((rule) => ({
+    label: seasonTagLabel(rule.tag),
+    value: `${rule.minUnits}枠 / 重み ${formatRatioPercent(rule.weight)}`
+  }));
+  const investmentEntries = Object.entries(SEASON3.builderWeights?.investmentTierMultipliers ?? {}).map(
+    ([key, value]) => ({
+      label: INVESTMENT_TIER_LABELS[key] ?? key,
+      value: formatMultiplier(value)
+    })
+  );
+  const availabilityEntries = [
+    ...Object.entries(SEASON3.builderWeights?.lockMultipliers ?? {}).map(([key, value]) => ({
+      label: LOCK_STATE_LABELS[key] ?? key,
+      value: formatMultiplier(value)
+    })),
+    ...Object.entries(SEASON3.builderWeights?.equipmentMultipliers ?? {}).map(([key, value]) => ({
+      label: EQUIPMENT_STATE_LABELS[key] ?? key,
+      value: formatMultiplier(value)
+    }))
+  ];
+  const popularSkills = [...preparedSkills]
+    .sort((left, right) => {
+      const rightSeason = right.season3 ? 1 : 0;
+      const leftSeason = left.season3 ? 1 : 0;
+      return (
+        rightSeason - leftSeason ||
+        right.holderCount - left.holderCount ||
+        left.order - right.order ||
+        left.name.localeCompare(right.name, "ja")
+      );
+    })
+    .slice(0, 4);
+  const objectiveCores = uniqueValues([objectiveKey, "pvp", "siege", "defense"])
+    .map((objective) => buildSeason3ObjectiveCore(objective))
+    .filter(Boolean);
 
   elements.s3HeroSeasonLabel.textContent = SEASON3.seasonLabel;
   elements.s3ThemeLabel.textContent = SEASON3.theme;
@@ -1863,6 +2330,56 @@ function renderFeatureBoard() {
     season3FeaturedSkills,
     "Season 3 注目技能データがありません。"
   );
+  elements.s3WeightGrid.innerHTML = [
+    renderSeason3WeightCard(
+      `${objectiveLabel}の戦闘軸`,
+      "season3-objectives.json の用途別重みです。",
+      objectiveWeights
+    ),
+    renderSeason3WeightCard(
+      "部隊スコア軸",
+      "season3-builder-weights.json の unitWeights を表示しています。",
+      unitWeights
+    ),
+    renderSeason3WeightCard(
+      "軍勢スコア軸",
+      "season3-builder-weights.json の armyWeights を表示しています。",
+      armyWeights
+    ),
+    renderSeason3WeightCard("主要減点", "自動編成で避ける失点要素です。", penaltyEntries)
+  ].join("");
+  elements.s3RoleRuleGrid.innerHTML = [
+    renderSeason3RuleCard(
+      "必須役割",
+      `${objectiveLabel}で最低限そろえたい役割です。`,
+      requiredRoleEntries
+    ),
+    renderSeason3RuleCard(
+      "優先役割",
+      "余裕があれば押さえたい補助役割です。",
+      preferredRoleEntries
+    ),
+    renderSeason3RuleCard(
+      "育成度補正",
+      "簡易ロスター入力を内部倍率に変換します。",
+      investmentEntries
+    ),
+    renderSeason3RuleCard(
+      "制約 / 装備補正",
+      "固定・除外・装備入力の扱いです。",
+      availabilityEntries
+    )
+  ].join("");
+  elements.s3PopularSkillList.innerHTML = renderSkillCards(
+    popularSkills,
+    "表示できる技能データがありません。"
+  );
+  elements.s3CoreGrid.innerHTML = objectiveCores.length
+    ? objectiveCores.map((core) => renderSeason3CoreCard(core)).join("")
+    : renderEmptyState("目的別コア提案データがありません。");
+  elements.s3UpdateList.innerHTML = S3_UPDATES.length
+    ? S3_UPDATES.map((update) => renderSeason3UpdateCard(update)).join("")
+    : renderEmptyState("更新履歴データがありません。");
 
   elements.sourceLinkList.innerHTML = [
     ...Object.entries(SOURCES).map(([key, url]) => ({
@@ -2046,9 +2563,12 @@ function boot() {
   renderCheckboxGroup(elements.conditionFilters, CONDITION_DEFS, "power-condition", []);
   renderCheckboxGroup(elements.powerFeatureFilters, CHARACTER_FEATURE_DEFS, "power-feature", []);
   renderCheckboxGroup(elements.characterRarityFilters, RARITY_DEFS, "db-rarity", defaultRarities);
+  renderCheckboxGroup(elements.characterTypeFilters, TYPE_DEFS, "db-type", defaultTypes);
+  renderCheckboxGroup(elements.characterObjectiveFilters, OBJECTIVE_FILTER_DEFS, "db-objective", []);
   renderCheckboxGroup(elements.characterTagFilters, CHARACTER_TAG_DEFS, "db-tag", []);
   renderCheckboxGroup(elements.characterFeatureFilters, CHARACTER_FEATURE_DEFS, "db-feature", []);
   renderCheckboxGroup(elements.skillConditionFilters, CONDITION_DEFS, "skill-condition", []);
+  renderCheckboxGroup(elements.skillEffectFilters, SKILL_EFFECT_DEFS, "skill-effect", []);
   renderCheckboxGroup(elements.synergyRarityFilters, RARITY_DEFS, "synergy-rarity", defaultRarities);
   renderCheckboxGroup(elements.synergyConditionFilters, CONDITION_DEFS, "synergy-condition", []);
   renderCheckboxGroup(elements.synergyFeatureFilters, CHARACTER_FEATURE_DEFS, "synergy-feature", []);
