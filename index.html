@@ -852,6 +852,147 @@
         font-weight: 700;
       }
 
+      .builder-select-grid,
+      .builder-overview-grid,
+      .builder-slot-grid,
+      .timeline-list {
+        display: grid;
+        gap: 14px;
+      }
+
+      .builder-select-grid {
+        margin-top: 18px;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        align-items: end;
+      }
+
+      .builder-overview-grid {
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      }
+
+      .builder-slot-grid {
+        grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+      }
+
+      .builder-slot-card,
+      .timeline-row-card {
+        padding: 18px;
+        border-radius: 22px;
+        background: rgba(255, 255, 255, 0.82);
+        border: 1px solid rgba(109, 57, 17, 0.14);
+      }
+
+      .builder-slot-card.is-empty {
+        min-height: 160px;
+        display: grid;
+        place-items: center;
+        color: var(--muted);
+        background: rgba(255, 255, 255, 0.58);
+      }
+
+      .builder-slot-head {
+        display: grid;
+        grid-template-columns: 104px minmax(0, 1fr);
+        gap: 16px;
+        align-items: start;
+      }
+
+      .builder-slot-main {
+        min-width: 0;
+      }
+
+      .timeline-shell {
+        display: grid;
+        gap: 12px;
+      }
+
+      .timeline-axis {
+        display: grid;
+        grid-template-columns: repeat(9, minmax(0, 1fr));
+        gap: 8px;
+      }
+
+      .timeline-axis span {
+        padding: 6px 0;
+        border-radius: 999px;
+        text-align: center;
+        font-size: 0.78rem;
+        color: var(--muted);
+        background: rgba(255, 255, 255, 0.74);
+        border: 1px solid rgba(109, 57, 17, 0.12);
+      }
+
+      .timeline-row-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 12px;
+        margin-bottom: 12px;
+      }
+
+      .timeline-track {
+        position: relative;
+        min-height: 76px;
+        border-radius: 20px;
+        border: 1px solid rgba(109, 57, 17, 0.12);
+        overflow: hidden;
+        background:
+          linear-gradient(to right, rgba(109, 57, 17, 0.08) 1px, transparent 1px) 0 0 / calc(100% / 9) 100%,
+          rgba(243, 234, 217, 0.68);
+      }
+
+      .timeline-event {
+        position: absolute;
+        top: 10px;
+        bottom: 10px;
+        left: calc(((var(--order) - 1) * 100%) / 9 + 6px);
+        width: calc((100% / 9) - 12px);
+        border-radius: 18px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        gap: 4px;
+        text-align: center;
+        padding: 8px;
+        font-weight: 700;
+        box-shadow: inset 0 0 0 1px rgba(109, 57, 17, 0.08);
+      }
+
+      .timeline-event strong {
+        font-size: 1rem;
+      }
+
+      .timeline-event span {
+        font-size: 0.8rem;
+        line-height: 1.35;
+      }
+
+      .timeline-track.tone-support .timeline-event {
+        background: rgba(60, 123, 88, 0.18);
+        color: #214a36;
+      }
+
+      .timeline-track.tone-damage .timeline-event {
+        background: rgba(156, 62, 34, 0.18);
+        color: #6d3911;
+      }
+
+      .timeline-track.tone-debuff .timeline-event {
+        background: rgba(54, 90, 116, 0.16);
+        color: #365a74;
+      }
+
+      .timeline-track.tone-heal .timeline-event {
+        background: rgba(58, 120, 111, 0.16);
+        color: #245650;
+      }
+
+      .timeline-track.tone-utility .timeline-event {
+        background: rgba(156, 95, 34, 0.16);
+        color: var(--gold-deep);
+      }
+
       .card-actions {
         margin-top: 14px;
         display: flex;
@@ -892,6 +1033,12 @@
       .meta-chip.is-feature {
         background: rgba(54, 90, 116, 0.08);
         border-color: rgba(54, 90, 116, 0.12);
+      }
+
+      .skill-chip.is-inactive {
+        opacity: 0.72;
+        background: rgba(255, 255, 255, 0.5);
+        border-color: rgba(109, 57, 17, 0.12);
       }
 
       .meta-chip.is-highlight {
@@ -1066,7 +1213,8 @@
         .card-grid,
         .skill-card-grid,
         .module-grid,
-        .quick-grid {
+        .quick-grid,
+        .builder-slot-grid {
           grid-template-columns: 1fr;
         }
       }
@@ -1075,7 +1223,8 @@
         .search-grid,
         .info-grid,
         .toolbar-grid,
-        .effect-grid {
+        .effect-grid,
+        .builder-select-grid {
           grid-template-columns: 1fr;
         }
 
@@ -1086,10 +1235,15 @@
         .stats-grid {
           grid-template-columns: repeat(2, minmax(0, 1fr));
         }
+
+        .timeline-row-head {
+          flex-direction: column;
+        }
       }
 
       @media (max-width: 720px) {
-        .card-layout {
+        .card-layout,
+        .builder-slot-head {
           grid-template-columns: 1fr;
         }
 
@@ -1122,6 +1276,14 @@
         .chip-label {
           min-width: 0;
         }
+
+        .timeline-axis {
+          gap: 4px;
+        }
+
+        .timeline-event {
+          padding: 6px;
+        }
       }
     </style>
   </head>
@@ -1131,8 +1293,8 @@
         <p class="eyebrow">Kingdom Hadou / Battle Power + DB + Synergy</p>
         <h1>キングダム覇道 戦力・DB・相性検索</h1>
         <p>
-          既存の戦力検索に加えて、武将DB、技能DB、相性検索を同じサイトにまとめた版です。
-          SSR / SR の武将・技能データを横断して、全文検索、タグ検索、技能条件検索、連鎖率ベースの相性確認まで扱えます。
+          既存の戦力検索に加えて、武将DB、技能DB、相性検索、1部隊用の編成ツールβを同じサイトにまとめた版です。
+          SSR / SR の武将・技能データを横断して、全文検索、タグ検索、技能条件検索、連鎖率ベースの相性確認、連鎖順ベースの編成チェックまで扱えます。
           魅力は戦力計算に関わらないため除外しています。
         </p>
         <div class="hero-meta">
@@ -1144,7 +1306,7 @@
           <span>Season <strong id="seasonLabel"></strong></span>
           <span>Revision <strong id="seasonRevision"></strong></span>
           <span>更新基準 <strong id="seasonUpdatedAt"></strong></span>
-          <span>対応: 戦力検索 / 武将DB / 技能DB / 相性検索</span>
+          <span>対応: 戦力検索 / 武将DB / 技能DB / 相性検索 / 編成ツール</span>
         </div>
       </section>
 
@@ -1154,6 +1316,7 @@
           <button class="tab-button" type="button" data-view-tab="character">武将DB</button>
           <button class="tab-button" type="button" data-view-tab="skill">技能DB</button>
           <button class="tab-button" type="button" data-view-tab="synergy">相性検索</button>
+          <button class="tab-button" type="button" data-view-tab="builder">編成ツールβ</button>
           <button class="tab-button" type="button" data-view-tab="board">S3ハブ</button>
         </div>
       </section>
@@ -1509,6 +1672,118 @@
             <span class="count-pill" id="synergyCount"></span>
           </div>
           <div class="card-grid" id="synergyList"></div>
+        </section>
+      </section>
+
+      <section class="app-view view-stack" id="view-builder" hidden>
+        <section class="panel">
+          <div class="panel-header">
+            <div>
+              <h2>編成ツールβ</h2>
+              <p>
+                note の戦法タイムライン系ツールを参考にしつつ、GameWith の個別ページと編成ガイドから根拠を取れる範囲だけで組んだ 1部隊用の編成確認ツールです。
+                秒数や効果時間は公開ソースで確定できなかったため扱わず、主将 / 副将1 / 副将2 / 補佐1 / 補佐2 と前中後列から、
+                連鎖順、連鎖率、技能条件、重複技能、列依存をまとめて見られるようにしています。
+              </p>
+            </div>
+          </div>
+
+          <div class="info-grid">
+            <article class="info-card">
+              <h2>この画面で見るもの</h2>
+              <p>連鎖順 1〜9 のタイムライン、主将と副将の連鎖率、条件を満たす技能 / 満たさない技能、重複技能を同時に見ます。</p>
+            </article>
+            <article class="info-card">
+              <h2>この版の前提</h2>
+              <p>タイムラインは秒数ではなく、GameWith の「主将 / 副将1 / 副将2」と「連鎖順 早い / 普通 / 遅い」をそのまま順番に落としています。</p>
+            </article>
+          </div>
+
+          <div class="builder-select-grid">
+            <div class="field">
+              <label for="builderRow">部隊の列</label>
+              <select id="builderRow" aria-label="部隊の列"></select>
+              <p class="field-note">前列 / 中列 / 後列で有効になる技能と、戦法の追加効果判定に使います。</p>
+            </div>
+
+            <div class="field">
+              <label for="builderCommander">主将</label>
+              <select id="builderCommander" aria-label="主将"></select>
+              <p class="field-note">主将を選ぶと、副将の連鎖率と連鎖順が計算されます。</p>
+            </div>
+
+            <div class="button-row">
+              <button class="secondary-button" id="builderLoadGuideButton" type="button">おすすめ編成を読み込む</button>
+              <button class="secondary-button" id="builderResetButton" type="button">編成ツールをリセット</button>
+            </div>
+
+            <div class="field">
+              <label for="builderVice1">副将1</label>
+              <select id="builderVice1" aria-label="副将1"></select>
+            </div>
+
+            <div class="field">
+              <label for="builderVice2">副将2</label>
+              <select id="builderVice2" aria-label="副将2"></select>
+            </div>
+
+            <div class="field toggle-card">
+              <strong>副将戦法の表示</strong>
+              <label class="toggle-switch">
+                <input id="builderVice1Enabled" type="checkbox" checked>
+                <span>副将1の戦法をタイムラインに含める</span>
+              </label>
+              <label class="toggle-switch">
+                <input id="builderVice2Enabled" type="checkbox" checked>
+                <span>副将2の戦法をタイムラインに含める</span>
+              </label>
+              <p>戦威オン / オフ比較の代わりに、副将戦法を表示対象から外して見比べられます。</p>
+            </div>
+
+            <div class="field">
+              <label for="builderAide1">補佐1</label>
+              <select id="builderAide1" aria-label="補佐1"></select>
+            </div>
+
+            <div class="field">
+              <label for="builderAide2">補佐2</label>
+              <select id="builderAide2" aria-label="補佐2"></select>
+            </div>
+          </div>
+
+          <div class="toolbar-summary" id="builderSummary"></div>
+          <p class="field-note" id="builderValidation" hidden></p>
+        </section>
+
+        <section class="result-section exact-section">
+          <div class="result-header">
+            <div>
+              <h2>連鎖順タイムライン</h2>
+              <p>1〜9 は GameWith の連鎖順ルールです。主将 / 副将1 / 副将2 に置いたときの発動順だけを安全に表示します。</p>
+            </div>
+            <span class="count-pill" id="builderTimelineCount"></span>
+          </div>
+          <div id="builderTimeline"></div>
+        </section>
+
+        <section class="result-section partial-section">
+          <div class="result-header">
+            <div>
+              <h2>部隊サマリー</h2>
+              <p>タイプ構成、重複技能、副将連鎖率、見るべき注意点をまとめます。</p>
+            </div>
+          </div>
+          <div class="builder-overview-grid" id="builderOverviewGrid"></div>
+        </section>
+
+        <section class="result-section exact-section">
+          <div class="result-header">
+            <div>
+              <h2>5枠の詳細</h2>
+              <p>各枠の戦法、範囲タグ、条件成立中の技能 / 条件未達の技能、連鎖率を slot ごとに確認します。</p>
+            </div>
+          </div>
+          <div class="builder-slot-grid" id="builderSlotGrid"></div>
         </section>
       </section>
 
