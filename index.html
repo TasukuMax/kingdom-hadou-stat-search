@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>キングダム覇道 SSR ステータス検索</title>
+    <title>キングダム覇道 SSR / SR ステータス・技能検索</title>
     <style>
       :root {
         --bg: #f3ead9;
@@ -51,7 +51,7 @@
       }
 
       .page {
-        width: min(1180px, calc(100% - 32px));
+        width: min(1200px, calc(100% - 32px));
         margin: 0 auto;
         padding: 28px 0 56px;
       }
@@ -104,7 +104,7 @@
       }
 
       .hero p {
-        max-width: 760px;
+        max-width: 820px;
         color: var(--muted);
         line-height: 1.7;
       }
@@ -136,7 +136,7 @@
         margin-top: 8px;
         color: var(--muted);
         line-height: 1.7;
-        max-width: 720px;
+        max-width: 760px;
       }
 
       .search-grid {
@@ -154,6 +154,12 @@
 
       .field label {
         font-weight: 700;
+      }
+
+      .field-note {
+        color: var(--muted);
+        font-size: 0.9rem;
+        line-height: 1.6;
       }
 
       select,
@@ -193,6 +199,76 @@
         background: rgba(255, 255, 255, 0.72);
         color: var(--ink);
         border: 1px solid rgba(109, 57, 17, 0.2);
+      }
+
+      .filters-grid {
+        margin-top: 18px;
+        display: grid;
+        grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+        gap: 14px;
+      }
+
+      .chip-fieldset {
+        margin: 0;
+        padding: 16px;
+        border-radius: 20px;
+        border: 1px solid rgba(109, 57, 17, 0.12);
+        background: rgba(255, 255, 255, 0.58);
+      }
+
+      .chip-fieldset legend {
+        padding: 0 8px;
+        font-weight: 700;
+      }
+
+      .chip-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
+      .chip-option {
+        position: relative;
+        display: inline-flex;
+      }
+
+      .chip-option input {
+        position: absolute;
+        inset: 0;
+        opacity: 0;
+        cursor: pointer;
+      }
+
+      .chip-label {
+        display: inline-flex;
+        flex-direction: column;
+        gap: 3px;
+        min-width: 92px;
+        padding: 10px 12px;
+        border-radius: 16px;
+        border: 1px solid rgba(109, 57, 17, 0.16);
+        background: rgba(255, 255, 255, 0.82);
+        transition: 160ms ease;
+      }
+
+      .chip-label strong {
+        font-size: 0.94rem;
+      }
+
+      .chip-label small {
+        color: var(--muted);
+        font-size: 0.77rem;
+        line-height: 1.4;
+      }
+
+      .chip-option input:checked + .chip-label {
+        background: rgba(156, 95, 34, 0.14);
+        border-color: rgba(156, 95, 34, 0.36);
+        color: var(--gold-deep);
+      }
+
+      .chip-option input:checked + .chip-label small {
+        color: var(--gold-deep);
       }
 
       .validation {
@@ -345,6 +421,44 @@
         color: var(--partial);
       }
 
+      .skill-group {
+        margin-top: 14px;
+      }
+
+      .skill-group-title {
+        margin-bottom: 8px;
+        color: var(--gold-deep);
+        font-size: 0.88rem;
+        font-weight: 700;
+      }
+
+      .skill-chip-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .skill-chip {
+        display: inline-flex;
+        flex-direction: column;
+        gap: 3px;
+        padding: 9px 11px;
+        border-radius: 16px;
+        text-decoration: none;
+        color: inherit;
+        background: rgba(243, 234, 217, 0.78);
+        border: 1px solid rgba(109, 57, 17, 0.12);
+      }
+
+      .skill-chip strong {
+        font-size: 0.9rem;
+      }
+
+      .skill-chip small {
+        color: var(--muted);
+        font-size: 0.76rem;
+      }
+
       .stats-grid {
         margin-top: 14px;
         display: grid;
@@ -392,19 +506,25 @@
         padding: 20px;
       }
 
+      @media (max-width: 1040px) {
+        .filters-grid,
+        .card-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .stats-grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+
       @media (max-width: 940px) {
         .search-grid,
-        .info-grid,
-        .card-grid {
+        .info-grid {
           grid-template-columns: 1fr;
         }
 
         .button-row button {
           flex: 1 1 0;
-        }
-
-        .stats-grid {
-          grid-template-columns: repeat(2, minmax(0, 1fr));
         }
       }
 
@@ -427,24 +547,28 @@
         .card-header {
           flex-direction: column;
         }
+
+        .chip-label {
+          min-width: 0;
+        }
       }
     </style>
   </head>
   <body>
     <main class="page">
       <section class="hero">
-        <p class="eyebrow">Kingdom Hadou / SSR Finder</p>
-        <h1>キングダム覇道 SSR ステータス検索</h1>
+        <p class="eyebrow">Kingdom Hadou / SSR + SR Finder</p>
+        <h1>キングダム覇道 SSR / SR ステータス・技能検索</h1>
         <p>
-          戦力の伸びを意識して、各武将の「上位2ステータス」で検索するローカルアプリです。
-          魅力は戦力計算の対象外として除外し、攻撃・防御・戦威・策略の4項目だけで順位を作っています。
-          1項目なら「1位一致 / 2位一致」、2項目なら「順番まで一致 / 逆順一致」で分けて表示します。
+          攻撃・防御・戦威・策略の上位2項目で武将を探せる検索アプリです。技能条件にも対応し、
+          前列・中列・後列、主将・副将・補佐で絞り込めます。魅力は戦力計算に関わらないため除外しています。
         </p>
         <div class="hero-meta">
-          <span>SSR <strong id="datasetCount"></strong></span>
-          <span>同値判定: 攻撃 → 防御 → 戦威 → 策略</span>
-          <span>魅力は検索対象外</span>
-          <span>出典: GameWith 武将一覧 / 個別ページ</span>
+          <span>総数 <strong id="datasetCount"></strong></span>
+          <span>SSR <strong id="ssrCount"></strong></span>
+          <span>SR <strong id="srCount"></strong></span>
+          <span>対象ステータス: 攻撃 / 防御 / 戦威 / 策略</span>
+          <span>出典: GameWith 武将一覧 / 技能一覧</span>
         </div>
       </section>
 
@@ -453,26 +577,42 @@
           <div>
             <h2>検索条件</h2>
             <p>
-              第2条件は任意です。例えば「攻撃 → 防御」で検索すると、完全一致にはその順番どおりの武将、
-              ある程度一致には「防御 → 攻撃」の武将が出ます。
+              1つのステータス検索なら 1位一致 / 2位一致、2つのステータス検索なら 完全一致 / 逆順一致 で表示します。
+              技能条件は同じ画面で同時に絞り込めます。
             </p>
           </div>
         </div>
 
-        <form id="searchForm" class="search-grid">
-          <div class="field">
-            <label for="primaryStat">第1条件</label>
-            <select id="primaryStat" name="primaryStat" aria-label="第1条件のステータス"></select>
+        <form id="searchForm">
+          <div class="search-grid">
+            <div class="field">
+              <label for="primaryStat">第1ステータス</label>
+              <select id="primaryStat" name="primaryStat" aria-label="第1ステータス"></select>
+              <p class="field-note">武将の最も高いステータスに使います。</p>
+            </div>
+
+            <div class="field">
+              <label for="secondaryStat">第2ステータス</label>
+              <select id="secondaryStat" name="secondaryStat" aria-label="第2ステータス"></select>
+              <p class="field-note">2つ目の条件を使う場合だけ選んでください。</p>
+            </div>
+
+            <div class="button-row">
+              <button class="primary-button" type="submit">検索</button>
+              <button class="secondary-button" id="resetButton" type="button">リセット</button>
+            </div>
           </div>
 
-          <div class="field">
-            <label for="secondaryStat">第2条件（任意）</label>
-            <select id="secondaryStat" name="secondaryStat" aria-label="第2条件のステータス"></select>
-          </div>
+          <div class="filters-grid">
+            <fieldset class="chip-fieldset">
+              <legend>レアリティ</legend>
+              <div class="chip-grid" id="rarityFilters" role="group" aria-label="レアリティ"></div>
+            </fieldset>
 
-          <div class="button-row">
-            <button class="primary-button" type="submit">検索</button>
-            <button class="secondary-button" id="resetButton" type="button">リセット</button>
+            <fieldset class="chip-fieldset">
+              <legend>技能条件</legend>
+              <div class="chip-grid" id="conditionFilters" role="group" aria-label="技能条件"></div>
+            </fieldset>
           </div>
         </form>
 
@@ -480,25 +620,24 @@
 
         <div class="info-grid">
           <article class="info-card">
-            <h2>1項目検索</h2>
-            <p>完全一致は「1位がそのステータス」、ある程度一致は「2位がそのステータス」です。</p>
+            <h2>1ステータス検索</h2>
+            <p>最も高いステータスが一致する武将を 1位一致、2番目に高いステータスが一致する武将を 2位一致 として表示します。</p>
           </article>
           <article class="info-card">
-            <h2>2項目検索</h2>
-            <p>完全一致は「1位→2位」が同順、ある程度一致は「上位2つだが逆順」です。</p>
+            <h2>2ステータス検索</h2>
+            <p>1位・2位の順番まで一致する武将を 完全一致、上位2項目は同じでも順番が逆の武将を 逆順一致 として表示します。</p>
           </article>
           <article class="info-card">
-            <h2>戦力対象</h2>
-            <p>
-              魅力は戦力が伸びない前提で除外しています。
-              そのため、魅力が元の1位でも次点のステータスを1位として扱います。
-            </p>
+            <h2>技能条件フィルタ</h2>
+            <p>前列・中列・後列と、主将・副将・補佐で絞り込みできます。選んだ条件に一致した技能名もカード内に表示します。</p>
           </article>
           <article class="info-card">
             <h2>データ出典</h2>
             <p>
               <a href="https://gamewith.jp/kingdom-hadou/519260" target="_blank" rel="noreferrer">GameWith の武将一覧</a>
-              と各個別ページの「最大能力」を使用しています。
+              と
+              <a href="https://gamewith.jp/kingdom-hadou/543359" target="_blank" rel="noreferrer">技能一覧</a>
+              を突き合わせて作成しています。武将の所持技能は武将一覧、技能の発動条件は技能一覧を参照しています。
             </p>
           </article>
         </div>
@@ -521,7 +660,7 @@
         <section class="result-section partial-section">
           <div class="result-header">
             <div>
-              <h2 id="partialTitle">ある程度一致</h2>
+              <h2 id="partialTitle">逆順一致</h2>
               <p id="partialDescription"></p>
             </div>
             <span class="count-pill" id="partialCount"></span>
