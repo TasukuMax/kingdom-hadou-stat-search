@@ -52,9 +52,9 @@
       }
 
       .page {
-        width: min(1220px, calc(100% - 32px));
+        width: min(1180px, calc(100% - 24px));
         margin: 0 auto;
-        padding: 28px 0 56px;
+        padding: 18px 0 56px;
       }
 
       .hero,
@@ -70,7 +70,9 @@
       .hero {
         position: relative;
         overflow: hidden;
-        padding: 30px;
+        display: grid;
+        gap: 16px;
+        padding: 22px;
       }
 
       .hero::after {
@@ -100,22 +102,35 @@
       }
 
       .hero h1 {
-        font-size: clamp(2rem, 3vw, 3rem);
-        line-height: 1.05;
-        margin-bottom: 12px;
+        font-size: clamp(1.72rem, 2.5vw, 2.6rem);
+        line-height: 1.08;
+        margin-bottom: 10px;
       }
 
       .hero p {
-        max-width: 860px;
+        max-width: 820px;
         color: var(--muted);
-        line-height: 1.7;
+        line-height: 1.65;
+      }
+
+      .hero-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
       }
 
       .hero-meta {
         display: flex;
-        flex-wrap: wrap;
+        flex-wrap: nowrap;
         gap: 10px;
-        margin-top: 18px;
+        margin-top: 4px;
+        overflow-x: auto;
+        padding-bottom: 4px;
+        scrollbar-width: none;
+      }
+
+      .hero-meta::-webkit-scrollbar {
+        display: none;
       }
 
       .hero-meta span {
@@ -127,18 +142,19 @@
         background: rgba(255, 255, 255, 0.72);
         border: 1px solid rgba(156, 95, 34, 0.2);
         font-size: 0.94rem;
+        white-space: nowrap;
       }
 
       .panel {
         margin-top: 20px;
-        padding: 24px;
+        padding: 20px;
       }
 
       .panel-header p {
         margin-top: 8px;
         color: var(--muted);
-        line-height: 1.7;
-        max-width: 800px;
+        line-height: 1.6;
+        max-width: 760px;
       }
 
       .search-grid,
@@ -185,7 +201,7 @@
       input[type="text"],
       select {
         width: 100%;
-        min-height: 52px;
+        min-height: 56px;
         padding: 0 14px;
         border-radius: 16px;
         border: 1px solid rgba(109, 57, 17, 0.24);
@@ -218,7 +234,7 @@
       }
 
       button {
-        min-height: 52px;
+        min-height: 56px;
         padding: 0 18px;
         border-radius: 16px;
         border: 0;
@@ -260,6 +276,13 @@
         display: flex;
         flex-wrap: wrap;
         gap: 10px;
+        overflow-x: auto;
+        padding-bottom: 2px;
+        scrollbar-width: none;
+      }
+
+      .chip-grid::-webkit-scrollbar {
+        display: none;
       }
 
       .chip-option {
@@ -408,7 +431,7 @@
 
       .card-layout {
         display: grid;
-        grid-template-columns: 104px minmax(0, 1fr);
+        grid-template-columns: 92px minmax(0, 1fr);
         gap: 16px;
         align-items: start;
       }
@@ -419,12 +442,50 @@
       }
 
       .character-thumb {
-        width: 104px;
-        height: 104px;
+        width: 92px;
+        height: 92px;
         object-fit: cover;
         border-radius: 22px;
         background: rgba(243, 234, 217, 0.92);
         border: 1px solid rgba(109, 57, 17, 0.12);
+      }
+
+      .inline-summary {
+        margin-top: 14px;
+        padding: 14px;
+        border-radius: 18px;
+        border: 1px solid rgba(109, 57, 17, 0.12);
+        background: rgba(255, 255, 255, 0.72);
+      }
+
+      .inline-summary-head {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      .inline-summary p:last-child {
+        margin-top: 10px;
+        color: var(--muted);
+        line-height: 1.6;
+      }
+
+      .card-disclosure {
+        margin-top: 14px;
+        border-radius: 18px;
+        border: 1px solid rgba(109, 57, 17, 0.12);
+        background: rgba(255, 255, 255, 0.62);
+        overflow: hidden;
+      }
+
+      .card-disclosure summary {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        min-height: 48px;
+        padding: 12px 14px;
+        color: var(--gold-deep);
+        font-weight: 700;
       }
 
       .card-main {
@@ -809,27 +870,41 @@
       .view-stack {
         margin-top: 20px;
         display: grid;
-        gap: 20px;
+        gap: 16px;
       }
 
       .view-nav {
         margin-top: 20px;
-        padding: 14px;
+        position: sticky;
+        top: 10px;
+        z-index: 30;
+        padding: 10px;
+        background: rgba(255, 249, 240, 0.88);
+        backdrop-filter: blur(16px);
       }
 
       .tab-list {
         display: flex;
-        flex-wrap: wrap;
+        flex-wrap: nowrap;
         gap: 10px;
+        overflow-x: auto;
+        scroll-snap-type: x proximity;
+        scrollbar-width: none;
+      }
+
+      .tab-list::-webkit-scrollbar {
+        display: none;
       }
 
       .tab-button {
-        min-height: 46px;
+        min-height: 50px;
+        min-width: max-content;
         padding: 0 16px;
         border-radius: 999px;
         border: 1px solid rgba(109, 57, 17, 0.18);
         background: rgba(255, 255, 255, 0.72);
         color: var(--ink);
+        scroll-snap-align: start;
       }
 
       .tab-button.is-active {
@@ -850,6 +925,57 @@
         margin-top: 18px;
         color: var(--gold-deep);
         font-weight: 700;
+      }
+
+      .section-details {
+        margin-top: 16px;
+        border-radius: 20px;
+        border: 1px solid rgba(109, 57, 17, 0.12);
+        background: rgba(255, 255, 255, 0.62);
+        overflow: hidden;
+      }
+
+      .section-details summary,
+      .card-disclosure summary {
+        list-style: none;
+        cursor: pointer;
+      }
+
+      .section-details summary::-webkit-details-marker,
+      .card-disclosure summary::-webkit-details-marker {
+        display: none;
+      }
+
+      .section-details summary {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        min-height: 52px;
+        padding: 14px 16px;
+        font-weight: 700;
+      }
+
+      .section-details summary::after,
+      .card-disclosure summary::after {
+        content: "＋";
+        font-size: 1rem;
+        color: var(--gold-deep);
+      }
+
+      .section-details[open] summary::after,
+      .card-disclosure[open] summary::after {
+        content: "−";
+      }
+
+      .details-body {
+        padding: 0 16px 16px;
+      }
+
+      .details-body > .filters-grid:first-child,
+      .details-body > .builder-select-grid:first-child,
+      .details-body > .aux-grid:first-child {
+        margin-top: 0;
       }
 
       .builder-select-grid,
@@ -1001,7 +1127,7 @@
       }
 
       .mini-button {
-        min-height: 40px;
+        min-height: 44px;
         padding: 0 12px;
         border-radius: 999px;
         border: 1px solid rgba(109, 57, 17, 0.16);
@@ -1241,7 +1367,7 @@
         }
       }
 
-      @media (max-width: 720px) {
+      @media (max-width: 560px) {
         .card-layout,
         .builder-slot-head {
           grid-template-columns: 1fr;
@@ -1263,6 +1389,9 @@
         .panel,
         .result-section,
         .character-card,
+        .skill-card,
+        .builder-slot-card,
+        .timeline-row-card,
         .skill-dialog-card {
           padding: 18px;
           border-radius: 22px;
@@ -1275,6 +1404,36 @@
 
         .chip-label {
           min-width: 0;
+        }
+
+        .hero-actions {
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+
+        .hero-actions .mini-button {
+          width: 100%;
+        }
+
+        .hero-meta {
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          overflow: visible;
+        }
+
+        .hero-meta span {
+          min-height: 76px;
+          align-items: flex-start;
+          justify-content: space-between;
+          flex-direction: column;
+          gap: 4px;
+          border-radius: 18px;
+          white-space: normal;
+          font-size: 0.86rem;
+        }
+
+        .source-link {
+          display: none;
         }
 
         .timeline-axis {
@@ -1293,10 +1452,14 @@
         <p class="eyebrow">Kingdom Hadou / Battle Power + DB + Synergy</p>
         <h1>キングダム覇道 戦力・DB・相性検索</h1>
         <p>
-          既存の戦力検索に加えて、武将DB、技能DB、相性検索、1部隊用の編成ツールβを同じサイトにまとめた版です。
-          SSR / SR の武将・技能データを横断して、全文検索、タグ検索、技能条件検索、連鎖率ベースの相性確認、連鎖順ベースの編成チェックまで扱えます。
-          魅力は戦力計算に関わらないため除外しています。
+          まず使いたい機能にすぐ入れて、必要な説明だけ後から開ける形に整理したモバイル優先版です。
+          SSR / SR の武将・技能データを横断して、戦力検索、武将DB、技能DB、相性検索、編成ツールを一つにまとめています。
         </p>
+        <div class="hero-actions">
+          <button class="mini-button" type="button" data-switch-view="power">戦力検索を開く</button>
+          <button class="mini-button" type="button" data-switch-view="builder">編成ツールを開く</button>
+          <button class="mini-button" type="button" data-switch-view="character">武将DBを開く</button>
+        </div>
         <div class="hero-meta">
           <span>総数 <strong id="datasetCount"></strong></span>
           <span>SSR <strong id="ssrCount"></strong></span>
@@ -1306,7 +1469,6 @@
           <span>Season <strong id="seasonLabel"></strong></span>
           <span>Revision <strong id="seasonRevision"></strong></span>
           <span>更新基準 <strong id="seasonUpdatedAt"></strong></span>
-          <span>対応: 戦力検索 / 武将DB / 技能DB / 相性検索 / 編成ツール</span>
         </div>
       </section>
 
@@ -1327,8 +1489,7 @@
           <div>
             <h2>検索条件</h2>
             <p>
-              ステータス検索、技能条件フィルタ、連鎖率ソートを同じ画面で使えます。
-              技能条件を入れた場合は技能順が先、連鎖率順をオンにした場合は連鎖率が最優先で並びます。
+              第1 / 第2ステータスを基準に候補を出し、必要なら技能条件や連鎖率ソートを追加します。
             </p>
           </div>
         </div>
@@ -1353,72 +1514,66 @@
             </div>
           </div>
 
-          <div class="aux-grid">
-            <div class="field">
-              <label for="chainCommander">連鎖率の基準武将</label>
-              <input
-                id="chainCommander"
-                type="text"
-                list="commanderOptions"
-                placeholder="主将にする武将名を入力"
-                aria-label="連鎖率の基準武将"
-              >
-              <datalist id="commanderOptions"></datalist>
-              <p class="field-note">連鎖率順をオンにすると、この武将を主将に置いた場合の副将連鎖率で並べます。</p>
+          <details class="section-details">
+            <summary>追加条件と絞り込み</summary>
+            <div class="details-body">
+              <div class="aux-grid">
+                <div class="field">
+                  <label for="chainCommander">連鎖率の基準武将</label>
+                  <input
+                    id="chainCommander"
+                    type="text"
+                    list="commanderOptions"
+                    placeholder="主将にする武将名を入力"
+                    aria-label="連鎖率の基準武将"
+                  >
+                  <datalist id="commanderOptions"></datalist>
+                  <p class="field-note">連鎖率順を使う場合だけ指定します。</p>
+                </div>
+
+                <div class="toggle-card">
+                  <strong>追加ソート</strong>
+                  <label class="toggle-switch">
+                    <input id="chainSortEnabled" type="checkbox">
+                    <span>連鎖率順を最優先にする</span>
+                  </label>
+                  <p>オンの間は、技能順やステータス順より先に連鎖率順で並びます。</p>
+                </div>
+              </div>
+
+              <div class="filters-grid">
+                <fieldset class="chip-fieldset">
+                  <legend>レアリティ</legend>
+                  <div class="chip-grid" id="rarityFilters" role="group" aria-label="レアリティ"></div>
+                </fieldset>
+
+                <fieldset class="chip-fieldset">
+                  <legend>技能条件</legend>
+                  <div class="chip-grid" id="conditionFilters" role="group" aria-label="技能条件"></div>
+                </fieldset>
+
+                <fieldset class="chip-fieldset">
+                  <legend>特徴</legend>
+                  <div class="chip-grid" id="powerFeatureFilters" role="group" aria-label="戦力検索の特徴検索"></div>
+                </fieldset>
+              </div>
             </div>
-
-            <div class="toggle-card">
-              <strong>追加ソート</strong>
-              <label class="toggle-switch">
-                <input id="chainSortEnabled" type="checkbox">
-                <span>連鎖率順を最優先にする</span>
-              </label>
-              <p>オンの間は、技能順やステータス順より先に連鎖率順で並びます。</p>
-            </div>
-          </div>
-
-          <div class="filters-grid">
-            <fieldset class="chip-fieldset">
-              <legend>レアリティ</legend>
-              <div class="chip-grid" id="rarityFilters" role="group" aria-label="レアリティ"></div>
-            </fieldset>
-
-            <fieldset class="chip-fieldset">
-              <legend>技能条件</legend>
-              <div class="chip-grid" id="conditionFilters" role="group" aria-label="技能条件"></div>
-            </fieldset>
-
-            <fieldset class="chip-fieldset">
-              <legend>特徴</legend>
-              <div class="chip-grid" id="powerFeatureFilters" role="group" aria-label="戦力検索の特徴検索"></div>
-            </fieldset>
-          </div>
+          </details>
         </form>
 
         <p class="validation" id="validationMessage" hidden></p>
 
-        <div class="info-grid">
-          <article class="info-card">
-            <h2>1ステータス検索</h2>
-            <p>最も高いステータスが一致する武将を 1位一致、2番目に高いステータスが一致する武将を 2位一致 として表示します。</p>
-          </article>
-          <article class="info-card">
-            <h2>2ステータス検索</h2>
-            <p>1位・2位の順番まで一致する武将を 完全一致、上位2項目は同じでも順番が逆の武将を 逆順一致 として表示します。</p>
-          </article>
-          <article class="info-card">
-            <h2>技能条件と技能順</h2>
-            <p>前列・中列・後列、主将・副将・補佐で絞り込めます。技能条件を使った場合は、同じ技能を持つ武将どうしがまとまるように並びます。</p>
-          </article>
-          <article class="info-card">
-            <h2>特徴タグ</h2>
-            <p>対物、弱化効果付与、回復、反撃などを AND 条件で絞れます。技能だけでなく戦法と S3 タグも使って判定しています。</p>
-          </article>
-          <article class="info-card">
-            <h2>連鎖率ソート</h2>
-            <p>GameWith 編成シミュレーターの個性データと連鎖率ロジックを使い、指定武将を主将に置いた場合の副将連鎖率順で並べます。</p>
-          </article>
-        </div>
+        <details class="section-details">
+          <summary>この検索の見方</summary>
+          <div class="details-body">
+            <ul class="bullet-list">
+              <li>1項目検索は 1位一致 / 2位一致、2項目検索は 完全一致 / 逆順一致 で分かれます。</li>
+              <li>技能条件を入れた場合は、同じ技能を持つ武将どうしがまとまる並びになります。</li>
+              <li>特徴タグは 対物 / 弱化 / 回復 / 反撃 などを AND 条件で絞ります。</li>
+              <li>連鎖率順は、指定主将に対する副将連鎖率が最優先です。</li>
+            </ul>
+          </div>
+        </details>
       </section>
 
       <section class="results">
@@ -1454,9 +1609,7 @@
             <div>
               <h2>武将DB</h2>
               <p>
-                武将名、戦法、技能名、個性、上位ステータス、役割タグ、特徴タグをまとめて検索できます。
-                タグ検索も特徴検索も AND 条件で、全文検索は戦法要約や技能要約にも効きます。
-                個別ページの評価ポイント、最新シーズン編成、おすすめ秘伝も取り込んでいます。
+                武将名、戦法、技能、個性、特徴タグをまとめて引くための一覧です。必要な絞り込みだけ開いて使えます。
               </p>
             </div>
           </div>
@@ -1479,53 +1632,50 @@
             </div>
           </div>
 
-          <div class="filters-grid">
-            <fieldset class="chip-fieldset">
-              <legend>レアリティ</legend>
-              <div class="chip-grid" id="characterRarityFilters" role="group" aria-label="武将DBのレアリティ"></div>
-            </fieldset>
+          <details class="section-details">
+            <summary>絞り込みを開く</summary>
+            <div class="details-body">
+              <div class="filters-grid">
+                <fieldset class="chip-fieldset">
+                  <legend>レアリティ</legend>
+                  <div class="chip-grid" id="characterRarityFilters" role="group" aria-label="武将DBのレアリティ"></div>
+                </fieldset>
 
-            <fieldset class="chip-fieldset">
-              <legend>タイプ</legend>
-              <div class="chip-grid" id="characterTypeFilters" role="group" aria-label="武将DBのタイプ検索"></div>
-            </fieldset>
+                <fieldset class="chip-fieldset">
+                  <legend>タイプ</legend>
+                  <div class="chip-grid" id="characterTypeFilters" role="group" aria-label="武将DBのタイプ検索"></div>
+                </fieldset>
 
-            <fieldset class="chip-fieldset">
-              <legend>目的</legend>
-              <div class="chip-grid" id="characterObjectiveFilters" role="group" aria-label="武将DBの目的検索"></div>
-            </fieldset>
+                <fieldset class="chip-fieldset">
+                  <legend>目的</legend>
+                  <div class="chip-grid" id="characterObjectiveFilters" role="group" aria-label="武将DBの目的検索"></div>
+                </fieldset>
 
-            <fieldset class="chip-fieldset">
-              <legend>タグ検索</legend>
-              <div class="chip-grid" id="characterTagFilters" role="group" aria-label="武将DBのタグ検索"></div>
-            </fieldset>
+                <fieldset class="chip-fieldset">
+                  <legend>タグ検索</legend>
+                  <div class="chip-grid" id="characterTagFilters" role="group" aria-label="武将DBのタグ検索"></div>
+                </fieldset>
 
-            <fieldset class="chip-fieldset">
-              <legend>特徴検索</legend>
-              <div class="chip-grid" id="characterFeatureFilters" role="group" aria-label="武将DBの特徴検索"></div>
-            </fieldset>
-          </div>
+                <fieldset class="chip-fieldset">
+                  <legend>特徴検索</legend>
+                  <div class="chip-grid" id="characterFeatureFilters" role="group" aria-label="武将DBの特徴検索"></div>
+                </fieldset>
+              </div>
+            </div>
+          </details>
 
           <div class="toolbar-summary" id="characterSummary"></div>
 
-          <div class="info-grid">
-            <article class="info-card">
-              <h2>主将を見る軸</h2>
-              <p>高いステータスと戦法の主導力を先に見ます。個別ページの最新シーズン編成で主将に置かれているかも併記します。</p>
-            </article>
-            <article class="info-card">
-              <h2>副将を見る軸</h2>
-              <p>戦法だけでなく、連鎖率、共通個性、支援技能のつながりを重視します。最新シーズン編成の配置も一緒に出します。</p>
-            </article>
-            <article class="info-card">
-              <h2>補佐を見る軸</h2>
-              <p>補佐は技能価値を優先し、ステータスより効果を見ます。おすすめ秘伝と補佐向けメモも同じカード内で確認できます。</p>
-            </article>
-            <article class="info-card">
-              <h2>低レアの見方</h2>
-              <p>序盤や手持ち不足では副将、補佐、任命で価値を出す武将が多いです。評価ポイントに任命向けかどうかも反映しています。</p>
-            </article>
-          </div>
+          <details class="section-details">
+            <summary>武将DBの見方</summary>
+            <div class="details-body">
+              <ul class="bullet-list">
+                <li>主将候補は上位ステータスと戦法の主導力を先に見ます。</li>
+                <li>副将候補は連鎖率、共通個性、支援戦法との噛み合いを重視します。</li>
+                <li>補佐候補はステータスより技能価値を優先して見ます。</li>
+              </ul>
+            </div>
+          </details>
         </section>
 
         <section class="result-section exact-section">
@@ -1546,8 +1696,7 @@
             <div>
               <h2>技能DB</h2>
               <p>
-                技能名、概要、初期効果、最大効果、所持武将をまとめて確認できます。
-                条件検索で前列・中列・後列、主将・副将・補佐を絞れます。
+                技能名から条件、効果、所持武将を逆引きする画面です。詳しい効果はカードごとに開いて見ます。
               </p>
             </div>
           </div>
@@ -1570,17 +1719,22 @@
             </div>
           </div>
 
-          <div class="filters-grid">
-            <fieldset class="chip-fieldset">
-              <legend>技能条件</legend>
-              <div class="chip-grid" id="skillConditionFilters" role="group" aria-label="技能DBの条件検索"></div>
-            </fieldset>
+          <details class="section-details">
+            <summary>絞り込みを開く</summary>
+            <div class="details-body">
+              <div class="filters-grid">
+                <fieldset class="chip-fieldset">
+                  <legend>技能条件</legend>
+                  <div class="chip-grid" id="skillConditionFilters" role="group" aria-label="技能DBの条件検索"></div>
+                </fieldset>
 
-            <fieldset class="chip-fieldset">
-              <legend>効果種別</legend>
-              <div class="chip-grid" id="skillEffectFilters" role="group" aria-label="技能DBの効果種別検索"></div>
-            </fieldset>
-          </div>
+                <fieldset class="chip-fieldset">
+                  <legend>効果種別</legend>
+                  <div class="chip-grid" id="skillEffectFilters" role="group" aria-label="技能DBの効果種別検索"></div>
+                </fieldset>
+              </div>
+            </div>
+          </details>
 
           <div class="toolbar-summary" id="skillSummary"></div>
         </section>
@@ -1603,8 +1757,7 @@
             <div>
               <h2>相性検索</h2>
               <p>
-                指定武将を主将に置いたときの副将連鎖率を軸に、共通個性と役割条件も合わせて確認する初版です。
-                前列・中列・後列フィルタに加えて、特徴タグでも候補を詰められます。
+                主将にしたい武将を軸に、副将候補を連鎖率と共通個性で絞る画面です。
               </p>
             </div>
           </div>
@@ -1633,22 +1786,27 @@
             </div>
           </div>
 
-          <div class="filters-grid">
-            <fieldset class="chip-fieldset">
-              <legend>レアリティ</legend>
-              <div class="chip-grid" id="synergyRarityFilters" role="group" aria-label="相性検索のレアリティ"></div>
-            </fieldset>
+          <details class="section-details">
+            <summary>絞り込みを開く</summary>
+            <div class="details-body">
+              <div class="filters-grid">
+                <fieldset class="chip-fieldset">
+                  <legend>レアリティ</legend>
+                  <div class="chip-grid" id="synergyRarityFilters" role="group" aria-label="相性検索のレアリティ"></div>
+                </fieldset>
 
-            <fieldset class="chip-fieldset">
-              <legend>候補の技能条件</legend>
-              <div class="chip-grid" id="synergyConditionFilters" role="group" aria-label="相性検索の技能条件"></div>
-            </fieldset>
+                <fieldset class="chip-fieldset">
+                  <legend>候補の技能条件</legend>
+                  <div class="chip-grid" id="synergyConditionFilters" role="group" aria-label="相性検索の技能条件"></div>
+                </fieldset>
 
-            <fieldset class="chip-fieldset">
-              <legend>候補の特徴</legend>
-              <div class="chip-grid" id="synergyFeatureFilters" role="group" aria-label="相性検索の特徴検索"></div>
-            </fieldset>
-          </div>
+                <fieldset class="chip-fieldset">
+                  <legend>候補の特徴</legend>
+                  <div class="chip-grid" id="synergyFeatureFilters" role="group" aria-label="相性検索の特徴検索"></div>
+                </fieldset>
+              </div>
+            </div>
+          </details>
 
           <div class="toolbar-summary" id="synergySummary"></div>
         </section>
@@ -1681,23 +1839,21 @@
             <div>
               <h2>編成ツールβ</h2>
               <p>
-                note の戦法タイムライン系ツールを参考にしつつ、GameWith の個別ページと編成ガイドから根拠を取れる範囲だけで組んだ 1部隊用の編成確認ツールです。
-                秒数や効果時間は公開ソースで確定できなかったため扱わず、主将 / 副将1 / 副将2 / 補佐1 / 補佐2 と前中後列から、
-                連鎖順、連鎖率、技能条件、重複技能、列依存をまとめて見られるようにしています。
+                1部隊の噛み合いを見るための簡易編成ツールです。主将・副将・補佐と前中後列を置くと、
+                連鎖順、連鎖率、技能条件、重複技能、列依存をまとめて確認できます。
               </p>
             </div>
           </div>
 
-          <div class="info-grid">
-            <article class="info-card">
-              <h2>この画面で見るもの</h2>
-              <p>連鎖順 1〜9 のタイムライン、主将と副将の連鎖率、条件を満たす技能 / 満たさない技能、重複技能を同時に見ます。</p>
-            </article>
-            <article class="info-card">
-              <h2>この版の前提</h2>
-              <p>タイムラインは秒数ではなく、GameWith の「主将 / 副将1 / 副将2」と「連鎖順 早い / 普通 / 遅い」をそのまま順番に落としています。</p>
-            </article>
-          </div>
+          <details class="section-details">
+            <summary>この画面の前提</summary>
+            <div class="details-body">
+              <ul class="bullet-list">
+                <li>タイムラインは秒数ではなく、GameWith の主将 / 副将1 / 副将2 と連鎖順 早い / 普通 / 遅い をそのまま順番化しています。</li>
+                <li>補佐は技能条件と重複技能、列条件の確認に使います。</li>
+              </ul>
+            </div>
+          </details>
 
           <div class="builder-select-grid">
             <div class="field">
@@ -1716,40 +1872,47 @@
               <button class="secondary-button" id="builderLoadGuideButton" type="button">おすすめ編成を読み込む</button>
               <button class="secondary-button" id="builderResetButton" type="button">編成ツールをリセット</button>
             </div>
-
-            <div class="field">
-              <label for="builderVice1">副将1</label>
-              <select id="builderVice1" aria-label="副将1"></select>
-            </div>
-
-            <div class="field">
-              <label for="builderVice2">副将2</label>
-              <select id="builderVice2" aria-label="副将2"></select>
-            </div>
-
-            <div class="field toggle-card">
-              <strong>副将戦法の表示</strong>
-              <label class="toggle-switch">
-                <input id="builderVice1Enabled" type="checkbox" checked>
-                <span>副将1の戦法をタイムラインに含める</span>
-              </label>
-              <label class="toggle-switch">
-                <input id="builderVice2Enabled" type="checkbox" checked>
-                <span>副将2の戦法をタイムラインに含める</span>
-              </label>
-              <p>戦威オン / オフ比較の代わりに、副将戦法を表示対象から外して見比べられます。</p>
-            </div>
-
-            <div class="field">
-              <label for="builderAide1">補佐1</label>
-              <select id="builderAide1" aria-label="補佐1"></select>
-            </div>
-
-            <div class="field">
-              <label for="builderAide2">補佐2</label>
-              <select id="builderAide2" aria-label="補佐2"></select>
-            </div>
           </div>
+
+          <details class="section-details">
+            <summary>副将・補佐・戦法オン / オフ</summary>
+            <div class="details-body">
+              <div class="builder-select-grid">
+                <div class="field">
+                  <label for="builderVice1">副将1</label>
+                  <select id="builderVice1" aria-label="副将1"></select>
+                </div>
+
+                <div class="field">
+                  <label for="builderVice2">副将2</label>
+                  <select id="builderVice2" aria-label="副将2"></select>
+                </div>
+
+                <div class="field toggle-card">
+                  <strong>副将戦法の表示</strong>
+                  <label class="toggle-switch">
+                    <input id="builderVice1Enabled" type="checkbox" checked>
+                    <span>副将1の戦法をタイムラインに含める</span>
+                  </label>
+                  <label class="toggle-switch">
+                    <input id="builderVice2Enabled" type="checkbox" checked>
+                    <span>副将2の戦法をタイムラインに含める</span>
+                  </label>
+                  <p>副将戦法を一時的に外して比較できます。</p>
+                </div>
+
+                <div class="field">
+                  <label for="builderAide1">補佐1</label>
+                  <select id="builderAide1" aria-label="補佐1"></select>
+                </div>
+
+                <div class="field">
+                  <label for="builderAide2">補佐2</label>
+                  <select id="builderAide2" aria-label="補佐2"></select>
+                </div>
+              </div>
+            </div>
+          </details>
 
           <div class="toolbar-summary" id="builderSummary"></div>
           <p class="field-note" id="builderValidation" hidden></p>
