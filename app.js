@@ -978,6 +978,7 @@ const season3FeaturedSkills = preparedSkills.filter((skill) => skill.season3);
 const elements = {
   viewButtons: Array.from(document.querySelectorAll("[data-view-tab]")),
   viewPanels: Array.from(document.querySelectorAll(".app-view")),
+  viewNav: document.querySelector(".view-nav"),
   datasetCount: document.querySelector("#datasetCount"),
   ssrCount: document.querySelector("#ssrCount"),
   srCount: document.querySelector("#srCount"),
@@ -1186,6 +1187,7 @@ function syncSecondaryOptions() {
 function setActiveView(viewKey, options = {}) {
   const nextView = VIEW_KEYS.includes(viewKey) ? viewKey : "power";
   const updateHash = options.updateHash !== false;
+  const scrollToNav = options.scrollToNav === true;
 
   elements.viewButtons.forEach((button) => {
     button.classList.toggle("is-active", button.dataset.viewTab === nextView);
@@ -1200,6 +1202,14 @@ function setActiveView(viewKey, options = {}) {
     if (window.location.hash !== nextHash) {
       history.replaceState(null, "", nextHash);
     }
+  }
+
+  if (scrollToNav && elements.viewNav) {
+    const navTop = elements.viewNav.getBoundingClientRect().top + window.scrollY - 12;
+    window.scrollTo({
+      top: Math.max(0, navTop),
+      behavior: "smooth"
+    });
   }
 }
 
@@ -1403,6 +1413,47 @@ function renderDisplayTags(character, highlightedTags = []) {
           return `<span class="${classes.join(" ")}">${escapeHtml(tag)}</span>`;
         })
         .join("")}
+    </div>
+  `;
+}
+
+function renderDisclosure(summaryLabel, bodyMarkup, extraClass = "") {
+  const body = String(bodyMarkup ?? "").trim();
+  if (!body) {
+    return "";
+  }
+
+  return `
+    <details class="card-disclosure ${escapeHtml(extraClass)}">
+      <summary>
+        <span>${escapeHtml(summaryLabel)}</span>
+      </summary>
+      <div class="details-body">
+        ${body}
+      </div>
+    </details>
+  `;
+}
+
+function renderBattleArtPreview(character) {
+  if (!character.battleArtName && !(character.battleArtEffects ?? []).length) {
+    return "";
+  }
+
+  const previewText = character.battleArtEffects?.[0] ?? "戦法効果は詳細を開いて確認できます。";
+  const chips = [
+    character.battleArtMeta?.type ? `系統 ${character.battleArtMeta.type}` : "",
+    character.battleArtMeta?.chainOrder ? `連鎖順 ${character.battleArtMeta.chainOrder}` : ""
+  ].filter(Boolean);
+
+  return `
+    <div class="inline-summary">
+      <div class="inline-summary-head">
+        <p class="skill-group-title">戦法サマリー</p>
+        <h4>${escapeHtml(character.battleArtName || "戦法名なし")}</h4>
+      </div>
+      ${chips.length ? `<div class="meta-chip-list">${chips.map((chip) => `<span class="meta-chip">${escapeHtml(chip)}</span>`).join("")}</div>` : ""}
+      <p>${escapeHtml(previewText)}</p>
     </div>
   `;
 }
@@ -1764,6 +1815,18 @@ function renderCharacterCard(character, options = {}) {
   const showSeason3Info = options.showSeason3Info ?? false;
   const showBattleArt = options.showBattleArt ?? true;
   const showGuideInsights = options.showGuideInsights ?? false;
+  const detailsMarkup = renderDisclosure(
+    "詳細を開く",
+    [
+      showBattleArt ? renderBattleArtBlock(character) : "",
+      showGuideInsights ? renderGuideInsightsBlock(character) : "",
+      showSeason3Info ? renderSeason3HeroBlock(character) : "",
+      showTags ? renderDisplayTags(character, highlightedTags) : "",
+      renderSkillChips(character, selectedConditionKeys),
+      showPersonalities ? renderPersonalityGroup(character, chainStats) : ""
+    ].join(""),
+    "character-disclosure"
+  );
 
   return `
     <article class="character-card">
@@ -1791,18 +1854,14 @@ function renderCharacterCard(character, options = {}) {
             <span class="pair-badge rank-1">1位: ${escapeHtml(character.top1.label)} ${character.top1.value}</span>
             <span class="pair-badge rank-2">2位: ${escapeHtml(character.top2.label)} ${character.top2.value}</span>
           </div>
-          ${showBattleArt ? renderBattleArtBlock(character) : ""}
-          ${showGuideInsights ? renderGuideInsightsBlock(character) : ""}
-          ${showSeason3Info ? renderSeason3HeroBlock(character) : ""}
+          ${showBattleArt ? renderBattleArtPreview(character) : ""}
           ${renderFeatureTags(character, highlightedTags)}
-          ${showTags ? renderDisplayTags(character, highlightedTags) : ""}
           ${renderChainInfo(chainStats)}
-          ${renderSkillChips(character, selectedConditionKeys)}
-          ${showPersonalities ? renderPersonalityGroup(character, chainStats) : ""}
           ${showActions ? renderCardActions(character) : ""}
           <dl class="stats-grid">
             ${renderStatsGrid(character, selectedStats)}
           </dl>
+          ${detailsMarkup}
         </div>
       </div>
     </article>
@@ -1861,21 +1920,27 @@ function renderSkillCard(skill) {
         <div class="meta-chip-list">${conditionMarkup}${featureMarkup}</div>
       </div>
       <p class="skill-summary">${escapeHtml(skill.summary || "概要データはありません。")}</p>
-      ${renderSeason3SkillBlock(skill)}
-      <div class="effect-grid">
-        <section class="effect-box">
-          <h3>初期効果</h3>
-          <p>${escapeHtml(skill.initialEffect || "データなし")}</p>
-        </section>
-        <section class="effect-box">
-          <h3>最大効果</h3>
-          <p>${escapeHtml(skill.maxEffect || "データなし")}</p>
-        </section>
-      </div>
-      <div class="skill-group">
-        <p class="skill-group-title">所持武将</p>
-        <div class="holder-list">${holderMarkup}</div>
-      </div>
+      ${renderDisclosure(
+        "効果と所持武将を開く",
+        `
+          ${renderSeason3SkillBlock(skill)}
+          <div class="effect-grid">
+            <section class="effect-box">
+              <h3>初期効果</h3>
+              <p>${escapeHtml(skill.initialEffect || "データなし")}</p>
+            </section>
+            <section class="effect-box">
+              <h3>最大効果</h3>
+              <p>${escapeHtml(skill.maxEffect || "データなし")}</p>
+            </section>
+          </div>
+          <div class="skill-group">
+            <p class="skill-group-title">所持武将</p>
+            <div class="holder-list">${holderMarkup}</div>
+          </div>
+        `,
+        "skill-disclosure"
+      )}
     </article>
   `;
 }
@@ -2499,7 +2564,7 @@ function openBuilderWithCommander(name) {
   }
 
   elements.builderCommander.value = name;
-  setActiveView("builder");
+  setActiveView("builder", { scrollToNav: true });
   renderBuilderView();
 }
 
@@ -3428,13 +3493,13 @@ function closeSkillDialog() {
 
 function openCharacterDb(name) {
   elements.characterKeyword.value = name;
-  setActiveView("character");
+  setActiveView("character", { scrollToNav: true });
   renderCharacterDb();
 }
 
 function openSynergyWithReference(name) {
   elements.synergyCommander.value = name;
-  setActiveView("synergy");
+  setActiveView("synergy", { scrollToNav: true });
   renderSynergy();
 }
 
@@ -3448,7 +3513,7 @@ function bindGlobalActions() {
 
     const viewButton = event.target.closest("[data-switch-view]");
     if (viewButton) {
-      setActiveView(viewButton.dataset.switchView);
+      setActiveView(viewButton.dataset.switchView, { scrollToNav: true });
       return;
     }
 
@@ -3481,7 +3546,7 @@ function bindGlobalActions() {
 function bindViewTabs() {
   elements.viewButtons.forEach((button) => {
     button.addEventListener("click", () => {
-      setActiveView(button.dataset.viewTab);
+      setActiveView(button.dataset.viewTab, { scrollToNav: true });
     });
   });
 
