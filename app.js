@@ -25,7 +25,7 @@ const SEASON3 =
         sources: []
       };
 
-const VIEW_KEYS = ["power", "character", "skill", "synergy", "builder", "board"];
+const VIEW_KEYS = ["power", "character", "skill", "synergy", "builder", "army", "board"];
 
 const STAT_DEFS = [
   { key: "attack", label: "攻撃" },
@@ -204,6 +204,204 @@ const S3_SLOT_FOCUS_DEFS = [
   { key: "balanced", label: "総合" }
 ];
 
+const ARMY_SEED_MODE_DEFS = [
+  { key: "best", label: "最適枠で採用" },
+  { key: "commander", label: "主将固定" },
+  { key: "vice", label: "副将固定" },
+  { key: "aide", label: "補佐固定" }
+];
+
+const ARMY_CONCEPT_DEFS = [
+  {
+    key: "balanced",
+    label: "対軍勢バランス",
+    description: "主将の質、連鎖率、妨害、耐久の4点を均等に取りにいく基準構成です。",
+    primaryObjective: "pvp",
+    objectiveMix: { pvp: 0.65, defense: 0.2, siege: 0.1, gathering: 0.05 },
+    recommendedFormation: "基本陣参",
+    formationReason: "5部隊の役割を崩さず、横断バフと妨害を扱いやすい陣形です。",
+    rowTarget: { front: 2, middle: 2, back: 1 },
+    commanderTypeBias: { 闘: 8, 護: 7, 妨: 7, 援: 4 },
+    orderWeights: { 早い: 1, 普通: 0.82, 遅い: 0.64 },
+    featureWeights: {
+      弱化効果付与: 16,
+      強化解除: 12,
+      被ダメ軽減: 12,
+      強化効果付与: 10,
+      反撃: 9,
+      回復: 8,
+      攻速低下: 8,
+      弱化解除: 7,
+      会心: 6
+    },
+    tagWeights: {
+      "role.frontline-anchor": 18,
+      "role.burst-commander": 16,
+      "role.disruptor": 16,
+      "role.counter-enabler": 10,
+      "def.damage-cut": 10,
+      "control.buff-strip": 10
+    },
+    required: [
+      { tag: "role.frontline-anchor", minUnits: 2, weight: 1 },
+      { tag: "role.burst-commander", minUnits: 1, weight: 0.9 },
+      { tag: "role.disruptor", minUnits: 1, weight: 0.9 }
+    ],
+    preferred: [
+      { tag: "role.counter-enabler", minUnits: 1, weight: 0.6 },
+      { tag: "support.cleanse", minUnits: 1, weight: 0.45 }
+    ]
+  },
+  {
+    key: "siege",
+    label: "対物特化",
+    description: "対物、攻速、軍勢バフを重ね、城や砦を削る速度を優先する軍勢です。",
+    primaryObjective: "siege",
+    objectiveMix: { siege: 0.78, pvp: 0.12, defense: 0.1, gathering: 0 },
+    recommendedFormation: "錐行陣参",
+    formationReason: "通常攻撃火力を押し上げやすく、対物主将を複数置いた時の削りが安定します。",
+    rowTarget: { front: 2, middle: 2, back: 1 },
+    commanderTypeBias: { 闘: 10, 援: 8, 護: 4, 妨: 2 },
+    orderWeights: { 早い: 1, 普通: 0.86, 遅い: 0.58 },
+    featureWeights: {
+      対物: 22,
+      攻速上昇: 12,
+      強化効果付与: 10,
+      被ダメ軽減: 6,
+      反撃: 5,
+      会心: 5,
+      デバフ無効: 4
+    },
+    tagWeights: {
+      "role.siege-breaker": 22,
+      "siege.structure-damage-up": 18,
+      "tempo.attack-speed-up": 12,
+      "role.flex-support": 8,
+      "def.debuff-immunity": 8
+    },
+    required: [
+      { tag: "role.siege-breaker", minUnits: 2, weight: 1 },
+      { tag: "siege.structure-damage-up", minUnits: 3, weight: 0.95 },
+      { tag: "role.frontline-anchor", minUnits: 1, weight: 0.7 }
+    ],
+    preferred: [
+      { tag: "tempo.attack-speed-up", minUnits: 2, weight: 0.6 },
+      { tag: "role.flex-support", minUnits: 1, weight: 0.45 }
+    ]
+  },
+  {
+    key: "counter",
+    label: "反撃特化",
+    description: "反撃強化と被ダメ軽減を厚くして、殴られながら返す軍勢です。",
+    primaryObjective: "defense",
+    objectiveMix: { defense: 0.55, pvp: 0.35, siege: 0.1, gathering: 0 },
+    recommendedFormation: "鶴翼陣参",
+    formationReason: "耐久寄りの軍勢に噛み合いやすく、反撃支援と前列保持を両立しやすい陣形です。",
+    rowTarget: { front: 2, middle: 1, back: 2 },
+    commanderTypeBias: { 護: 10, 闘: 8, 妨: 5, 援: 4 },
+    orderWeights: { 早い: 0.86, 普通: 1, 遅い: 0.74 },
+    featureWeights: {
+      反撃: 22,
+      被ダメ軽減: 16,
+      堅固: 12,
+      回復: 11,
+      強化効果付与: 10,
+      弱化解除: 8,
+      デバフ無効: 8
+    },
+    tagWeights: {
+      "role.counter-enabler": 22,
+      "def.damage-cut": 16,
+      "role.frontline-anchor": 14,
+      "support.heal": 10,
+      "def.debuff-immunity": 8
+    },
+    required: [
+      { tag: "role.counter-enabler", minUnits: 2, weight: 1 },
+      { tag: "def.damage-cut", minUnits: 2, weight: 0.9 },
+      { tag: "role.frontline-anchor", minUnits: 2, weight: 0.9 }
+    ],
+    preferred: [
+      { tag: "support.heal", minUnits: 1, weight: 0.55 },
+      { tag: "support.cleanse", minUnits: 1, weight: 0.45 }
+    ]
+  },
+  {
+    key: "debuff",
+    label: "弱化妨害",
+    description: "恐怖、攻速低下、強化解除を重ねて相手のテンポを崩す軍勢です。",
+    primaryObjective: "pvp",
+    objectiveMix: { pvp: 0.75, defense: 0.15, siege: 0.1, gathering: 0 },
+    recommendedFormation: "策謀陣参",
+    formationReason: "策略を伸ばして妨害を通しやすくし、前半のテンポを握りやすい陣形です。",
+    rowTarget: { front: 1, middle: 2, back: 2 },
+    commanderTypeBias: { 妨: 12, 護: 6, 援: 4, 闘: 3 },
+    orderWeights: { 早い: 1, 普通: 0.84, 遅い: 0.54 },
+    featureWeights: {
+      弱化効果付与: 22,
+      攻速低下: 14,
+      強化解除: 14,
+      継続削り: 10,
+      弱化解除: 6,
+      被ダメ軽減: 4
+    },
+    tagWeights: {
+      "role.disruptor": 20,
+      "tempo.attack-speed-down": 16,
+      "control.buff-strip": 14,
+      "control.fear": 14,
+      "control.dot": 10
+    },
+    required: [
+      { tag: "role.disruptor", minUnits: 2, weight: 1 },
+      { tag: "tempo.attack-speed-down", minUnits: 1, weight: 0.8 },
+      { tag: "control.buff-strip", minUnits: 1, weight: 0.8 }
+    ],
+    preferred: [
+      { tag: "control.fear", minUnits: 1, weight: 0.55 },
+      { tag: "role.frontline-anchor", minUnits: 1, weight: 0.45 }
+    ]
+  },
+  {
+    key: "defense",
+    label: "防衛耐久",
+    description: "前列維持、被ダメ軽減、回復、解除を積み、長期戦で崩れにくくします。",
+    primaryObjective: "defense",
+    objectiveMix: { defense: 0.75, pvp: 0.15, siege: 0.1, gathering: 0 },
+    recommendedFormation: "鶴翼陣参",
+    formationReason: "防御補正と列維持を取りやすく、防衛や受け寄りの軍勢に向いています。",
+    rowTarget: { front: 2, middle: 2, back: 1 },
+    commanderTypeBias: { 護: 12, 妨: 7, 援: 5, 闘: 4 },
+    orderWeights: { 早い: 0.8, 普通: 1, 遅い: 0.82 },
+    featureWeights: {
+      被ダメ軽減: 20,
+      回復: 16,
+      堅固: 14,
+      弱化解除: 12,
+      デバフ無効: 12,
+      反撃: 8,
+      強化効果付与: 8
+    },
+    tagWeights: {
+      "role.frontline-anchor": 20,
+      "def.damage-cut": 18,
+      "support.heal": 14,
+      "support.cleanse": 12,
+      "def.debuff-immunity": 10,
+      "role.disruptor": 6
+    },
+    required: [
+      { tag: "role.frontline-anchor", minUnits: 2, weight: 1 },
+      { tag: "def.damage-cut", minUnits: 2, weight: 0.9 },
+      { tag: "support.heal", minUnits: 1, weight: 0.75 }
+    ],
+    preferred: [
+      { tag: "support.cleanse", minUnits: 1, weight: 0.55 },
+      { tag: "def.debuff-immunity", minUnits: 1, weight: 0.45 }
+    ]
+  }
+];
+
 const BUILDER_SLOT_DEFS = [
   { key: "commander", label: "主将", tacticSlot: true, roleCondition: "main" },
   { key: "vice1", label: "副将1", tacticSlot: true, roleCondition: "vice" },
@@ -266,6 +464,14 @@ const LIVE_FEATURES = [
     description: "1部隊の主将・副将・補佐を置いて、連鎖順、技能条件、重複技能をまとめて確認する。",
     actionLabel: "編成ツールを開く",
     view: "builder"
+  },
+  {
+    title: "軍勢自動編成β",
+    status: "LIVE",
+    statusClass: "is-live",
+    description: "任意の武将と軍勢コンセプトを指定して、5部隊25体の候補を自動で組み上げる。",
+    actionLabel: "軍勢自動編成を開く",
+    view: "army"
   }
 ];
 
@@ -320,11 +526,11 @@ const PLANNED_FEATURES = [
     need: "必要: 装備一覧ソースの取り込みと正規化。"
   },
   {
-    title: "AI編成提案",
+    title: "手持ち入力対応AI編成",
     status: "PLAN",
     statusClass: "is-plan",
-    description: "目的と手持ちに対して前中後列まで含めた候補編成を提案する。",
-    need: "必要: 武将DB、技能DB、装備DB、評価ルールの統合。"
+    description: "所持武将、育成段階、装備、固定枠まで反映して個人用の候補軍勢を提案する。",
+    need: "必要: 手持ち入力、育成段階、装備DB、評価ルールの統合。"
   },
   {
     title: "AI対策提案",
@@ -429,12 +635,56 @@ const S3_HERO_RAW_BY_NAME = Object.fromEntries(SEASON3.heroes.map((hero) => [her
 const S3_SKILL_RAW_BY_NAME = Object.fromEntries(SEASON3.skills.map((skill) => [skill.name, skill]));
 const S3_ROLE_BUCKETS = SEASON3.roleBuckets?.objectives ?? {};
 const S3_UPDATES = SEASON3.updates ?? [];
+const ARMY_CONCEPT_MAP = Object.fromEntries(ARMY_CONCEPT_DEFS.map((concept) => [concept.key, concept]));
 const BUILDER_SLOT_MAP = Object.fromEntries(BUILDER_SLOT_DEFS.map((slot) => [slot.key, slot]));
 const BUILDER_ROW_MAP = Object.fromEntries(BUILDER_ROW_DEFS.map((row) => [row.key, row]));
 const TACTIC_SLOT_DEFS = BUILDER_SLOT_DEFS.filter((slot) => slot.tacticSlot);
 
 const defaultRarities = RARITY_DEFS.map((rarity) => rarity.key);
 const defaultTypes = TYPE_DEFS.map((type) => type.key);
+
+const ARMY_FEATURE_GROUP_WEIGHTS = {
+  offense: {
+    対物: 22,
+    会心: 14,
+    攻速上昇: 12,
+    強化効果付与: 10,
+    継続削り: 10,
+    反撃: 8
+  },
+  defense: {
+    被ダメ軽減: 20,
+    堅固: 18,
+    回復: 16,
+    弱化解除: 14,
+    デバフ無効: 12,
+    反撃: 10,
+    強化効果付与: 8
+  },
+  control: {
+    弱化効果付与: 20,
+    攻速低下: 16,
+    強化解除: 16,
+    継続削り: 12,
+    弱化解除: 6,
+    デバフ無効: 4
+  },
+  support: {
+    強化効果付与: 18,
+    回復: 16,
+    弱化解除: 16,
+    被ダメ軽減: 10,
+    攻速上昇: 10,
+    デバフ無効: 10,
+    対物: 6
+  }
+};
+
+const ARMY_ORDER_VALUE_MAP = {
+  早い: 100,
+  普通: 72,
+  遅い: 48
+};
 
 function escapeHtml(value) {
   return String(value)
@@ -1074,6 +1324,21 @@ const elements = {
   builderTimeline: document.querySelector("#builderTimeline"),
   builderOverviewGrid: document.querySelector("#builderOverviewGrid"),
   builderSlotGrid: document.querySelector("#builderSlotGrid"),
+
+  armyView: document.querySelector("#view-army"),
+  armySeedCharacter: document.querySelector("#armySeedCharacter"),
+  armySeedMode: document.querySelector("#armySeedMode"),
+  armyConcept: document.querySelector("#armyConcept"),
+  armyRarityFilters: document.querySelector("#armyRarityFilters"),
+  armyBuildButton: document.querySelector("#armyBuildButton"),
+  armyResetButton: document.querySelector("#armyResetButton"),
+  armySummary: document.querySelector("#armySummary"),
+  armyValidation: document.querySelector("#armyValidation"),
+  armyTopCount: document.querySelector("#armyTopCount"),
+  armyOverviewGrid: document.querySelector("#armyOverviewGrid"),
+  armyUnitGrid: document.querySelector("#armyUnitGrid"),
+  armyAlternativeGrid: document.querySelector("#armyAlternativeGrid"),
+  armyReserveGrid: document.querySelector("#armyReserveGrid"),
 
   s3HeroSeasonLabel: document.querySelector("#s3HeroSeasonLabel"),
   s3ThemeLabel: document.querySelector("#s3ThemeLabel"),
