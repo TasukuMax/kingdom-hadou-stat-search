@@ -70,22 +70,84 @@ const CHARACTER_TAG_DEFS = [
 ];
 
 const CHARACTER_FEATURE_DEFS = [
-  { key: "対物", label: "対物", hint: "対物上昇・建物削りに関わる" },
-  { key: "弱化効果付与", label: "弱化効果付与", hint: "低下・病毒・恐怖などを相手に付与する" },
-  { key: "強化効果付与", label: "強化効果付与", hint: "攻撃上昇・攻速上昇・堅固・回避などを付与する" },
-  { key: "強化解除", label: "強化解除", hint: "相手の強化効果を外せる" },
+  { key: "対物", label: "対物", hint: "技能や戦法で対物ダメージを伸ばせる" },
+  { key: "弱化効果付与", label: "弱化効果付与", hint: "攻撃低下・防御低下・戦威低下・策略低下・恐怖・病毒など" },
+  { key: "弱化解除", label: "弱化解除", hint: "味方の弱化効果を解除できる" },
+  { key: "強化効果付与", label: "強化効果付与", hint: "堅固・反撃強化・攻速上昇・各種上昇効果の付与" },
+  { key: "強化解除", label: "強化解除", hint: "相手の強化効果を解除できる" },
+  { key: "回復", label: "回復", hint: "負傷兵回復などを持つ" },
   { key: "被ダメ軽減", label: "被ダメ軽減", hint: "被ダメージ軽減を持つ" },
   { key: "反撃", label: "反撃", hint: "反撃強化や反撃時効果を持つ" },
   { key: "攻速上昇", label: "攻速上昇", hint: "攻撃速度を上げられる" },
   { key: "攻速低下", label: "攻速低下", hint: "相手の攻撃速度を下げられる" },
-  { key: "継続削り", label: "継続削り", hint: "病毒など継続的な削りを持つ" },
-  { key: "会心", label: "会心", hint: "会心発生率・会心威力を伸ばす" },
-  { key: "堅固", label: "堅固", hint: "堅固を付与または活用する" },
+  { key: "継続削り", label: "継続削り", hint: "病毒などの継続削りを持つ" },
+  { key: "会心", label: "会心", hint: "会心発生率や会心威力に関わる" },
+  { key: "堅固", label: "堅固", hint: "堅固付与や堅固活用を持つ" },
   { key: "回避", label: "回避", hint: "回避付与を持つ" },
   { key: "連鎖依存", label: "連鎖依存", hint: "共通個性数で性能が伸びる" },
   { key: "兵力条件", label: "兵力条件", hint: "兵力割合で効果が変わる" },
-  { key: "調達", label: "調達", hint: "調達・採集まわりで価値がある" },
+  { key: "調達", label: "調達", hint: "調達・採集で価値がある" },
   { key: "デバフ無効", label: "デバフ無効", hint: "能力低下系デバフを受けにくい" }
+];
+
+const SKILL_FEATURE_MAP = {
+  攻城: ["対物"],
+  破壁: ["対物"],
+  大勇: ["対物"],
+  山読: ["対物", "連鎖依存"],
+  掃討: ["攻速上昇"],
+  猛者: ["会心"],
+  豪傑: ["会心"],
+  発揚: ["兵力条件"],
+  奮戦: ["兵力条件"],
+  不屈: ["兵力条件"],
+  逆境: ["兵力条件"],
+  洞察: ["調達"],
+  人望: ["調達"],
+  雄心: ["連鎖依存"],
+  死王: ["会心", "攻速上昇", "強化効果付与"],
+  戦士: ["攻速上昇", "連鎖依存"],
+  報復: ["反撃", "弱化効果付与"],
+  飛槍: ["攻速上昇", "連鎖依存"],
+  白老: ["強化効果付与", "堅固", "連鎖依存"],
+  戦神子: ["連鎖依存"],
+  伝熱: ["攻速上昇", "強化効果付与"],
+  不敗: ["被ダメ軽減"],
+  巨人: ["強化効果付与"],
+  才賢: ["弱化効果付与", "攻速低下"],
+  黒弓: ["弱化効果付与", "継続削り"],
+  奇矯: ["弱化効果付与"],
+  堅靭: ["強化効果付与", "回避"]
+};
+
+const S3_FEATURE_TAG_MAP = {
+  "siege.structure-damage-up": ["対物"],
+  "control.fear": ["弱化効果付与"],
+  "control.buff-strip": ["弱化効果付与", "強化解除"],
+  "control.dot": ["弱化効果付与", "継続削り"],
+  "tempo.attack-speed-down": ["弱化効果付与", "攻速低下"],
+  "tempo.attack-speed-up": ["攻速上昇"],
+  "role.counter-enabler": ["反撃"],
+  "def.damage-cut": ["被ダメ軽減"],
+  "def.debuff-immunity": ["デバフ無効"]
+};
+
+const TACTIC_FEATURE_RULES = [
+  { feature: "対物", pattern: /対物/u },
+  { feature: "弱化効果付与", pattern: /(攻撃|防御|戦威|策略|攻撃速度)を?\d+[%％]低下|恐怖|病毒/u },
+  { feature: "弱化解除", pattern: /弱化効果.*解除/u },
+  { feature: "強化解除", pattern: /強化効果.*解除/u },
+  { feature: "回復", pattern: /回復/u },
+  { feature: "被ダメ軽減", pattern: /被ダメージ.*軽減/u },
+  { feature: "反撃", pattern: /反撃/u },
+  { feature: "攻速上昇", pattern: /攻撃速度上昇/u },
+  { feature: "攻速低下", pattern: /攻撃速度低下/u },
+  { feature: "継続削り", pattern: /病毒/u },
+  { feature: "会心", pattern: /会心(発生|威力)?上昇/u },
+  { feature: "堅固", pattern: /堅固/u },
+  { feature: "回避", pattern: /回避/u },
+  { feature: "兵力条件", pattern: /兵力が\d+[%％](以上|以下)/u },
+  { feature: "強化効果付与", pattern: /付与|反撃強化/u }
 ];
 
 const CHARACTER_SORT_DEFS = [
@@ -233,6 +295,9 @@ const CHARACTER_SORT_MAP = Object.fromEntries(
 const SKILL_SORT_MAP = Object.fromEntries(
   SKILL_SORT_DEFS.map((definition) => [definition.key, definition.label])
 );
+const CHARACTER_FEATURE_MAP = Object.fromEntries(
+  CHARACTER_FEATURE_DEFS.map((definition) => [definition.key, definition])
+);
 const S3_TAG_MAP = Object.fromEntries(SEASON3.tags.map((tag) => [tag.key, tag]));
 const S3_OBJECTIVE_MAP = Object.fromEntries(SEASON3.objectives.map((objective) => [objective.key, objective]));
 const S3_HERO_RAW_BY_NAME = Object.fromEntries(SEASON3.heroes.map((hero) => [hero.name, hero]));
@@ -288,6 +353,10 @@ function seasonTagLabel(tagKey) {
   return S3_TAG_MAP[tagKey]?.label ?? tagKey;
 }
 
+function featureHintFor(featureKey) {
+  return CHARACTER_FEATURE_MAP[featureKey]?.hint ?? "";
+}
+
 function hasSeason3Tags(season3, tagKeys) {
   return tagKeys.some((tagKey) => season3?.tags?.includes(tagKey));
 }
@@ -299,81 +368,35 @@ function collectSkillEffectText(skillRecords) {
     .join(" ");
 }
 
-function deriveFeatureTags(skillRecords, season3) {
-  const skillText = collectSkillEffectText(skillRecords);
+function collectTacticText(character) {
+  return [character.battleArtName, ...(character.battleArtEffects ?? [])].filter(Boolean).join(" ");
+}
+
+function deriveFeatureTags(character, skillRecords, season3) {
   const featureTags = [];
+  const skillText = collectSkillEffectText(skillRecords);
+  const tacticText = collectTacticText(character);
 
-  if (skillText.includes("対物") || hasSeason3Tags(season3, ["siege.structure-damage-up"])) {
-    featureTags.push("対物");
-  }
-
-  if (
-    hasAnyKeyword(skillText, ["低下", "病毒", "恐怖"]) ||
-    hasSeason3Tags(season3, ["control.fear", "control.buff-strip", "control.dot", "tempo.attack-speed-down"])
-  ) {
-    featureTags.push("弱化効果付与");
-  }
-
-  if (hasAnyKeyword(skillText, ["攻撃速度上昇", "攻撃上昇", "堅固", "通常攻撃回避"])) {
-    featureTags.push("強化効果付与");
-  }
-
-  if (skillText.includes("強化解除") || hasSeason3Tags(season3, ["control.buff-strip"])) {
-    featureTags.push("強化解除");
-  }
-
-  if (
-    (skillText.includes("被ダメージ") && hasAnyKeyword(skillText, ["軽減", "₋", "-"])) ||
-    hasSeason3Tags(season3, ["def.damage-cut"])
-  ) {
-    featureTags.push("被ダメ軽減");
-  }
-
-  if (skillText.includes("反撃") || hasSeason3Tags(season3, ["role.counter-enabler"])) {
-    featureTags.push("反撃");
-  }
-
-  if (
-    hasAnyKeyword(skillText, ["攻撃速度上昇", "部隊の攻撃速度が上昇"]) ||
-    hasSeason3Tags(season3, ["tempo.attack-speed-up"])
-  ) {
-    featureTags.push("攻速上昇");
-  }
-
-  if (skillText.includes("攻撃速度低下") || hasSeason3Tags(season3, ["tempo.attack-speed-down"])) {
-    featureTags.push("攻速低下");
-  }
-
-  if (skillText.includes("病毒") || hasSeason3Tags(season3, ["control.dot"])) {
-    featureTags.push("継続削り");
-  }
-
-  if (skillText.includes("会心")) {
-    featureTags.push("会心");
-  }
-
-  if (skillText.includes("堅固")) {
-    featureTags.push("堅固");
-  }
-
-  if (skillText.includes("回避")) {
-    featureTags.push("回避");
+  for (const skill of skillRecords) {
+    featureTags.push(...(SKILL_FEATURE_MAP[skill.name] ?? []));
   }
 
   if (hasAnyKeyword(skillText, ["共通する個性", "同じ個性を持つ武将の人数"])) {
     featureTags.push("連鎖依存");
   }
 
-  if (hasAnyKeyword(skillText, ["50%以上", "50%以下", "30%以下", "30％以下"])) {
-    featureTags.push("兵力条件");
-  }
-
   if (skillText.includes("調達")) {
     featureTags.push("調達");
   }
 
-  if (hasSeason3Tags(season3, ["def.debuff-immunity"])) {
-    featureTags.push("デバフ無効");
+  for (const rule of TACTIC_FEATURE_RULES) {
+    if (rule.pattern.test(tacticText)) {
+      featureTags.push(rule.feature);
+    }
+  }
+
+  for (const tagKey of season3?.tags ?? []) {
+    featureTags.push(...(S3_FEATURE_TAG_MAP[tagKey] ?? []));
   }
 
   return uniqueValues(featureTags);
@@ -427,14 +450,15 @@ const preparedCharacters = RAW_CHARACTERS.map((character) => {
   const conditionLabels = CONDITION_DEFS.filter(
     (condition) => conditionIndex[condition.key].length > 0
   ).map((condition) => condition.label);
-  const featureTags = deriveFeatureTags(skillRecords, season3);
+  const battleArtText = collectTacticText(character);
+  const featureTags = deriveFeatureTags(character, skillRecords, season3);
 
   const displayTags = uniqueValues([
     character.rarity,
     `天賦${character.tenpu}`,
     `${rankedStats[0].label}1位`,
     `${rankedStats[1].label}2位`,
-    ...featureTags,
+    character.type ? `${character.type}タイプ` : "",
     ...conditionLabels,
     ...(season3 ? [season3.type, ...season3.bestUseCases, ...season3.tags.map(seasonTagLabel)] : [])
   ]);
@@ -443,9 +467,13 @@ const preparedCharacters = RAW_CHARACTERS.map((character) => {
     [
       character.name,
       character.rarity,
+      character.type ? `${character.type}タイプ` : "",
       `天賦${character.tenpu}`,
       ...displayTags,
       ...featureTags,
+      character.battleArtName ?? "",
+      ...(character.battleArtEffects ?? []),
+      battleArtText,
       ...character.skills,
       ...skillRecords.map((skill) => skill.summary),
       ...skillRecords.map((skill) => skill.initialEffect),
@@ -469,6 +497,7 @@ const preparedCharacters = RAW_CHARACTERS.map((character) => {
     conditionKeys: CONDITION_DEFS.filter((condition) => conditionLabels.includes(condition.label)).map(
       (condition) => condition.key
     ),
+    battleArtText,
     featureTags,
     displayTags,
     searchText,
@@ -556,6 +585,7 @@ const elements = {
   chainSortEnabled: document.querySelector("#chainSortEnabled"),
   rarityFilters: document.querySelector("#rarityFilters"),
   conditionFilters: document.querySelector("#conditionFilters"),
+  powerFeatureFilters: document.querySelector("#powerFeatureFilters"),
   resetButton: document.querySelector("#resetButton"),
   validationMessage: document.querySelector("#validationMessage"),
   summary: document.querySelector("#searchSummary"),
@@ -895,6 +925,49 @@ function renderDisplayTags(character, highlightedTags = []) {
   `;
 }
 
+function renderFeatureTags(character, highlightedFeatures = []) {
+  if (!character.featureTags.length) {
+    return "";
+  }
+
+  const highlightedSet = new Set(highlightedFeatures);
+  return `
+    <div class="skill-group">
+      <p class="skill-group-title">特徴</p>
+      <div class="meta-chip-list">
+        ${character.featureTags
+          .map((feature) => {
+            const classes = ["meta-chip", "is-feature"];
+            if (highlightedSet.has(feature)) {
+              classes.push("is-highlight");
+            }
+            const hint = featureHintFor(feature);
+            return `<span class="${classes.join(" ")}" title="${escapeHtml(hint)}">${escapeHtml(feature)}</span>`;
+          })
+          .join("")}
+      </div>
+    </div>
+  `;
+}
+
+function renderBattleArtBlock(character) {
+  if (!character.battleArtName && !(character.battleArtEffects ?? []).length) {
+    return "";
+  }
+
+  return `
+    <div class="battle-art-box">
+      <p class="skill-group-title">戦法</p>
+      <h4>${escapeHtml(character.battleArtName || "戦法名なし")}</h4>
+      <ul class="bullet-list">
+        ${(character.battleArtEffects ?? [])
+          .map((effect) => `<li>${escapeHtml(effect)}</li>`)
+          .join("")}
+      </ul>
+    </div>
+  `;
+}
+
 function renderSeason3HeroBlock(character) {
   const season3 = character.season3;
   if (!season3) {
@@ -1105,6 +1178,7 @@ function renderCharacterCard(character, options = {}) {
   const showPersonalities = options.showPersonalities ?? false;
   const showActions = options.showActions ?? true;
   const showSeason3Info = options.showSeason3Info ?? false;
+  const showBattleArt = options.showBattleArt ?? true;
 
   return `
     <article class="character-card">
@@ -1122,9 +1196,8 @@ function renderCharacterCard(character, options = {}) {
             <div>
               <h3>${escapeHtml(character.name)}</h3>
               <p class="subline">
-                ${escapeHtml(character.rarity)} / 天賦 ${character.tenpu} / 基礎連鎖率 ${escapeHtml(
-                  formatPercent(character.chainBase * 100)
-                )}
+                ${escapeHtml(character.rarity)} / ${escapeHtml(character.type || "-")}タイプ / 天賦 ${character.tenpu} /
+                基礎連鎖率 ${escapeHtml(formatPercent(character.chainBase * 100))}
               </p>
             </div>
             <a class="source-link" href="${escapeHtml(character.sourceUrl)}" target="_blank" rel="noreferrer">GameWith</a>
@@ -1133,7 +1206,9 @@ function renderCharacterCard(character, options = {}) {
             <span class="pair-badge rank-1">1位: ${escapeHtml(character.top1.label)} ${character.top1.value}</span>
             <span class="pair-badge rank-2">2位: ${escapeHtml(character.top2.label)} ${character.top2.value}</span>
           </div>
+          ${showBattleArt ? renderBattleArtBlock(character) : ""}
           ${showSeason3Info ? renderSeason3HeroBlock(character) : ""}
+          ${renderFeatureTags(character, highlightedTags)}
           ${showTags ? renderDisplayTags(character, highlightedTags) : ""}
           ${renderChainInfo(chainStats)}
           ${renderSkillChips(character, selectedConditionKeys)}
@@ -1251,11 +1326,12 @@ function buildPowerDescription(baseText, chainContext) {
   return `${baseText} 並び順は ${chainContext.chainReference.name} を主将に置いた場合の副将連鎖率が最優先です。`;
 }
 
-function getPowerSearchState(primary, secondary, rarities, conditions, chainContext) {
+function getPowerSearchState(primary, secondary, rarities, conditions, features, chainContext) {
   const filteredCharacters = preparedCharacters.filter(
     (character) =>
       rarities.includes(character.rarity) &&
       matchesConditions(character, conditions) &&
+      features.every((feature) => character.featureTags.includes(feature)) &&
       (!chainContext.chainReference || character.id !== chainContext.chainReference.id)
   );
 
@@ -1271,19 +1347,20 @@ function getPowerSearchState(primary, secondary, rarities, conditions, chainCont
       summary: formatSummaryText(
         [
           conditions.length ? `技能条件: ${conditions.map(conditionLabelFor).join(" / ")}` : "",
+          features.length ? `特徴: ${features.join(" / ")}` : "",
           rarities.length !== RARITY_DEFS.length ? `レアリティ: ${rarities.join(" / ")}` : "",
           chainContext.chainSortEnabled && chainContext.chainReference
             ? `連鎖率基準: ${chainContext.chainReference.name}`
             : ""
         ].filter(Boolean),
-        "技能条件や連鎖率基準に一致する武将を表示しています。"
+        "技能条件・特徴・連鎖率基準に一致する武将を表示しています。"
       ),
       exactTitle:
         chainContext.chainSortEnabled && chainContext.chainReference
           ? `連鎖率順: ${chainContext.chainReference.name}`
           : "条件一致",
       exactDescription: buildPowerDescription(
-        "選択したレアリティと技能条件に一致する武将です。魅力は除外し、攻撃・防御・戦威・策略の4項目だけを表示しています。",
+        "選択したレアリティ・技能条件・特徴に一致する武将です。魅力は除外し、攻撃・防御・戦威・策略の4項目だけを表示しています。",
         chainContext
       ),
       partialTitle: "ステータス検索の使い方",
@@ -1305,6 +1382,7 @@ function getPowerSearchState(primary, secondary, rarities, conditions, chainCont
         [
           `ステータス: ${labelFor(primary)}`,
           conditions.length ? `技能条件: ${conditions.map(conditionLabelFor).join(" / ")}` : "",
+          features.length ? `特徴: ${features.join(" / ")}` : "",
           rarities.length !== RARITY_DEFS.length ? `レアリティ: ${rarities.join(" / ")}` : "",
           chainContext.chainSortEnabled && chainContext.chainReference
             ? `連鎖率基準: ${chainContext.chainReference.name}`
@@ -1314,12 +1392,12 @@ function getPowerSearchState(primary, secondary, rarities, conditions, chainCont
       ),
       exactTitle: `1位一致: ${labelFor(primary)}`,
       exactDescription: buildPowerDescription(
-        "最も高いステータスが選択項目の武将です。レアリティと技能条件の絞り込みを反映しています。",
+        "最も高いステータスが選択項目の武将です。レアリティ・技能条件・特徴の絞り込みを反映しています。",
         chainContext
       ),
       partialTitle: `2位一致: ${labelFor(primary)}`,
       partialDescription: buildPowerDescription(
-        "1位ではないものの、2番目に高いステータスが選択項目の武将です。レアリティと技能条件の絞り込みを反映しています。",
+        "1位ではないものの、2番目に高いステータスが選択項目の武将です。レアリティ・技能条件・特徴の絞り込みを反映しています。",
         chainContext
       ),
       exact: sortPowerMatches(
@@ -1340,6 +1418,7 @@ function getPowerSearchState(primary, secondary, rarities, conditions, chainCont
       [
         `ステータス: ${labelFor(primary)} → ${labelFor(secondary)}`,
         conditions.length ? `技能条件: ${conditions.map(conditionLabelFor).join(" / ")}` : "",
+        features.length ? `特徴: ${features.join(" / ")}` : "",
         rarities.length !== RARITY_DEFS.length ? `レアリティ: ${rarities.join(" / ")}` : "",
         chainContext.chainSortEnabled && chainContext.chainReference
           ? `連鎖率基準: ${chainContext.chainReference.name}`
@@ -1349,12 +1428,12 @@ function getPowerSearchState(primary, secondary, rarities, conditions, chainCont
     ),
     exactTitle: `完全一致: ${labelFor(primary)} → ${labelFor(secondary)}`,
     exactDescription: buildPowerDescription(
-      "1位・2位の並び順まで一致する武将です。レアリティと技能条件の絞り込みを反映しています。",
+      "1位・2位の並び順まで一致する武将です。レアリティ・技能条件・特徴の絞り込みを反映しています。",
       chainContext
     ),
     partialTitle: `逆順一致: ${labelFor(secondary)} → ${labelFor(primary)}`,
     partialDescription: buildPowerDescription(
-      "上位2項目は一致するものの、1位・2位の順番が逆の武将です。レアリティと技能条件の絞り込みを反映しています。",
+      "上位2項目は一致するものの、1位・2位の順番が逆の武将です。レアリティ・技能条件・特徴の絞り込みを反映しています。",
       chainContext
     ),
     exact: sortPowerMatches(
@@ -1376,7 +1455,7 @@ function getPowerSearchState(primary, secondary, rarities, conditions, chainCont
 
 function renderPowerEmptyState() {
   elements.summary.textContent =
-    "第1ステータスや技能条件、連鎖率ソートを使って、戦力を伸ばしやすい武将を条件別に探せます。";
+    "第1ステータス、技能条件、特徴タグ、連鎖率ソートを組み合わせて、戦力を伸ばしやすい武将を探せます。";
 
   elements.exactTitle.textContent = "検索の使い方";
   elements.exactDescription.textContent =
@@ -1402,6 +1481,7 @@ function renderPowerResults() {
   const secondary = elements.secondaryStat.value;
   const rarities = readCheckedValuesIn(elements.powerForm, "power-rarity");
   const conditions = readCheckedValuesIn(elements.powerForm, "power-condition");
+  const features = readCheckedValuesIn(elements.powerForm, "power-feature");
   const chainSortEnabled = elements.chainSortEnabled.checked;
   const chainReference = characterByName[elements.chainCommander.value.trim()] ?? null;
   const chainContext = { chainSortEnabled, chainReference };
@@ -1410,6 +1490,7 @@ function renderPowerResults() {
     Boolean(primary) ||
     Boolean(secondary) ||
     Boolean(conditions.length) ||
+    Boolean(features.length) ||
     rarities.length !== RARITY_DEFS.length ||
     (chainSortEnabled && chainReference);
 
@@ -1440,7 +1521,7 @@ function renderPowerResults() {
     return;
   }
 
-  const state = getPowerSearchState(primary, secondary, rarities, conditions, chainContext);
+  const state = getPowerSearchState(primary, secondary, rarities, conditions, features, chainContext);
 
   elements.summary.textContent = state.summary;
   elements.exactTitle.textContent = state.exactTitle;
@@ -1449,6 +1530,7 @@ function renderPowerResults() {
   elements.exactList.innerHTML = renderCharacterCards(state.exact, {
     selectedStats: [primary, secondary],
     selectedConditionKeys: conditions,
+    highlightedTags: features,
     chainReference,
     emptyMessage: state.exactEmptyMessage
   });
@@ -1459,6 +1541,7 @@ function renderPowerResults() {
   elements.partialList.innerHTML = renderCharacterCards(state.partial, {
     selectedStats: [primary, secondary],
     selectedConditionKeys: conditions,
+    highlightedTags: features,
     chainReference,
     emptyMessage: state.partialEmptyMessage
   });
@@ -1474,6 +1557,9 @@ function resetPowerSearch() {
     .forEach((input) => (input.checked = defaultRarities.includes(input.value)));
   document
     .querySelectorAll('input[name="power-condition"]')
+    .forEach((input) => (input.checked = false));
+  document
+    .querySelectorAll('input[name="power-feature"]')
     .forEach((input) => (input.checked = false));
   setPowerValidation("");
   renderPowerResults();
@@ -1766,6 +1852,7 @@ function renderFeatureBoard() {
     showTags: true,
     showSeason3Info: true,
     showActions: true,
+    showBattleArt: false,
     emptyMessage: "Season 3 注目武将データがありません。"
   });
   elements.s3UpgradeGrid.innerHTML = topUpgrades.length
@@ -1957,6 +2044,7 @@ function boot() {
 
   renderCheckboxGroup(elements.rarityFilters, RARITY_DEFS, "power-rarity", defaultRarities);
   renderCheckboxGroup(elements.conditionFilters, CONDITION_DEFS, "power-condition", []);
+  renderCheckboxGroup(elements.powerFeatureFilters, CHARACTER_FEATURE_DEFS, "power-feature", []);
   renderCheckboxGroup(elements.characterRarityFilters, RARITY_DEFS, "db-rarity", defaultRarities);
   renderCheckboxGroup(elements.characterTagFilters, CHARACTER_TAG_DEFS, "db-tag", []);
   renderCheckboxGroup(elements.characterFeatureFilters, CHARACTER_FEATURE_DEFS, "db-feature", []);
