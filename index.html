@@ -1000,6 +1000,89 @@
         grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
       }
 
+      .army-summary-grid {
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      }
+
+      .army-unit-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        gap: 14px;
+      }
+
+      .army-unit-card {
+        padding: 18px;
+        border-radius: 22px;
+        background: rgba(255, 255, 255, 0.84);
+        border: 1px solid rgba(109, 57, 17, 0.14);
+        display: grid;
+        gap: 14px;
+      }
+
+      .army-unit-head,
+      .army-role-line,
+      .army-list-row,
+      .army-score-line {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        align-items: flex-start;
+      }
+
+      .army-role-line,
+      .army-list-row,
+      .army-score-line {
+        font-size: 0.92rem;
+      }
+
+      .army-unit-head p,
+      .army-list-row span:last-child,
+      .army-role-line span:last-child {
+        color: var(--muted);
+      }
+
+      .army-slot-list,
+      .army-note-list {
+        display: grid;
+        gap: 10px;
+      }
+
+      .army-slot-item {
+        padding: 12px 14px;
+        border-radius: 18px;
+        background: rgba(243, 234, 217, 0.52);
+        border: 1px solid rgba(109, 57, 17, 0.12);
+      }
+
+      .army-slot-item strong {
+        display: inline-block;
+        margin-right: 8px;
+      }
+
+      .army-explanation {
+        padding: 14px;
+        border-radius: 18px;
+        background: rgba(54, 90, 116, 0.08);
+        border: 1px solid rgba(54, 90, 116, 0.12);
+      }
+
+      .army-summary-card {
+        align-self: stretch;
+        padding: 16px;
+        border-radius: 20px;
+        border: 1px solid rgba(109, 57, 17, 0.12);
+        background: rgba(255, 255, 255, 0.58);
+      }
+
+      .army-summary-card strong {
+        display: inline-block;
+        margin-bottom: 6px;
+      }
+
+      .army-summary-card .count-pill {
+        align-self: flex-start;
+      }
+
       .builder-slot-card,
       .timeline-row-card {
         padding: 18px;
@@ -1340,7 +1423,8 @@
         .skill-card-grid,
         .module-grid,
         .quick-grid,
-        .builder-slot-grid {
+        .builder-slot-grid,
+        .army-unit-grid {
           grid-template-columns: 1fr;
         }
       }
@@ -1371,6 +1455,13 @@
         .card-layout,
         .builder-slot-head {
           grid-template-columns: 1fr;
+        }
+
+        .army-unit-head,
+        .army-role-line,
+        .army-list-row,
+        .army-score-line {
+          flex-direction: column;
         }
 
         .character-thumb-wrap {
@@ -1453,12 +1544,13 @@
         <h1>キングダム覇道 戦力・DB・相性検索</h1>
         <p>
           まず使いたい機能にすぐ入れて、必要な説明だけ後から開ける形に整理したモバイル優先版です。
-          SSR / SR の武将・技能データを横断して、戦力検索、武将DB、技能DB、相性検索、編成ツールを一つにまとめています。
+          SSR / SR の武将・技能データを横断して、戦力検索、武将DB、技能DB、相性検索、編成ツール、
+          軍勢自動編成を一つにまとめています。
         </p>
         <div class="hero-actions">
           <button class="mini-button" type="button" data-switch-view="power">戦力検索を開く</button>
+          <button class="mini-button" type="button" data-switch-view="army">軍勢自動編成を開く</button>
           <button class="mini-button" type="button" data-switch-view="builder">編成ツールを開く</button>
-          <button class="mini-button" type="button" data-switch-view="character">武将DBを開く</button>
         </div>
         <div class="hero-meta">
           <span>総数 <strong id="datasetCount"></strong></span>
@@ -1479,6 +1571,7 @@
           <button class="tab-button" type="button" data-view-tab="skill">技能DB</button>
           <button class="tab-button" type="button" data-view-tab="synergy">相性検索</button>
           <button class="tab-button" type="button" data-view-tab="builder">編成ツールβ</button>
+          <button class="tab-button" type="button" data-view-tab="army">軍勢自動編成β</button>
           <button class="tab-button" type="button" data-view-tab="board">S3ハブ</button>
         </div>
       </section>
@@ -1950,6 +2043,119 @@
         </section>
       </section>
 
+      <section class="app-view view-stack" id="view-army" hidden>
+        <section class="panel">
+          <div class="panel-header">
+            <div>
+              <h2>軍勢自動編成β</h2>
+              <p>
+                1人の武将を軸に、5部隊 × 5人の25体を自動で提案します。主将適性、副将連鎖率、補佐補完、
+                列条件、役割カバー、軍勢コンセプトをまとめて見て、今のデータで最も噛み合う軍勢を返します。
+              </p>
+            </div>
+          </div>
+
+          <details class="section-details">
+            <summary>この画面の採点基準</summary>
+            <div class="details-body">
+              <ul class="bullet-list">
+                <li>公式指南書の「部隊編成のポイント / 軍勢編成のポイント」、GameWith の編成・補佐・陣形記事を土台にしています。</li>
+                <li>note の編成ツール記事やプレイヤー記事で共通していた「連鎖率」「技能補完」「列適性」「5部隊の役割分担」を重視しています。</li>
+                <li>結果は固定解ではなく、公開ソースを横断して作ったヒューリスティックです。手持ちや装備入力はまだ未反映なので β 扱いにしています。</li>
+              </ul>
+            </div>
+          </details>
+
+          <div class="builder-select-grid">
+            <div class="field">
+              <label for="armySeedCharacter">軸にする武将</label>
+              <select id="armySeedCharacter" aria-label="軸にする武将"></select>
+              <p class="field-note">選んだ武将を必ず軍勢に含めます。空欄なら完全自動で組みます。</p>
+            </div>
+
+            <div class="field">
+              <label for="armySeedMode">固定する役割</label>
+              <select id="armySeedMode" aria-label="固定する役割"></select>
+              <p class="field-note">主将固定、副将固定、補佐固定、または最適な役割に自動配置できます。</p>
+            </div>
+
+            <div class="field">
+              <label for="armyConcept">軍勢コンセプト</label>
+              <select id="armyConcept" aria-label="軍勢コンセプト"></select>
+              <p class="field-note">対軍勢バランス、対物特化、反撃特化、弱化妨害、防衛耐久を切り替えられます。</p>
+            </div>
+          </div>
+
+          <details class="section-details">
+            <summary>レアリティと実行</summary>
+            <div class="details-body">
+              <div class="builder-select-grid">
+                <fieldset class="chip-fieldset">
+                  <legend>レアリティ</legend>
+                  <div class="chip-grid" id="armyRarityFilters" role="group" aria-label="軍勢自動編成のレアリティ"></div>
+                </fieldset>
+
+                <div class="field army-summary-card">
+                  <strong>自動編成の出し方</strong>
+                  <p class="field-note">
+                    まず 1部隊候補を大量に採点し、そのあと重複なしで 5部隊に束ねています。25体未満になる条件では作れません。
+                  </p>
+                </div>
+
+                <div class="button-row">
+                  <button class="primary-button" id="armyBuildButton" type="button">軍勢を自動編成する</button>
+                  <button class="secondary-button" id="armyResetButton" type="button">条件をリセット</button>
+                </div>
+              </div>
+            </div>
+          </details>
+
+          <div class="toolbar-summary" id="armySummary"></div>
+          <p class="field-note" id="armyValidation" hidden></p>
+        </section>
+
+        <section class="result-section exact-section">
+          <div class="result-header">
+            <div>
+              <h2>軍勢の総評</h2>
+              <p>総合スコア、役割充足、列配分、おすすめ陣形、固定武将の活かし方を先にまとめます。</p>
+            </div>
+            <span class="count-pill" id="armyTopCount"></span>
+          </div>
+          <div class="builder-overview-grid army-summary-grid" id="armyOverviewGrid"></div>
+        </section>
+
+        <section class="result-section partial-section">
+          <div class="result-header">
+            <div>
+              <h2>5部隊の詳細</h2>
+              <p>各部隊の列、主将 / 副将 / 補佐、採用理由、連鎖率、特徴タグ、弱点を一覧で見ます。</p>
+            </div>
+          </div>
+          <div class="army-unit-grid" id="armyUnitGrid"></div>
+        </section>
+
+        <section class="result-section exact-section">
+          <div class="result-header">
+            <div>
+              <h2>別案の軍勢</h2>
+              <p>同じ条件で組んだ上位候補を並べて、どこを捨てて何を取りにいったかを比較できます。</p>
+            </div>
+          </div>
+          <div class="quick-grid" id="armyAlternativeGrid"></div>
+        </section>
+
+        <section class="result-section partial-section">
+          <div class="result-header">
+            <div>
+              <h2>差し替え候補</h2>
+              <p>今回落選した中で、役割不足やコンセプト純度を埋めやすい予備候補を出します。</p>
+            </div>
+          </div>
+          <div class="quick-grid" id="armyReserveGrid"></div>
+        </section>
+      </section>
+
       <section class="app-view view-stack" id="view-board" hidden>
         <section class="panel">
           <div class="panel-header">
@@ -2133,5 +2339,6 @@
     <script src="./data.js"></script>
     <script src="./season3-data.js"></script>
     <script src="./app.js"></script>
+    <script src="./army-builder.js"></script>
   </body>
 </html>
