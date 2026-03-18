@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>キングダム覇道 SSR ステータス検索</title>
+    <style>
+      :root {
+        --bg: #f3ead9;
+        --paper: rgba(255, 249, 240, 0.94);
+        --paper-strong: #fffaf2;
+        --ink: #221811;
+        --muted: #665649;
+        --line: rgba(82, 53, 26, 0.18);
+        --gold: #9c5f22;
+        --gold-deep: #6d3911;
+        --exact: #7a2d18;
+        --partial: #365a74;
+        --shadow: 0 24px 60px rgba(73, 45, 20, 0.16);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        color: var(--ink);
+        font-family: "BIZ UDPGothic", "Yu Gothic UI", "Hiragino Sans", sans-serif;
+        background:
+          radial-gradient(circle at top right, rgba(185, 136, 66, 0.32), transparent 28%),
+          radial-gradient(circle at left 20%, rgba(130, 57, 15, 0.1), transparent 24%),
+          linear-gradient(180deg, #f7f0e3 0%, #f0e2c8 54%, #ebdcc1 100%);
+      }
+
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        background-image:
+          linear-gradient(rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.08)),
+          repeating-linear-gradient(
+            125deg,
+            rgba(104, 68, 36, 0.04) 0,
+            rgba(104, 68, 36, 0.04) 10px,
+            transparent 10px,
+            transparent 20px
+          );
+        mix-blend-mode: multiply;
+      }
+
+      .page {
+        width: min(1180px, calc(100% - 32px));
+        margin: 0 auto;
+        padding: 28px 0 56px;
+      }
+
+      .hero,
+      .panel,
+      .result-section {
+        background: var(--paper);
+        border: 1px solid var(--line);
+        border-radius: 28px;
+        box-shadow: var(--shadow);
+        backdrop-filter: blur(14px);
+      }
+
+      .hero {
+        position: relative;
+        overflow: hidden;
+        padding: 30px;
+      }
+
+      .hero::after {
+        content: "";
+        position: absolute;
+        inset: auto -60px -80px auto;
+        width: 280px;
+        height: 280px;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(156, 95, 34, 0.22), transparent 66%);
+      }
+
+      h1,
+      h2,
+      h3,
+      p {
+        margin: 0;
+      }
+
+      .eyebrow {
+        margin-bottom: 10px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        font-size: 0.78rem;
+        color: var(--gold-deep);
+      }
+
+      .hero h1 {
+        font-size: clamp(2rem, 3vw, 3rem);
+        line-height: 1.05;
+        margin-bottom: 12px;
+      }
+
+      .hero p {
+        max-width: 760px;
+        color: var(--muted);
+        line-height: 1.7;
+      }
+
+      .hero-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 18px;
+      }
+
+      .hero-meta span {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.72);
+        border: 1px solid rgba(156, 95, 34, 0.2);
+        font-size: 0.94rem;
+      }
+
+      .panel {
+        margin-top: 20px;
+        padding: 24px;
+      }
+
+      .panel-header p {
+        margin-top: 8px;
+        color: var(--muted);
+        line-height: 1.7;
+        max-width: 720px;
+      }
+
+      .search-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr)) auto;
+        gap: 14px;
+        align-items: end;
+        margin-top: 18px;
+      }
+
+      .field {
+        display: grid;
+        gap: 8px;
+      }
+
+      .field label {
+        font-weight: 700;
+      }
+
+      select,
+      button {
+        font: inherit;
+      }
+
+      select {
+        width: 100%;
+        min-height: 52px;
+        padding: 0 14px;
+        border-radius: 16px;
+        border: 1px solid rgba(109, 57, 17, 0.24);
+        background: var(--paper-strong);
+        color: var(--ink);
+      }
+
+      .button-row {
+        display: flex;
+        gap: 10px;
+      }
+
+      button {
+        min-height: 52px;
+        padding: 0 18px;
+        border-radius: 16px;
+        border: 0;
+        cursor: pointer;
+      }
+
+      .primary-button {
+        background: linear-gradient(135deg, var(--gold) 0%, var(--gold-deep) 100%);
+        color: #fff9f1;
+      }
+
+      .secondary-button {
+        background: rgba(255, 255, 255, 0.72);
+        color: var(--ink);
+        border: 1px solid rgba(109, 57, 17, 0.2);
+      }
+
+      .validation {
+        margin-top: 12px;
+        padding: 12px 14px;
+        border-radius: 14px;
+        background: rgba(140, 43, 24, 0.08);
+        border: 1px solid rgba(140, 43, 24, 0.18);
+        color: var(--exact);
+      }
+
+      .info-grid {
+        margin-top: 20px;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 14px;
+      }
+
+      .info-card {
+        padding: 18px;
+        border-radius: 20px;
+        background: rgba(255, 255, 255, 0.58);
+        border: 1px solid rgba(109, 57, 17, 0.12);
+      }
+
+      .info-card h2 {
+        font-size: 1rem;
+        margin-bottom: 8px;
+      }
+
+      .info-card p,
+      .info-card a {
+        color: var(--muted);
+        line-height: 1.7;
+      }
+
+      .info-card a {
+        color: var(--gold-deep);
+      }
+
+      .results {
+        margin-top: 20px;
+        display: grid;
+        gap: 18px;
+      }
+
+      .results-summary {
+        padding: 0 2px;
+        color: var(--gold-deep);
+        font-weight: 700;
+      }
+
+      .result-section {
+        padding: 22px;
+      }
+
+      .result-header {
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+        align-items: flex-start;
+        margin-bottom: 16px;
+      }
+
+      .result-header p {
+        margin-top: 6px;
+        color: var(--muted);
+        line-height: 1.7;
+      }
+
+      .count-pill {
+        display: inline-flex;
+        align-items: center;
+        padding: 8px 12px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.82);
+        border: 1px solid rgba(109, 57, 17, 0.16);
+        min-width: 58px;
+        justify-content: center;
+      }
+
+      .exact-section {
+        border-top: 6px solid rgba(122, 45, 24, 0.72);
+      }
+
+      .partial-section {
+        border-top: 6px solid rgba(54, 90, 116, 0.72);
+      }
+
+      .card-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+      }
+
+      .character-card {
+        padding: 18px;
+        border-radius: 22px;
+        background: rgba(255, 255, 255, 0.8);
+        border: 1px solid rgba(109, 57, 17, 0.14);
+      }
+
+      .card-header {
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+        align-items: flex-start;
+      }
+
+      .card-header h3 {
+        font-size: 1.22rem;
+        margin-bottom: 4px;
+      }
+
+      .subline {
+        color: var(--muted);
+        font-size: 0.92rem;
+      }
+
+      .source-link {
+        color: var(--gold-deep);
+        text-decoration: none;
+        font-size: 0.94rem;
+        font-weight: 700;
+      }
+
+      .top-pair {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 14px;
+      }
+
+      .pair-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 7px 11px;
+        border-radius: 999px;
+        font-size: 0.9rem;
+        font-weight: 700;
+      }
+
+      .rank-1 {
+        background: rgba(122, 45, 24, 0.12);
+        color: var(--exact);
+      }
+
+      .rank-2 {
+        background: rgba(54, 90, 116, 0.12);
+        color: var(--partial);
+      }
+
+      .stats-grid {
+        margin-top: 14px;
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      .stat-item {
+        padding: 12px 10px;
+        border-radius: 16px;
+        background: rgba(246, 239, 229, 0.72);
+        border: 1px solid transparent;
+      }
+
+      .stat-item dt {
+        font-size: 0.85rem;
+        color: var(--muted);
+        margin-bottom: 4px;
+      }
+
+      .stat-item dd {
+        margin: 0;
+        font-size: 1.08rem;
+        font-weight: 700;
+      }
+
+      .stat-item.is-top-two {
+        border-color: rgba(109, 57, 17, 0.18);
+      }
+
+      .stat-item.is-highlight {
+        background: rgba(156, 95, 34, 0.12);
+        border-color: rgba(156, 95, 34, 0.26);
+      }
+
+      .empty-state {
+        display: grid;
+        place-items: center;
+        min-height: 168px;
+        border: 1px dashed rgba(109, 57, 17, 0.22);
+        border-radius: 22px;
+        background: rgba(255, 255, 255, 0.44);
+        color: var(--muted);
+        text-align: center;
+        padding: 20px;
+      }
+
+      @media (max-width: 940px) {
+        .search-grid,
+        .info-grid,
+        .card-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .button-row button {
+          flex: 1 1 0;
+        }
+
+        .stats-grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+
+      @media (max-width: 640px) {
+        .page {
+          width: min(100% - 20px, 1180px);
+          padding-top: 16px;
+          padding-bottom: 34px;
+        }
+
+        .hero,
+        .panel,
+        .result-section,
+        .character-card {
+          padding: 18px;
+          border-radius: 22px;
+        }
+
+        .result-header,
+        .card-header {
+          flex-direction: column;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <section class="hero">
+        <p class="eyebrow">Kingdom Hadou / SSR Finder</p>
+        <h1>キングダム覇道 SSR ステータス検索</h1>
+        <p>
+          戦力の伸びを意識して、各武将の「上位2ステータス」で検索するローカルアプリです。
+          魅力は戦力計算の対象外として除外し、攻撃・防御・戦威・策略の4項目だけで順位を作っています。
+          1項目なら「1位一致 / 2位一致」、2項目なら「順番まで一致 / 逆順一致」で分けて表示します。
+        </p>
+        <div class="hero-meta">
+          <span>SSR <strong id="datasetCount"></strong></span>
+          <span>同値判定: 攻撃 → 防御 → 戦威 → 策略</span>
+          <span>魅力は検索対象外</span>
+          <span>出典: GameWith 武将一覧 / 個別ページ</span>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <div>
+            <h2>検索条件</h2>
+            <p>
+              第2条件は任意です。例えば「攻撃 → 防御」で検索すると、完全一致にはその順番どおりの武将、
+              ある程度一致には「防御 → 攻撃」の武将が出ます。
+            </p>
+          </div>
+        </div>
+
+        <form id="searchForm" class="search-grid">
+          <div class="field">
+            <label for="primaryStat">第1条件</label>
+            <select id="primaryStat" name="primaryStat" aria-label="第1条件のステータス"></select>
+          </div>
+
+          <div class="field">
+            <label for="secondaryStat">第2条件（任意）</label>
+            <select id="secondaryStat" name="secondaryStat" aria-label="第2条件のステータス"></select>
+          </div>
+
+          <div class="button-row">
+            <button class="primary-button" type="submit">検索</button>
+            <button class="secondary-button" id="resetButton" type="button">リセット</button>
+          </div>
+        </form>
+
+        <p class="validation" id="validationMessage" hidden></p>
+
+        <div class="info-grid">
+          <article class="info-card">
+            <h2>1項目検索</h2>
+            <p>完全一致は「1位がそのステータス」、ある程度一致は「2位がそのステータス」です。</p>
+          </article>
+          <article class="info-card">
+            <h2>2項目検索</h2>
+            <p>完全一致は「1位→2位」が同順、ある程度一致は「上位2つだが逆順」です。</p>
+          </article>
+          <article class="info-card">
+            <h2>戦力対象</h2>
+            <p>
+              魅力は戦力が伸びない前提で除外しています。
+              そのため、魅力が元の1位でも次点のステータスを1位として扱います。
+            </p>
+          </article>
+          <article class="info-card">
+            <h2>データ出典</h2>
+            <p>
+              <a href="https://gamewith.jp/kingdom-hadou/519260" target="_blank" rel="noreferrer">GameWith の武将一覧</a>
+              と各個別ページの「最大能力」を使用しています。
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section class="results">
+        <div class="results-summary" id="searchSummary"></div>
+
+        <section class="result-section exact-section">
+          <div class="result-header">
+            <div>
+              <h2 id="exactTitle">完全一致</h2>
+              <p id="exactDescription"></p>
+            </div>
+            <span class="count-pill" id="exactCount"></span>
+          </div>
+          <div class="card-grid" id="exactList"></div>
+        </section>
+
+        <section class="result-section partial-section">
+          <div class="result-header">
+            <div>
+              <h2 id="partialTitle">ある程度一致</h2>
+              <p id="partialDescription"></p>
+            </div>
+            <span class="count-pill" id="partialCount"></span>
+          </div>
+          <div class="card-grid" id="partialList"></div>
+        </section>
+      </section>
+    </main>
+
+    <script src="./data.js"></script>
+    <script src="./app.js"></script>
+  </body>
+</html>
