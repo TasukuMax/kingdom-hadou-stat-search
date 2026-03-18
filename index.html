@@ -541,6 +541,42 @@
         font-size: 1rem;
       }
 
+      .guide-summary {
+        color: var(--muted);
+        line-height: 1.7;
+      }
+
+      .guide-slot-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(84px, 1fr));
+        gap: 8px;
+      }
+
+      .guide-slot-chip {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        padding: 10px 12px;
+        border-radius: 16px;
+        border: 1px solid rgba(109, 57, 17, 0.12);
+        background: rgba(255, 255, 255, 0.78);
+      }
+
+      .guide-slot-chip small {
+        color: var(--muted);
+        font-size: 0.74rem;
+      }
+
+      .guide-slot-chip strong {
+        font-size: 0.88rem;
+      }
+
+      .guide-slot-chip.is-self {
+        border-color: rgba(156, 95, 34, 0.3);
+        background: rgba(156, 95, 34, 0.12);
+        color: var(--gold-deep);
+      }
+
       .skill-chip-list {
         display: flex;
         flex-wrap: wrap;
@@ -1257,6 +1293,7 @@
               <p>
                 武将名、戦法、技能名、個性、上位ステータス、役割タグ、特徴タグをまとめて検索できます。
                 タグ検索も特徴検索も AND 条件で、全文検索は戦法要約や技能要約にも効きます。
+                個別ページの評価ポイント、最新シーズン編成、おすすめ秘伝も取り込んでいます。
               </p>
             </div>
           </div>
@@ -1307,6 +1344,25 @@
           </div>
 
           <div class="toolbar-summary" id="characterSummary"></div>
+
+          <div class="info-grid">
+            <article class="info-card">
+              <h2>主将を見る軸</h2>
+              <p>高いステータスと戦法の主導力を先に見ます。個別ページの最新シーズン編成で主将に置かれているかも併記します。</p>
+            </article>
+            <article class="info-card">
+              <h2>副将を見る軸</h2>
+              <p>戦法だけでなく、連鎖率、共通個性、支援技能のつながりを重視します。最新シーズン編成の配置も一緒に出します。</p>
+            </article>
+            <article class="info-card">
+              <h2>補佐を見る軸</h2>
+              <p>補佐は技能価値を優先し、ステータスより効果を見ます。おすすめ秘伝と補佐向けメモも同じカード内で確認できます。</p>
+            </article>
+            <article class="info-card">
+              <h2>低レアの見方</h2>
+              <p>序盤や手持ち不足では副将、補佐、任命で価値を出す武将が多いです。評価ポイントに任命向けかどうかも反映しています。</p>
+            </article>
+          </div>
         </section>
 
         <section class="result-section exact-section">
