@@ -308,7 +308,11 @@ const PLANNED_FEATURES = [
 const SOURCE_LABELS = {
   characterList: "武将一覧",
   skillList: "技能一覧",
-  simulator: "編成シミュレーター"
+  simulator: "編成シミュレーター",
+  teamGuide: "編成のコツ",
+  aideGuide: "補佐ガイド",
+  lowRarityGuide: "低レア運用",
+  officialNewbie: "公式指南書"
 };
 
 const SCORE_LABELS = {
@@ -604,6 +608,34 @@ function deriveSkillFeatureTags(skill, season3) {
   return uniqueValues(featureTags);
 }
 
+function deriveGuideFallbackSlot({ conditionKeys, featureTags, objectiveTags, top1, guide }) {
+  if (guide.evaluationPoints.some((point) => point.includes("任命"))) {
+    return "任命";
+  }
+  if (conditionKeys.includes("main")) {
+    return "主将";
+  }
+  if (conditionKeys.includes("aide")) {
+    return "補佐";
+  }
+  if (conditionKeys.includes("vice")) {
+    return "副将";
+  }
+  if (objectiveTags.includes("gathering")) {
+    return "任命";
+  }
+  if (featureTags.some((tag) => ["回復", "弱化解除", "強化効果付与", "調達"].includes(tag))) {
+    return "補佐";
+  }
+  if (featureTags.some((tag) => ["反撃", "弱化効果付与", "攻速低下", "対物"].includes(tag))) {
+    return "副将";
+  }
+  if (["攻撃", "防御", "戦威"].includes(top1.label)) {
+    return "主将";
+  }
+  return "副将";
+}
+
 function compareCharactersBase(left, right) {
   return (
     RARITY_RANK[left.rarity] - RARITY_RANK[right.rarity] ||
@@ -655,6 +687,29 @@ const preparedCharacters = RAW_CHARACTERS.map((character) => {
   const battleArtText = collectTacticText(character);
   const featureTags = deriveFeatureTags(character, skillRecords, season3);
   const objectiveTags = deriveObjectiveTags(featureTags, season3);
+  const guide = {
+    evaluationPoints: character.guide?.evaluationPoints ?? [],
+    latestFormation: {
+      placements: character.guide?.latestFormation?.placements ?? [],
+      selfSlot: character.guide?.latestFormation?.selfSlot ?? "",
+      focusTitles: character.guide?.latestFormation?.focusTitles ?? []
+    },
+    recommendedSecrets: {
+      items: character.guide?.recommendedSecrets?.items ?? [],
+      tipTitles: character.guide?.recommendedSecrets?.tipTitles ?? []
+    }
+  };
+  const guideSlot =
+    guide.latestFormation.selfSlot ||
+    deriveGuideFallbackSlot({
+      conditionKeys: CONDITION_DEFS.filter((condition) => conditionLabels.includes(condition.label)).map(
+        (condition) => condition.key
+      ),
+      featureTags,
+      objectiveTags,
+      top1: rankedStats[0],
+      guide
+    });
 
   const displayTags = uniqueValues([
     character.rarity,
@@ -662,6 +717,7 @@ const preparedCharacters = RAW_CHARACTERS.map((character) => {
     `${rankedStats[0].label}1位`,
     `${rankedStats[1].label}2位`,
     character.type ? `${character.type}タイプ` : "",
+    guideSlot ? `${guideSlot}向き` : "",
     ...objectiveTags.map(objectiveLabelFor),
     season3 ? "S3注目" : "",
     ...conditionLabels,
@@ -689,7 +745,14 @@ const preparedCharacters = RAW_CHARACTERS.map((character) => {
       ...(season3?.strengths ?? []),
       ...(season3?.weaknesses ?? []),
       ...(season3?.bestUseCases ?? []),
-      ...(season3?.tags ?? []).map(seasonTagLabel)
+      ...(season3?.tags ?? []).map(seasonTagLabel),
+      guideSlot,
+      ...guide.evaluationPoints,
+      ...guide.latestFormation.placements.map((row) => `${row.slot} ${row.name}`),
+      ...guide.latestFormation.focusTitles,
+      ...guide.recommendedSecrets.items.map((item) => item.name),
+      ...guide.recommendedSecrets.items.map((item) => item.effect),
+      ...guide.recommendedSecrets.tipTitles
     ].join(" ")
   );
 
@@ -709,6 +772,8 @@ const preparedCharacters = RAW_CHARACTERS.map((character) => {
     displayTags,
     searchText,
     personalitySet: new Set(character.personalities),
+    guide,
+    guideSlot,
     season3
   };
 }).sort(compareCharactersBase);
@@ -1202,6 +1267,91 @@ function renderBattleArtBlock(character) {
   `;
 }
 
+function renderGuideInsightsBlock(character) {
+  const evaluationPoints = character.guide?.evaluationPoints ?? [];
+  const formation = character.guide?.latestFormation ?? { placements: [], selfSlot: "", focusTitles: [] };
+  const secrets = character.guide?.recommendedSecrets ?? { items: [], tipTitles: [] };
+
+  if (
+    !character.guideSlot &&
+    !evaluationPoints.length &&
+    !formation.placements.length &&
+    !formation.focusTitles.length &&
+    !secrets.items.length &&
+    !secrets.tipTitles.length
+  ) {
+    return "";
+  }
+
+  const usageText = character.objectiveTags.length
+    ? character.objectiveTags.map(objectiveLabelFor).join(" / ")
+    : "汎用";
+  const formationMarkup = formation.placements.length
+    ? `
+        <div class="guide-slot-grid">
+          ${formation.placements
+            .map(
+              (row) => `
+                <span class="guide-slot-chip ${row.name === character.name ? "is-self" : ""}">
+                  <small>${escapeHtml(row.slot)}</small>
+                  <strong>${escapeHtml(row.name)}</strong>
+                </span>
+              `
+            )
+            .join("")}
+        </div>
+      `
+    : `<p class="field-note">個別ページに編成データがありません。</p>`;
+  const secretMarkup = secrets.items.length
+    ? `
+        <div class="meta-chip-list">
+          ${secrets.items
+            .slice(0, 4)
+            .map((item) => `<span class="meta-chip">${escapeHtml(item.name)}</span>`)
+            .join("")}
+        </div>
+      `
+    : `<p class="field-note">個別ページに秘伝データがありません。</p>`;
+
+  return `
+    <div class="battle-art-box guide-box">
+      <p class="skill-group-title">運用メモ</p>
+      <p class="guide-summary">
+        推奨配置: ${escapeHtml(character.guideSlot || "-")} / 主用途: ${escapeHtml(usageText)}
+      </p>
+      ${
+        evaluationPoints.length
+          ? `<ul class="bullet-list">${evaluationPoints.map((point) => `<li>${escapeHtml(point)}</li>`).join("")}</ul>`
+          : ""
+      }
+      <div class="effect-grid">
+        <section class="effect-box">
+          <h3>最新シーズン編成</h3>
+          ${formationMarkup}
+          ${
+            formation.focusTitles.length
+              ? `<ul class="bullet-list">${formation.focusTitles
+                  .map((title) => `<li>${escapeHtml(title)}</li>`)
+                  .join("")}</ul>`
+              : ""
+          }
+        </section>
+        <section class="effect-box">
+          <h3>おすすめ秘伝</h3>
+          ${secretMarkup}
+          ${
+            secrets.tipTitles.length
+              ? `<ul class="bullet-list">${secrets.tipTitles
+                  .map((title) => `<li>${escapeHtml(title)}</li>`)
+                  .join("")}</ul>`
+              : ""
+          }
+        </section>
+      </div>
+    </div>
+  `;
+}
+
 function renderSeason3HeroBlock(character) {
   const season3 = character.season3;
   if (!season3) {
@@ -1413,6 +1563,7 @@ function renderCharacterCard(character, options = {}) {
   const showActions = options.showActions ?? true;
   const showSeason3Info = options.showSeason3Info ?? false;
   const showBattleArt = options.showBattleArt ?? true;
+  const showGuideInsights = options.showGuideInsights ?? false;
 
   return `
     <article class="character-card">
@@ -1441,6 +1592,7 @@ function renderCharacterCard(character, options = {}) {
             <span class="pair-badge rank-2">2位: ${escapeHtml(character.top2.label)} ${character.top2.value}</span>
           </div>
           ${showBattleArt ? renderBattleArtBlock(character) : ""}
+          ${showGuideInsights ? renderGuideInsightsBlock(character) : ""}
           ${showSeason3Info ? renderSeason3HeroBlock(character) : ""}
           ${renderFeatureTags(character, highlightedTags)}
           ${showTags ? renderDisplayTags(character, highlightedTags) : ""}
@@ -1843,6 +1995,7 @@ function renderCharacterDb() {
   elements.characterList.innerHTML = renderCharacterCards(sorted, {
     showTags: true,
     showPersonalities: true,
+    showGuideInsights: true,
     showSeason3Info: true,
     highlightedTags: [...tags, ...features],
     selectedConditionKeys,
