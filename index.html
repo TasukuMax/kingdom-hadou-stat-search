@@ -1237,8 +1237,8 @@
           <div class="toolbar-grid">
             <div class="field">
               <label for="characterKeyword">全文検索</label>
-              <input id="characterKeyword" type="text" placeholder="例: 王騎 / 攻陣 / 武勇 / 防御1位">
-              <p class="field-note">武将名、技能名、技能説明、個性、役割タグまでまとめて検索します。</p>
+              <input id="characterKeyword" type="text" placeholder="例: 王騎 / 攻陣 / 対物 / 弱化効果付与">
+              <p class="field-note">武将名、技能名、技能説明、個性、役割タグ、特徴タグまでまとめて検索します。</p>
             </div>
 
             <div class="field">
@@ -1261,6 +1261,11 @@
             <fieldset class="chip-fieldset">
               <legend>タグ検索</legend>
               <div class="chip-grid" id="characterTagFilters" role="group" aria-label="武将DBのタグ検索"></div>
+            </fieldset>
+
+            <fieldset class="chip-fieldset">
+              <legend>特徴検索</legend>
+              <div class="chip-grid" id="characterFeatureFilters" role="group" aria-label="武将DBの特徴検索"></div>
             </fieldset>
           </div>
 
@@ -1338,7 +1343,7 @@
               <h2>相性検索</h2>
               <p>
                 指定武将を主将に置いたときの副将連鎖率を軸に、共通個性と役割条件も合わせて確認する初版です。
-                前列・中列・後列フィルタで候補を詰められます。
+                前列・中列・後列フィルタに加えて、特徴タグでも候補を詰められます。
               </p>
             </div>
           </div>
@@ -1358,8 +1363,8 @@
 
             <div class="field">
               <label for="synergyKeyword">候補の全文検索</label>
-              <input id="synergyKeyword" type="text" placeholder="例: 攻陣 / 武勇 / 王賁">
-              <p class="field-note">候補側にも全文検索をかけられます。</p>
+              <input id="synergyKeyword" type="text" placeholder="例: 攻陣 / 対物 / 弱化効果付与 / 王賁">
+              <p class="field-note">候補側にも全文検索をかけられます。特徴タグもここで拾えます。</p>
             </div>
 
             <div class="button-row">
@@ -1376,6 +1381,11 @@
             <fieldset class="chip-fieldset">
               <legend>候補の技能条件</legend>
               <div class="chip-grid" id="synergyConditionFilters" role="group" aria-label="相性検索の技能条件"></div>
+            </fieldset>
+
+            <fieldset class="chip-fieldset">
+              <legend>候補の特徴</legend>
+              <div class="chip-grid" id="synergyFeatureFilters" role="group" aria-label="相性検索の特徴検索"></div>
             </fieldset>
           </div>
 
