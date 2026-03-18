@@ -14,6 +14,8 @@ const APP_DATA = {
         "自部隊と同じ横列の部隊の対物を15％上昇させ、攻撃速度上昇20％と悠然を付与",
         "攻撃対象に対物250％の攻撃（自身の兵力が50％以上の場合、350％に威力上昇）"
       ],
+      "battleArtType": "対物",
+      "battleArtChainOrder": "普通",
       "guide": {
         "evaluationPoints": [
           "対物攻撃に優れた武将",
@@ -111,6 +113,8 @@ const APP_DATA = {
         "自部隊の攻撃を30％上昇させ会心発生上昇30％を付与",
         "攻撃対象の防御を20％低下させ攻撃対象と同じ横列の部隊に戦威250％の攻撃"
       ],
+      "battleArtType": "戦威",
+      "battleArtChainOrder": "普通",
       "guide": {
         "evaluationPoints": [
           "戦法と会心で火力を出す武将",
@@ -209,6 +213,8 @@ const APP_DATA = {
         "自部隊と同じ横列の部隊の戦威を30％上昇させ、撃心発生上昇50％を付与",
         "攻撃対象に戦威250％の攻撃"
       ],
+      "battleArtType": "戦威",
+      "battleArtChainOrder": "早い",
       "guide": {
         "evaluationPoints": [
           "戦法で大ダメージを与える武将",
@@ -307,6 +313,8 @@ const APP_DATA = {
         "自部隊に堅固5%を付与",
         "攻撃対象と同じ縦列の部隊に戦威200%の攻撃"
       ],
+      "battleArtType": "戦威",
+      "battleArtChainOrder": "遅い",
       "guide": {
         "evaluationPoints": [
           "反撃で大ダメージを与える武将",
@@ -405,6 +413,8 @@ const APP_DATA = {
         "自部隊と同じ横列の部隊の防御、策略、対物を35％上昇させ、反撃強化50％を付与",
         "攻撃対象と同じ縦列の部隊に戦威200％の攻撃"
       ],
+      "battleArtType": "戦威",
+      "battleArtChainOrder": "普通",
       "guide": {
         "evaluationPoints": [
           "耐久と対物に優れた武将",
@@ -501,6 +511,8 @@ const APP_DATA = {
       "battleArtEffects": [
         "自部隊と同じ縦列の部隊の防御、戦威、策略を20％上昇させ、堅固5％を付与"
       ],
+      "battleArtType": "補助",
+      "battleArtChainOrder": "早い",
       "guide": {
         "evaluationPoints": [
           "戦法で味方を強化する武将",
@@ -597,6 +609,8 @@ const APP_DATA = {
         "（自身が主将の場合、対物上昇を軍勢全体に付与）",
         "攻撃対象に対物300%の攻撃"
       ],
+      "battleArtType": "対物",
+      "battleArtChainOrder": "普通",
       "guide": {
         "evaluationPoints": [
           "対物攻撃に特化した援タイプ武将",
@@ -695,6 +709,8 @@ const APP_DATA = {
         "攻撃対象と同じ縦列の部隊に戦威250％の攻撃",
         "（敵部隊の戦威より自部隊の戦威が上回っている場合、300％に威力上昇）"
       ],
+      "battleArtType": "戦威",
+      "battleArtChainOrder": "普通",
       "guide": {
         "evaluationPoints": [
           "攻撃的な戦法を持つ闘タイプ武将",
@@ -787,6 +803,8 @@ const APP_DATA = {
       "battleArtEffects": [
         "攻撃対象と同じ縦列の部隊の強化効果を2つ解除し、攻撃を20％、策略を40％低下させ、恐怖を付与し、戦威200％の攻撃"
       ],
+      "battleArtType": "戦威",
+      "battleArtChainOrder": "早い",
       "guide": {
         "evaluationPoints": [
           "敵の妨害に特化した武将",
@@ -885,6 +903,8 @@ const APP_DATA = {
         "攻撃対象と同じ横列の部隊に恐怖を付与",
         "攻撃対象に戦威200%の攻撃"
       ],
+      "battleArtType": "戦威",
+      "battleArtChainOrder": "普通",
       "guide": {
         "evaluationPoints": [
           "恐怖で敵部隊を妨害する武将",
@@ -983,6 +1003,8 @@ const APP_DATA = {
         "自部隊の防御を20％上昇させ、会心発生上昇30％を付与",
         "攻撃対象と同じ横列の部隊に戦威300％の攻撃（自部隊に付与されている強化効果の種類×10%威力上昇。10種類まで計上し、効果最大で100％上昇して400％に威力上昇）"
       ],
+      "battleArtType": "戦威",
+      "battleArtChainOrder": "遅い",
       "guide": {
         "evaluationPoints": [
           "戦法で大ダメージを与える武将",
@@ -1080,6 +1102,8 @@ const APP_DATA = {
         "自部隊と同じ横列の部隊の攻撃を20％、防御を40％上昇させて反撃強化50％を付与",
         "攻撃対象と同じ横列の部隊に戦慄3％を付与して戦威200％の攻撃"
       ],
+      "battleArtType": "戦威",
+      "battleArtChainOrder": "遅い",
       "guide": {
         "evaluationPoints": [
           "対軍勢の戦闘で活躍する武将",
@@ -1178,6 +1202,8 @@ const APP_DATA = {
         "攻撃対象と同じ縦列の部隊に戦威250％の攻撃（攻撃対象には350％の攻撃）",
         "攻撃対象と同じ縦列の部隊の防御を40％低下"
       ],
+      "battleArtType": "戦威",
+      "battleArtChainOrder": "普通",
       "guide": {
         "evaluationPoints": [
           "敵部隊に大ダメージを与える武将",
@@ -1275,6 +1301,8 @@ const APP_DATA = {
         "自部隊と同じ横列の部隊の攻撃、防御を15％上昇（自部隊が前列にいる場合、軍勢全体に付与）",
         "攻撃対象と同じ横列の部隊に戦威200％の攻撃"
       ],
+      "battleArtType": "戦威",
+      "battleArtChainOrder": "遅い",
       "guide": {
         "evaluationPoints": [
           "戦法で軍勢全体を強化する武将",
@@ -1373,6 +1401,8 @@ const APP_DATA = {
         "自部隊の攻撃、策略を30％上昇",
         "攻撃対象と同じ縦列の部隊に攻撃速度低下20％を付与し、戦威200％の攻撃（攻撃対象には300％の攻撃）"
       ],
+      "battleArtType": "戦威",
+      "battleArtChainOrder": "早い",
       "guide": {
         "evaluationPoints": [
           "攻撃と妨害が得意な武将",
@@ -1470,6 +1500,8 @@ const APP_DATA = {
       "battleArtEffects": [
         "自部隊と同じ横列の部隊の攻撃を20％上昇させ、確率回避50％、会心発生上昇30％を付与"
       ],
+      "battleArtType": "補助",
+      "battleArtChainOrder": "普通",
       "guide": {
         "evaluationPoints": [
           "通常攻撃を避ける武将",
@@ -1563,6 +1595,8 @@ const APP_DATA = {
         "自部隊と同じ横列の部隊の弱化効果を3つ解除し、防御を40％、戦威を20％上昇させ、負傷兵を最大兵力の20％回復",
         "自部隊に反撃強化50％を付与"
       ],
+      "battleArtType": "回復",
+      "battleArtChainOrder": "普通",
       "guide": {
         "evaluationPoints": [
           "耐久力に優れた護タイプ武将",
@@ -1656,6 +1690,8 @@ const APP_DATA = {
         "自部隊に攻撃拡張・横を付与",
         "攻撃対象と同じ横列の部隊の攻撃、防御、戦威を25％低下させ、戦威200％の攻撃"
       ],
+      "battleArtType": "戦威",
+      "battleArtChainOrder": "普通",
       "guide": {
         "evaluationPoints": [
           "通常攻撃で横列にダメージを与える",
@@ -1753,6 +1789,8 @@ const APP_DATA = {
         "自部隊と同じ縦列の部隊の戦威を20％上昇させ、悠然を付与",
         "攻撃対象と同じ縦列の部隊に戦威200％の攻撃（攻撃対象には250％の攻撃）"
       ],
+      "battleArtType": "戦威",
+      "battleArtChainOrder": "早い",
       "guide": {
         "evaluationPoints": [
           "城砦の利権や調達で入手できる武将",
@@ -1851,6 +1889,8 @@ const APP_DATA = {
         "自部隊と同じ横列の部隊に会心発生上昇20％を付与",
         "攻撃対象と同じ縦列の部隊に戦威250％の攻撃（自部隊が種火状態の場合300％、炎状態の場合350％、大炎状態の場合400％に威力上昇）"
       ],
+      "battleArtType": "戦威",
+      "battleArtChainOrder": "遅い",
       "guide": {
         "evaluationPoints": [
           "軍団戦で活躍する闘タイプ武将",
@@ -1949,6 +1989,8 @@ const APP_DATA = {
         "自部隊と同じ横列の部隊の戦威を20％上昇させ、会心威力上昇20％を付与",
         "自部隊に攻撃速度上昇20％を付与"
       ],
+      "battleArtType": "補助",
+      "battleArtChainOrder": "早い",
       "guide": {
         "evaluationPoints": [
           "戦法で味方の火力を伸ばす武将",
@@ -2047,6 +2089,8 @@ const APP_DATA = {
         "自部隊の防御を30％上昇させ、堅固5％を付与",
         "攻撃対象に対物300％の攻撃"
       ],
+      "battleArtType": "対物",
+      "battleArtChainOrder": "遅い",
       "guide": {
         "evaluationPoints": [
           "物体に大ダメージを与える武将",
@@ -2142,6 +2186,8 @@ const APP_DATA = {
         "攻撃低下が30％に効果上昇）",
         "攻撃対象と同じ横列の部隊に戦威200％の攻撃"
       ],
+      "battleArtType": "戦威",
+      "battleArtChainOrder": "遅い",
       "guide": {
         "evaluationPoints": [
           "戦法で敵部隊を妨害する武将",
@@ -2240,6 +2286,8 @@ const APP_DATA = {
         "自部隊の攻撃を30％上昇",
         "攻撃対象と同じ横列の部隊に戦威200％の攻撃（攻撃対象には350％の攻撃）"
       ],
+      "battleArtType": "戦威",
+      "battleArtChainOrder": "普通",
       "guide": {
         "evaluationPoints": [
           "攻撃的な戦法を持つ武将",
@@ -2337,6 +2385,8 @@ const APP_DATA = {
         "自部隊の攻撃を30％上昇",
         "攻撃対象に戦威300％の攻撃（自部隊の兵力が50％以下の場合、350％に威力上昇）"
       ],
+      "battleArtType": "戦威",
+      "battleArtChainOrder": "遅い",
       "guide": {
         "evaluationPoints": [
           "火力に特化した闘タイプ武将",
@@ -2434,6 +2484,8 @@ const APP_DATA = {
       "battleArtEffects": [
         "自部隊と同じ横列の部隊の攻撃を15％、防御を25％上昇させ会心発生上昇20％を付与"
       ],
+      "battleArtType": "補助",
+      "battleArtChainOrder": "普通",
       "guide": {
         "evaluationPoints": [
           "戦法で味方を強化する武将",
@@ -2532,6 +2584,8 @@ const APP_DATA = {
         "自部隊と同じ横列の部隊の戦威、対物を40％上昇",
         "攻撃対象に戦威100％の攻撃（自部隊が後列にいる場合、200％に威力上昇）"
       ],
+      "battleArtType": "戦威",
+      "battleArtChainOrder": "早い",
       "guide": {
         "evaluationPoints": [
           "強力なバフを持つ武将",
@@ -2630,6 +2684,8 @@ const APP_DATA = {
         "攻撃対象と同じ横列の部隊の攻撃を50%低下",
         "攻撃対象に戦威200%の攻撃"
       ],
+      "battleArtType": "戦威",
+      "battleArtChainOrder": "早い",
       "guide": {
         "evaluationPoints": [
           "耐久力に優れる妨タイプ武将",
@@ -2726,6 +2782,8 @@ const APP_DATA = {
       "battleArtEffects": [
         "攻撃対象と同じ横列の部隊の防御、策略を15％低下させ、病毒10％を付与"
       ],
+      "battleArtType": "補助",
+      "battleArtChainOrder": "普通",
       "guide": {
         "evaluationPoints": [
           "病毒で敵を妨害する武将",
@@ -2819,6 +2877,8 @@ const APP_DATA = {
         "自部隊の策略を30％上昇",
         "攻撃対象と同じ横列の部隊の防御、策略を20％、戦威を40％低下"
       ],
+      "battleArtType": "補助",
+      "battleArtChainOrder": "普通",
       "guide": {
         "evaluationPoints": [
           "複数のデバフで敵を妨害する武将",
@@ -2916,6 +2976,8 @@ const APP_DATA = {
       "battleArtEffects": [
         "自部隊と同じ横列の部隊の弱化効果を1つ解除し戦威を10％上昇させ、攻撃速度上昇20％を付与"
       ],
+      "battleArtType": "補助",
+      "battleArtChainOrder": "普通",
       "guide": {
         "evaluationPoints": [
           "横列の味方を支援する武将",
@@ -3014,6 +3076,8 @@ const APP_DATA = {
         "自部隊の攻撃、対物を10%上昇させて攻撃速度上昇を10%付与",
         "攻撃対象と同じ縦列の部隊に戦威200%の攻撃（自部隊の兵力が30%以下の場合300%に威力上昇）"
       ],
+      "battleArtType": "戦威",
+      "battleArtChainOrder": "普通",
       "guide": {
         "evaluationPoints": [
           "戦法で自部隊を強化する武将",
@@ -3112,6 +3176,8 @@ const APP_DATA = {
         "（自部隊の兵力が50％以上の場合、350％に威力上昇）",
         "自部隊と同じ横列の部隊の戦威を20％上昇"
       ],
+      "battleArtType": "戦威",
+      "battleArtChainOrder": "早い",
       "guide": {
         "evaluationPoints": [
           "火力に特化した武将",
@@ -3208,6 +3274,8 @@ const APP_DATA = {
       "battleArtEffects": [
         "攻撃対象と同じ縦列の部隊に戦威250％の攻撃（自部隊が前列にいる場合、300％に威力上昇）"
       ],
+      "battleArtType": "戦威",
+      "battleArtChainOrder": "遅い",
       "guide": {
         "evaluationPoints": [
           "城砦や温泉で入手できる武将",
@@ -3306,6 +3374,8 @@ const APP_DATA = {
         "自部隊と同じ横列の部隊の防御を40％上昇",
         "自部隊の戦威を40％上昇させ、堅固5％を付与"
       ],
+      "battleArtType": "補助",
+      "battleArtChainOrder": "早い",
       "guide": {
         "evaluationPoints": [
           "耐久寄りの性能を持つ武将",
@@ -3403,6 +3473,8 @@ const APP_DATA = {
         "自部隊と同じ横列の攻撃を30％上昇させ、会心威力上昇30％を付与",
         "攻撃対象に戦威250％の攻撃"
       ],
+      "battleArtType": "戦威",
+      "battleArtChainOrder": "普通",
       "guide": {
         "evaluationPoints": [
           "蒙恬の副将に最適な武将",
@@ -3501,6 +3573,8 @@ const APP_DATA = {
         "攻撃対象と同じ縦列の部隊に戦威250％の攻撃",
         "攻撃対象と同じ縦列の部隊の防御を30％低下"
       ],
+      "battleArtType": "戦威",
+      "battleArtChainOrder": "普通",
       "guide": {
         "evaluationPoints": [
           "補佐として使える闘タイプ武将",
@@ -3597,6 +3671,8 @@ const APP_DATA = {
       "battleArtEffects": [
         "攻撃対象と同じ横列の部隊の策略を30％低下させ、それぞれ確率で攻撃、防御、戦威を30％低下"
       ],
+      "battleArtType": "補助",
+      "battleArtChainOrder": "普通",
       "guide": {
         "evaluationPoints": [
           "敵部隊の妨害に特化した武将",
@@ -3694,6 +3770,8 @@ const APP_DATA = {
         "自部隊と同じ横列の部隊の攻撃、策略を20％上昇",
         "（自身が副将の場合、40％に効果上昇）"
       ],
+      "battleArtType": "戦威",
+      "battleArtChainOrder": "早い",
       "guide": {
         "evaluationPoints": [
           "副将で性能を発揮する武将",
@@ -3786,6 +3864,8 @@ const APP_DATA = {
       "battleArtEffects": [
         "攻撃対象と同じ横列の部隊の攻撃を15%低下させ、病毒5%を付与"
       ],
+      "battleArtType": "補助",
+      "battleArtChainOrder": "普通",
       "guide": {
         "evaluationPoints": [
           "病毒を付与するデバフ戦法",
@@ -3881,6 +3961,8 @@ const APP_DATA = {
       "battleArtEffects": [
         "自部隊同じ横列の部隊の攻撃、対物を30％上昇"
       ],
+      "battleArtType": "補助",
+      "battleArtChainOrder": "早い",
       "guide": {
         "evaluationPoints": [
           "戦法のバフが優秀な武将",
@@ -3977,6 +4059,8 @@ const APP_DATA = {
       "battleArtEffects": [
         "自部隊と同じ縦列の部隊の攻撃を30％上昇させ、弱化効果を1つ解除"
       ],
+      "battleArtType": "補助",
+      "battleArtChainOrder": "普通",
       "guide": {
         "evaluationPoints": [
           "任命で活躍する武将",
@@ -4074,6 +4158,8 @@ const APP_DATA = {
         "自部隊と同じ縦列の部隊の防御を20％上昇させ、会心威力上昇10％を付与（自部隊が中列にいる場合",
         "会心威力上昇が20％に効果上昇）"
       ],
+      "battleArtType": "補助",
+      "battleArtChainOrder": "普通",
       "guide": {
         "evaluationPoints": [
           "会心編成の副将で使える武将",
@@ -4170,6 +4256,8 @@ const APP_DATA = {
       "battleArtEffects": [
         "攻撃対象と同じ横列の部隊に戦威150％の攻撃（自部隊の兵力が30％以下の場合、300％に威力上昇）"
       ],
+      "battleArtType": "戦威",
+      "battleArtChainOrder": "遅い",
       "guide": {
         "evaluationPoints": [
           "攻撃性能に特化した武将",
@@ -4266,6 +4354,8 @@ const APP_DATA = {
       "battleArtEffects": [
         "攻撃対象と同じ縦列の部隊に戦威150％の攻撃（攻撃する敵部隊の兵力が30％以下の場合200％に威力上昇）"
       ],
+      "battleArtType": "戦威",
+      "battleArtChainOrder": "遅い",
       "guide": {
         "evaluationPoints": [
           "戦法で縦列を攻撃する武将",
@@ -4362,6 +4452,8 @@ const APP_DATA = {
         "自部隊と同じ横列の部隊の防御、策略を25％上昇",
         "攻撃対象に戦威150％の攻撃"
       ],
+      "battleArtType": "戦威",
+      "battleArtChainOrder": "早い",
       "guide": {
         "evaluationPoints": [
           "調達隊でも活躍する"
@@ -4459,6 +4551,8 @@ const APP_DATA = {
         "自部隊の攻撃を20％上昇（自部隊が前列にいる場合、30％に効果上昇）",
         "攻撃対象と同じ縦列の部隊に戦威100％の攻撃"
       ],
+      "battleArtType": "戦威",
+      "battleArtChainOrder": "遅い",
       "guide": {
         "evaluationPoints": [
           "攻撃的な戦法を持つ武将",
@@ -4556,6 +4650,8 @@ const APP_DATA = {
       "battleArtEffects": [
         "自部隊と同じ横列の部隊の戦威、策略を15％上昇させ負傷兵を最大兵力の20％回復"
       ],
+      "battleArtType": "回復",
+      "battleArtChainOrder": "早い",
       "guide": {
         "evaluationPoints": [
           "後列の補佐として使える武将",
@@ -4653,6 +4749,8 @@ const APP_DATA = {
       "battleArtEffects": [
         "自部隊と同じ横列の部隊の防御40％上昇"
       ],
+      "battleArtType": "補助",
+      "battleArtChainOrder": "普通",
       "guide": {
         "evaluationPoints": [
           "耐久性能に特化した武将",
@@ -4750,6 +4848,8 @@ const APP_DATA = {
         "自部隊に確率回避30％を付与",
         "攻撃対象と同じ横列の部隊の防御、策略を35％低下"
       ],
+      "battleArtType": "補助",
+      "battleArtChainOrder": "普通",
       "guide": {
         "evaluationPoints": [
           "対軍勢の時に活躍する武将",
@@ -4846,6 +4946,8 @@ const APP_DATA = {
       "battleArtEffects": [
         "自部隊と同じ縦列の攻撃、策略を30％上昇"
       ],
+      "battleArtType": "補助",
+      "battleArtChainOrder": "普通",
       "guide": {
         "evaluationPoints": [
           "成蟜の副将で使える援タイプ武将",
@@ -4942,6 +5044,8 @@ const APP_DATA = {
       "battleArtEffects": [
         "自部隊と同じ横列の部隊の攻撃を40％上昇"
       ],
+      "battleArtType": "補助",
+      "battleArtChainOrder": "普通",
       "guide": {
         "evaluationPoints": [
           "戦法で味方を強化する武将",
@@ -5035,6 +5139,8 @@ const APP_DATA = {
         "自部隊と同じ横列の部隊の弱化効果を1つ解除",
         "攻撃対象と同じ横列の部隊の攻撃、策略を30％低下"
       ],
+      "battleArtType": "補助",
+      "battleArtChainOrder": "早い",
       "guide": {
         "evaluationPoints": [
           "進物で入手できる妨タイプ武将",
@@ -5131,6 +5237,8 @@ const APP_DATA = {
       "battleArtEffects": [
         "自部隊と同じ横列の部隊の策略、対物を30％上昇"
       ],
+      "battleArtType": "補助",
+      "battleArtChainOrder": "普通",
       "guide": {
         "evaluationPoints": [
           "戦法と技能で対物を強化する武将",
@@ -5226,6 +5334,8 @@ const APP_DATA = {
       "battleArtEffects": [
         "自部隊と同じ横列の部隊の防御を20%上昇させ負傷兵を最大兵力の20%回復"
       ],
+      "battleArtType": "回復",
+      "battleArtChainOrder": "普通",
       "guide": {
         "evaluationPoints": [
           "負傷兵を回復する護タイプ武将",
@@ -5323,6 +5433,8 @@ const APP_DATA = {
         "自部隊と同じ横列の部隊の策略を40％上昇",
         "攻撃対象と同じ横列の部隊に戦威150％の攻撃"
       ],
+      "battleArtType": "戦威",
+      "battleArtChainOrder": "普通",
       "guide": {
         "evaluationPoints": [
           "策略ステータスを上昇させる武将",
@@ -5420,6 +5532,8 @@ const APP_DATA = {
         "攻撃対象と同じ縦列の部隊に攻撃速度低下20％を付与",
         "攻撃対象に戦威150％の攻撃"
       ],
+      "battleArtType": "戦威",
+      "battleArtChainOrder": "普通",
       "guide": {
         "evaluationPoints": [
           "戦法で敵を妨害する武将",
@@ -5517,6 +5631,8 @@ const APP_DATA = {
         "自部隊の防御を15％上昇",
         "攻撃対象と同じ縦列の部隊の防御、策略を30％低下"
       ],
+      "battleArtType": "補助",
+      "battleArtChainOrder": "早い",
       "guide": {
         "evaluationPoints": [
           "耐久性能に優れる妨タイプ武将",
@@ -5614,6 +5730,8 @@ const APP_DATA = {
         "自部隊に会心発生上昇20％を付与",
         "攻撃対象に戦威150％の攻撃（自部隊が後列にいる場合、250％に威力上昇）"
       ],
+      "battleArtType": "戦威",
+      "battleArtChainOrder": "遅い",
       "guide": {
         "evaluationPoints": [
           "後列で性能を発揮する武将",
@@ -5711,6 +5829,8 @@ const APP_DATA = {
         "自部隊と同じ横列の部隊の対物を30％上昇",
         "自部隊の攻撃を10％上昇"
       ],
+      "battleArtType": "補助",
+      "battleArtChainOrder": "普通",
       "guide": {
         "evaluationPoints": [
           "味方の対物を強化する武将",
@@ -5780,6 +5900,8 @@ const APP_DATA = {
       "battleArtEffects": [
         "自部隊と同じ縦列の部隊の攻撃を10％上昇（自部隊の兵力が50％以下の場合、30％に効果上昇）"
       ],
+      "battleArtType": "補助",
+      "battleArtChainOrder": "普通",
       "guide": {
         "evaluationPoints": [
           "技能で攻撃を上昇させる武将",
@@ -5849,6 +5971,8 @@ const APP_DATA = {
         "自部隊の攻撃を20％上昇",
         "攻撃対象に戦威150％の攻撃（自部隊が前列にいる場合、200％に威力上昇）"
       ],
+      "battleArtType": "戦威",
+      "battleArtChainOrder": "普通",
       "guide": {
         "evaluationPoints": [
           "扱いやすい技能を持つ武将",
@@ -5918,6 +6042,8 @@ const APP_DATA = {
         "攻撃対象と同じ横列の部隊の防御を25％低下",
         "自部隊の戦威を10％上昇"
       ],
+      "battleArtType": "補助",
+      "battleArtChainOrder": "早い",
       "guide": {
         "evaluationPoints": [
           "発動の早い防御デバフ戦法",
@@ -5987,6 +6113,8 @@ const APP_DATA = {
         "自部隊に会心威力上昇20％を付与",
         "攻撃対象に戦威200％の攻撃"
       ],
+      "battleArtType": "戦威",
+      "battleArtChainOrder": "普通",
       "guide": {
         "evaluationPoints": [
           "戦法攻撃が戦威200％と高威力"
@@ -6056,6 +6184,8 @@ const APP_DATA = {
         "自部隊の防御を10％上昇",
         "攻撃対象と同じ縦列の部隊に戦威150％の攻撃"
       ],
+      "battleArtType": "戦威",
+      "battleArtChainOrder": "普通",
       "guide": {
         "evaluationPoints": [
           "戦法で防御上昇+縦列に攻撃",
@@ -6125,6 +6255,8 @@ const APP_DATA = {
         "自部隊と同じ横列の部隊の弱化効果を1つ解除",
         "攻撃対象に150％の攻撃"
       ],
+      "battleArtType": "戦威",
+      "battleArtChainOrder": "普通",
       "guide": {
         "evaluationPoints": [
           "弱化解除が行える攻撃戦法",
@@ -6193,6 +6325,8 @@ const APP_DATA = {
       "battleArtEffects": [
         "自部隊と同じ横列の部隊に会心発生上昇15％を付与"
       ],
+      "battleArtType": "補助",
+      "battleArtChainOrder": "普通",
       "guide": {
         "evaluationPoints": [
           "戦法の会心発生上昇が優秀",
@@ -6263,6 +6397,8 @@ const APP_DATA = {
         "自部隊の攻撃、防御を10％上昇",
         "攻撃対象に対物200％の攻撃"
       ],
+      "battleArtType": "対物",
+      "battleArtChainOrder": "普通",
       "guide": {
         "evaluationPoints": [
           "対物に特化した武将",
@@ -6332,6 +6468,8 @@ const APP_DATA = {
       "battleArtEffects": [
         "攻撃対象と同じ横列の部隊の攻撃、戦威を15％低下"
       ],
+      "battleArtType": "補助",
+      "battleArtChainOrder": "早い",
       "guide": {
         "evaluationPoints": [
           "攻撃と戦威を下げる戦法",
@@ -6401,6 +6539,8 @@ const APP_DATA = {
       "battleArtEffects": [
         "攻撃対象と同じ横列の部隊の攻撃を10％低下させ、攻撃速度低下15％を付与"
       ],
+      "battleArtType": "補助",
+      "battleArtChainOrder": "普通",
       "guide": {
         "evaluationPoints": [
           "戦法で敵の火力を抑える武将",
@@ -6471,6 +6611,8 @@ const APP_DATA = {
         "自部隊と同じ横列の部隊の策略を15％上昇（自部隊が中列にいる場合、30％に効果上昇）",
         "自部隊と同じ横列の部隊の防御を15％上昇"
       ],
+      "battleArtType": "補助",
+      "battleArtChainOrder": "早い",
       "guide": {
         "evaluationPoints": [
           "耐久面に優れた戦法を持つ",
@@ -6540,6 +6682,8 @@ const APP_DATA = {
         "自部隊と同じ縦列の部隊の防御を15％上昇",
         "自部隊の攻撃、対物を10％上昇"
       ],
+      "battleArtType": "補助",
+      "battleArtChainOrder": "普通",
       "guide": {
         "evaluationPoints": [
           "ステータスと戦法が優秀",
@@ -6609,6 +6753,8 @@ const APP_DATA = {
       "battleArtEffects": [
         "攻撃対象と同じ横列の部隊の防御を20％、策略を30％低下"
       ],
+      "battleArtType": "補助",
+      "battleArtChainOrder": "早い",
       "guide": {
         "evaluationPoints": [
           "戦法で攻撃対象+横列の防御と策略を低下",
@@ -6679,6 +6825,8 @@ const APP_DATA = {
         "自部隊と同じ横列の部隊の戦威、策略を10％上昇",
         "（自部隊の兵力が50％以下の場合、30％に効果上昇）"
       ],
+      "battleArtType": "補助",
+      "battleArtChainOrder": "早い",
       "guide": {
         "evaluationPoints": [
           "発動の早いバフ戦法",
