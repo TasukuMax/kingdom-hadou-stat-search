@@ -69,6 +69,25 @@ const CHARACTER_TAG_DEFS = [
   }))
 ];
 
+const CHARACTER_FEATURE_DEFS = [
+  { key: "対物", label: "対物", hint: "対物上昇・建物削りに関わる" },
+  { key: "弱化効果付与", label: "弱化効果付与", hint: "低下・病毒・恐怖などを相手に付与する" },
+  { key: "強化効果付与", label: "強化効果付与", hint: "攻撃上昇・攻速上昇・堅固・回避などを付与する" },
+  { key: "強化解除", label: "強化解除", hint: "相手の強化効果を外せる" },
+  { key: "被ダメ軽減", label: "被ダメ軽減", hint: "被ダメージ軽減を持つ" },
+  { key: "反撃", label: "反撃", hint: "反撃強化や反撃時効果を持つ" },
+  { key: "攻速上昇", label: "攻速上昇", hint: "攻撃速度を上げられる" },
+  { key: "攻速低下", label: "攻速低下", hint: "相手の攻撃速度を下げられる" },
+  { key: "継続削り", label: "継続削り", hint: "病毒など継続的な削りを持つ" },
+  { key: "会心", label: "会心", hint: "会心発生率・会心威力を伸ばす" },
+  { key: "堅固", label: "堅固", hint: "堅固を付与または活用する" },
+  { key: "回避", label: "回避", hint: "回避付与を持つ" },
+  { key: "連鎖依存", label: "連鎖依存", hint: "共通個性数で性能が伸びる" },
+  { key: "兵力条件", label: "兵力条件", hint: "兵力割合で効果が変わる" },
+  { key: "調達", label: "調達", hint: "調達・採集まわりで価値がある" },
+  { key: "デバフ無効", label: "デバフ無効", hint: "能力低下系デバフを受けにくい" }
+];
+
 const CHARACTER_SORT_DEFS = [
   { key: "rarityTenpu", label: "レアリティ / 天賦順" },
   { key: "topPair", label: "上位2値合計順" },
@@ -241,6 +260,10 @@ function uniqueValues(values) {
   return [...new Set(values.filter(Boolean))];
 }
 
+function hasAnyKeyword(text, keywords) {
+  return keywords.some((keyword) => text.includes(keyword));
+}
+
 function labelFor(statKey) {
   return STAT_MAP[statKey]?.label ?? "";
 }
@@ -263,6 +286,97 @@ function formatPercent(value) {
 
 function seasonTagLabel(tagKey) {
   return S3_TAG_MAP[tagKey]?.label ?? tagKey;
+}
+
+function hasSeason3Tags(season3, tagKeys) {
+  return tagKeys.some((tagKey) => season3?.tags?.includes(tagKey));
+}
+
+function collectSkillEffectText(skillRecords) {
+  return skillRecords
+    .flatMap((skill) => [skill.name, skill.summary, skill.initialEffect, skill.maxEffect])
+    .filter(Boolean)
+    .join(" ");
+}
+
+function deriveFeatureTags(skillRecords, season3) {
+  const skillText = collectSkillEffectText(skillRecords);
+  const featureTags = [];
+
+  if (skillText.includes("対物") || hasSeason3Tags(season3, ["siege.structure-damage-up"])) {
+    featureTags.push("対物");
+  }
+
+  if (
+    hasAnyKeyword(skillText, ["低下", "病毒", "恐怖"]) ||
+    hasSeason3Tags(season3, ["control.fear", "control.buff-strip", "control.dot", "tempo.attack-speed-down"])
+  ) {
+    featureTags.push("弱化効果付与");
+  }
+
+  if (hasAnyKeyword(skillText, ["攻撃速度上昇", "攻撃上昇", "堅固", "通常攻撃回避"])) {
+    featureTags.push("強化効果付与");
+  }
+
+  if (skillText.includes("強化解除") || hasSeason3Tags(season3, ["control.buff-strip"])) {
+    featureTags.push("強化解除");
+  }
+
+  if (
+    (skillText.includes("被ダメージ") && hasAnyKeyword(skillText, ["軽減", "₋", "-"])) ||
+    hasSeason3Tags(season3, ["def.damage-cut"])
+  ) {
+    featureTags.push("被ダメ軽減");
+  }
+
+  if (skillText.includes("反撃") || hasSeason3Tags(season3, ["role.counter-enabler"])) {
+    featureTags.push("反撃");
+  }
+
+  if (
+    hasAnyKeyword(skillText, ["攻撃速度上昇", "部隊の攻撃速度が上昇"]) ||
+    hasSeason3Tags(season3, ["tempo.attack-speed-up"])
+  ) {
+    featureTags.push("攻速上昇");
+  }
+
+  if (skillText.includes("攻撃速度低下") || hasSeason3Tags(season3, ["tempo.attack-speed-down"])) {
+    featureTags.push("攻速低下");
+  }
+
+  if (skillText.includes("病毒") || hasSeason3Tags(season3, ["control.dot"])) {
+    featureTags.push("継続削り");
+  }
+
+  if (skillText.includes("会心")) {
+    featureTags.push("会心");
+  }
+
+  if (skillText.includes("堅固")) {
+    featureTags.push("堅固");
+  }
+
+  if (skillText.includes("回避")) {
+    featureTags.push("回避");
+  }
+
+  if (hasAnyKeyword(skillText, ["共通する個性", "同じ個性を持つ武将の人数"])) {
+    featureTags.push("連鎖依存");
+  }
+
+  if (hasAnyKeyword(skillText, ["50%以上", "50%以下", "30%以下", "30％以下"])) {
+    featureTags.push("兵力条件");
+  }
+
+  if (skillText.includes("調達")) {
+    featureTags.push("調達");
+  }
+
+  if (hasSeason3Tags(season3, ["def.debuff-immunity"])) {
+    featureTags.push("デバフ無効");
+  }
+
+  return uniqueValues(featureTags);
 }
 
 function compareCharactersBase(left, right) {
@@ -313,12 +427,14 @@ const preparedCharacters = RAW_CHARACTERS.map((character) => {
   const conditionLabels = CONDITION_DEFS.filter(
     (condition) => conditionIndex[condition.key].length > 0
   ).map((condition) => condition.label);
+  const featureTags = deriveFeatureTags(skillRecords, season3);
 
   const displayTags = uniqueValues([
     character.rarity,
     `天賦${character.tenpu}`,
     `${rankedStats[0].label}1位`,
     `${rankedStats[1].label}2位`,
+    ...featureTags,
     ...conditionLabels,
     ...(season3 ? [season3.type, ...season3.bestUseCases, ...season3.tags.map(seasonTagLabel)] : [])
   ]);
@@ -329,6 +445,7 @@ const preparedCharacters = RAW_CHARACTERS.map((character) => {
       character.rarity,
       `天賦${character.tenpu}`,
       ...displayTags,
+      ...featureTags,
       ...character.skills,
       ...skillRecords.map((skill) => skill.summary),
       ...skillRecords.map((skill) => skill.initialEffect),
@@ -352,6 +469,7 @@ const preparedCharacters = RAW_CHARACTERS.map((character) => {
     conditionKeys: CONDITION_DEFS.filter((condition) => conditionLabels.includes(condition.label)).map(
       (condition) => condition.key
     ),
+    featureTags,
     displayTags,
     searchText,
     personalitySet: new Set(character.personalities),
@@ -455,6 +573,7 @@ const elements = {
   characterSort: document.querySelector("#characterSort"),
   characterRarityFilters: document.querySelector("#characterRarityFilters"),
   characterTagFilters: document.querySelector("#characterTagFilters"),
+  characterFeatureFilters: document.querySelector("#characterFeatureFilters"),
   characterResetButton: document.querySelector("#characterResetButton"),
   characterSummary: document.querySelector("#characterSummary"),
   characterCount: document.querySelector("#characterCount"),
@@ -474,6 +593,7 @@ const elements = {
   synergyKeyword: document.querySelector("#synergyKeyword"),
   synergyRarityFilters: document.querySelector("#synergyRarityFilters"),
   synergyConditionFilters: document.querySelector("#synergyConditionFilters"),
+  synergyFeatureFilters: document.querySelector("#synergyFeatureFilters"),
   synergyResetButton: document.querySelector("#synergyResetButton"),
   synergySummary: document.querySelector("#synergySummary"),
   synergyQuickGrid: document.querySelector("#synergyQuickGrid"),
@@ -1364,12 +1484,14 @@ function renderCharacterDb() {
   const sortKey = elements.characterSort.value;
   const rarities = readCheckedValuesIn(elements.characterView, "db-rarity");
   const tags = readCheckedValuesIn(elements.characterView, "db-tag");
+  const features = readCheckedValuesIn(elements.characterView, "db-feature");
   const selectedConditionKeys = getConditionKeysFromLabels(tags);
 
   const filtered = preparedCharacters.filter(
     (character) =>
       rarities.includes(character.rarity) &&
       tags.every((tag) => character.displayTags.includes(tag)) &&
+      features.every((feature) => character.featureTags.includes(feature)) &&
       keywordMatches(character.searchText, keyword)
   );
 
@@ -1379,10 +1501,11 @@ function renderCharacterDb() {
     [
       keyword ? `全文: ${keyword}` : "",
       tags.length ? `タグ: ${tags.join(" / ")}` : "",
+      features.length ? `特徴: ${features.join(" / ")}` : "",
       rarities.length !== RARITY_DEFS.length ? `レアリティ: ${rarities.join(" / ")}` : "",
       `並び順: ${CHARACTER_SORT_MAP[sortKey]}`
     ].filter(Boolean),
-    "武将DBでは、武将名、技能名、個性、役割タグを横断して検索できます。"
+    "武将DBでは、武将名、技能名、技能説明、個性、タグ、特徴を横断して検索できます。"
   );
 
   elements.characterCount.textContent = `${sorted.length}体`;
@@ -1390,7 +1513,7 @@ function renderCharacterDb() {
     showTags: true,
     showPersonalities: true,
     showSeason3Info: true,
-    highlightedTags: tags,
+    highlightedTags: [...tags, ...features],
     selectedConditionKeys,
     emptyMessage: "条件に一致する武将はいません。"
   });
@@ -1403,6 +1526,7 @@ function resetCharacterDb() {
     .querySelectorAll('input[name="db-rarity"]')
     .forEach((input) => (input.checked = defaultRarities.includes(input.value)));
   document.querySelectorAll('input[name="db-tag"]').forEach((input) => (input.checked = false));
+  document.querySelectorAll('input[name="db-feature"]').forEach((input) => (input.checked = false));
   renderCharacterDb();
 }
 
@@ -1486,6 +1610,7 @@ function renderSynergy() {
   const keyword = elements.synergyKeyword.value.trim();
   const rarities = readCheckedValuesIn(elements.synergyView, "synergy-rarity");
   const conditions = readCheckedValuesIn(elements.synergyView, "synergy-condition");
+  const features = readCheckedValuesIn(elements.synergyView, "synergy-feature");
 
   if (!reference) {
     elements.synergySummary.textContent =
@@ -1503,6 +1628,7 @@ function renderSynergy() {
       character.id !== reference.id &&
       rarities.includes(character.rarity) &&
       matchesConditions(character, conditions) &&
+      features.every((feature) => character.featureTags.includes(feature)) &&
       keywordMatches(character.searchText, keyword)
   );
 
@@ -1528,6 +1654,7 @@ function renderSynergy() {
       `基準: ${reference.name}`,
       keyword ? `全文: ${keyword}` : "",
       conditions.length ? `候補条件: ${conditions.map(conditionLabelFor).join(" / ")}` : "",
+      features.length ? `特徴: ${features.join(" / ")}` : "",
       rarities.length !== RARITY_DEFS.length ? `レアリティ: ${rarities.join(" / ")}` : ""
     ].filter(Boolean),
     `${reference.name} を主将に置いた場合の候補一覧です。`
@@ -1544,7 +1671,7 @@ function renderSynergy() {
     showSeason3Info: true,
     chainReference: reference,
     selectedConditionKeys: conditions,
-    highlightedTags: conditions.map(conditionLabelFor),
+    highlightedTags: [...conditions.map(conditionLabelFor), ...features],
     emptyMessage: "条件に一致する候補はいません。"
   });
 }
@@ -1558,6 +1685,7 @@ function resetSynergy() {
   document
     .querySelectorAll('input[name="synergy-condition"]')
     .forEach((input) => (input.checked = false));
+  document.querySelectorAll('input[name="synergy-feature"]').forEach((input) => (input.checked = false));
   renderSynergy();
 }
 
@@ -1831,9 +1959,11 @@ function boot() {
   renderCheckboxGroup(elements.conditionFilters, CONDITION_DEFS, "power-condition", []);
   renderCheckboxGroup(elements.characterRarityFilters, RARITY_DEFS, "db-rarity", defaultRarities);
   renderCheckboxGroup(elements.characterTagFilters, CHARACTER_TAG_DEFS, "db-tag", []);
+  renderCheckboxGroup(elements.characterFeatureFilters, CHARACTER_FEATURE_DEFS, "db-feature", []);
   renderCheckboxGroup(elements.skillConditionFilters, CONDITION_DEFS, "skill-condition", []);
   renderCheckboxGroup(elements.synergyRarityFilters, RARITY_DEFS, "synergy-rarity", defaultRarities);
   renderCheckboxGroup(elements.synergyConditionFilters, CONDITION_DEFS, "synergy-condition", []);
+  renderCheckboxGroup(elements.synergyFeatureFilters, CHARACTER_FEATURE_DEFS, "synergy-feature", []);
 
   populateCommanderDatalist();
   populateCounts();
