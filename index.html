@@ -694,6 +694,65 @@
         white-space: pre-line;
       }
 
+      .season-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        border-radius: 999px;
+        background: rgba(122, 45, 24, 0.12);
+        color: var(--exact);
+        font-size: 0.86rem;
+        font-weight: 700;
+      }
+
+      .season-banner {
+        padding: 18px;
+        border-radius: 22px;
+        border: 1px solid rgba(122, 45, 24, 0.16);
+        background: linear-gradient(135deg, rgba(122, 45, 24, 0.08), rgba(156, 95, 34, 0.12));
+      }
+
+      .season-banner p + p {
+        margin-top: 8px;
+      }
+
+      .score-grid {
+        margin-top: 14px;
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      .score-box {
+        padding: 12px;
+        border-radius: 18px;
+        background: rgba(246, 239, 229, 0.72);
+      }
+
+      .score-box strong {
+        display: block;
+        font-size: 1.12rem;
+        margin-top: 4px;
+      }
+
+      .score-box small {
+        color: var(--muted);
+      }
+
+      .bullet-list {
+        margin: 12px 0 0;
+        padding: 0;
+        list-style: none;
+        display: grid;
+        gap: 8px;
+      }
+
+      .bullet-list li {
+        color: var(--muted);
+        line-height: 1.7;
+      }
+
       .app-view[hidden] {
         display: none !important;
       }
@@ -1028,6 +1087,9 @@
           <span>SR <strong id="srCount"></strong></span>
           <span>技能 <strong id="skillCount"></strong></span>
           <span>データソース <strong id="sourceCount"></strong></span>
+          <span>Season <strong id="seasonLabel"></strong></span>
+          <span>Revision <strong id="seasonRevision"></strong></span>
+          <span>更新基準 <strong id="seasonUpdatedAt"></strong></span>
           <span>対応: 戦力検索 / 武将DB / 技能DB / 相性検索</span>
         </div>
       </section>
@@ -1038,7 +1100,7 @@
           <button class="tab-button" type="button" data-view-tab="character">武将DB</button>
           <button class="tab-button" type="button" data-view-tab="skill">技能DB</button>
           <button class="tab-button" type="button" data-view-tab="synergy">相性検索</button>
-          <button class="tab-button" type="button" data-view-tab="board">機能ボード</button>
+          <button class="tab-button" type="button" data-view-tab="board">S3ハブ</button>
         </div>
       </section>
 
@@ -1346,24 +1408,84 @@
         <section class="panel">
           <div class="panel-header">
             <div>
-              <h2>機能ボード</h2>
+              <h2>Season 3 ハブ</h2>
               <p>
-                いま使える機能と、次に作る計算系・AI系の候補を整理したボードです。
-                まずは DB / 検索 / 相性の土台を固め、その上に計算機能を積む構成にしています。
+                仕様書にあった `Season 3 Only` の入口をここにまとめます。
+                注目武将、注目技能、目的別のおすすめ強化先を先に出し、その下に計算系とAI系の拡張計画を置きます。
               </p>
             </div>
           </div>
 
           <div class="info-grid">
             <article class="info-card">
-              <h2>現在のデータ範囲</h2>
-              <p>SSR / SR の武将データと技能データを使っています。全文検索、タグ検索、技能検索、相性確認はこの範囲で動きます。</p>
+              <h2>Season 3 基本情報</h2>
+              <p class="season-pill">
+                <span id="s3HeroSeasonLabel"></span>
+                <span id="s3ThemeLabel"></span>
+                <span id="s3RevisionLabel"></span>
+              </p>
+              <ul class="bullet-list" id="s3ContextNotes"></ul>
             </article>
             <article class="info-card">
               <h2>利用中のソース</h2>
               <div class="source-list" id="sourceLinkList"></div>
             </article>
           </div>
+        </section>
+
+        <section class="result-section exact-section">
+          <div class="result-header">
+            <div>
+              <h2>S3おすすめ切り替え</h2>
+              <p>目的と優先スロットを切り替えると、注目武将と今週のおすすめ強化先を並べ替えます。</p>
+            </div>
+          </div>
+          <div class="toolbar-grid">
+            <div class="field">
+              <label for="s3Objective">目的</label>
+              <select id="s3Objective" aria-label="S3目的"></select>
+            </div>
+            <div class="field">
+              <label for="s3SlotFocus">優先スロット</label>
+              <select id="s3SlotFocus" aria-label="S3スロット"></select>
+            </div>
+            <div class="button-row">
+              <button class="secondary-button" id="s3ResetButton" type="button">S3表示をリセット</button>
+            </div>
+          </div>
+          <div class="toolbar-summary" id="s3Summary"></div>
+        </section>
+
+        <section class="result-section exact-section">
+          <div class="result-header">
+            <div>
+              <h2>注目武将</h2>
+              <p>仕様書の starter data をもとに、Season 3 の目的別スコアとスロット適性で並べています。</p>
+            </div>
+            <span class="count-pill" id="s3HeroCount"></span>
+          </div>
+          <div class="card-grid" id="s3HeroList"></div>
+        </section>
+
+        <section class="result-section partial-section">
+          <div class="result-header">
+            <div>
+              <h2>今週のおすすめ強化先</h2>
+              <p>目的と優先スロットに対して、改善効果が見込みやすい候補を先に絞ります。</p>
+            </div>
+          </div>
+          <div class="quick-grid" id="s3UpgradeGrid"></div>
+        </section>
+
+        <section class="result-section exact-section">
+          <div class="result-header">
+            <div>
+              <h2>注目技能</h2>
+              <p>Season 3 starter に入っている重要技能を、発動条件とスロット価値つきで並べます。</p>
+            </div>
+            <span class="count-pill" id="s3SkillCount"></span>
+          </div>
+          <div class="skill-card-grid" id="s3SkillList"></div>
         </section>
 
         <section class="result-section exact-section">
@@ -1413,6 +1535,7 @@
     </dialog>
 
     <script src="./data.js"></script>
+    <script src="./season3-data.js"></script>
     <script src="./app.js"></script>
   </body>
 </html>
