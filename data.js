@@ -5,9 +5,15 @@ const APP_DATA = {
       "name": "オルド",
       "rarity": "SSR",
       "tenpu": 900,
+      "type": "援",
       "sourceUrl": "https://gamewith.jp/kingdom-hadou/546513",
       "sourceId": "546513",
       "imageUrl": "https://img.gamewith.jp/article_tools/kingdom-hadou/gacha/chara_81.png",
+      "battleArtName": "山城破り",
+      "battleArtEffects": [
+        "自部隊と同じ横列の部隊の対物を15％上昇させ、攻撃速度上昇20％と悠然を付与",
+        "攻撃対象に対物250％の攻撃（自身の兵力が50％以上の場合、350％に威力上昇）"
+      ],
       "skills": [
         "猛者",
         "統制",
@@ -33,9 +39,15 @@ const APP_DATA = {
       "name": "バジオウ",
       "rarity": "SSR",
       "tenpu": 900,
+      "type": "闘",
       "sourceUrl": "https://gamewith.jp/kingdom-hadou/519318",
       "sourceId": "519318",
       "imageUrl": "https://img.gamewith.jp/article_tools/kingdom-hadou/gacha/chara_5.png",
+      "battleArtName": "死王の剣",
+      "battleArtEffects": [
+        "自部隊の攻撃を30％上昇させ会心発生上昇30％を付与",
+        "攻撃対象の防御を20％低下させ攻撃対象と同じ横列の部隊に戦威250％の攻撃"
+      ],
       "skills": [
         "豪傑",
         "練武",
@@ -61,9 +73,15 @@ const APP_DATA = {
       "name": "信(臨時千人将)",
       "rarity": "SSR",
       "tenpu": 900,
+      "type": "援",
       "sourceUrl": "https://gamewith.jp/kingdom-hadou/533475",
       "sourceId": "533475",
       "imageUrl": "https://img.gamewith.jp/article_tools/kingdom-hadou/gacha/chara_68.png",
+      "battleArtName": "刹那の一撃",
+      "battleArtEffects": [
+        "自部隊と同じ横列の部隊の戦威を30％上昇させ、撃心発生上昇50％を付与",
+        "攻撃対象に戦威250％の攻撃"
+      ],
       "skills": [
         "鋭鋒",
         "練武",
@@ -89,9 +107,16 @@ const APP_DATA = {
       "name": "呉慶",
       "rarity": "SSR",
       "tenpu": 900,
+      "type": "護",
       "sourceUrl": "https://gamewith.jp/kingdom-hadou/527706",
       "sourceId": "527706",
       "imageUrl": "https://img.gamewith.jp/article_tools/kingdom-hadou/gacha/chara_65.png",
+      "battleArtName": "九重槍璧",
+      "battleArtEffects": [
+        "自部隊と同じ横列の部隊の防御を40%上昇させ、反撃強化100%を付与（自身が主将の場合、反撃強化を軍勢全体に付与）",
+        "自部隊に堅固5%を付与",
+        "攻撃対象と同じ縦列の部隊に戦威200%の攻撃"
+      ],
       "skills": [
         "頑健",
         "開智",
@@ -117,9 +142,16 @@ const APP_DATA = {
       "name": "呉鳳明",
       "rarity": "SSR",
       "tenpu": 900,
+      "type": "護",
       "sourceUrl": "https://gamewith.jp/kingdom-hadou/549059",
       "sourceId": "549059",
       "imageUrl": "https://img.gamewith.jp/article_tools/kingdom-hadou/gacha/chara_89.png",
+      "battleArtName": "流動力術",
+      "battleArtEffects": [
+        "自部隊に悠然を付与",
+        "自部隊と同じ横列の部隊の防御、策略、対物を35％上昇させ、反撃強化50％を付与",
+        "攻撃対象と同じ縦列の部隊に戦威200％の攻撃"
+      ],
       "skills": [
         "聡明",
         "開智",
@@ -145,9 +177,14 @@ const APP_DATA = {
       "name": "嬴政",
       "rarity": "SSR",
       "tenpu": 900,
+      "type": "護",
       "sourceUrl": "https://gamewith.jp/kingdom-hadou/519317",
       "sourceId": "519317",
       "imageUrl": "https://img.gamewith.jp/article_tools/kingdom-hadou/gacha/chara_6.png",
+      "battleArtName": "不撓不屈",
+      "battleArtEffects": [
+        "自部隊と同じ縦列の部隊の防御、戦威、策略を20％上昇させ、堅固5％を付与"
+      ],
       "skills": [
         "威風",
         "統制",
@@ -173,9 +210,17 @@ const APP_DATA = {
       "name": "廉頗",
       "rarity": "SSR",
       "tenpu": 900,
+      "type": "援",
       "sourceUrl": "https://gamewith.jp/kingdom-hadou/541917",
       "sourceId": "541917",
       "imageUrl": "https://img.gamewith.jp/article_tools/kingdom-hadou/gacha/chara_79.png",
+      "battleArtName": "天地激震",
+      "battleArtEffects": [
+        "自部隊と同じ横列の部隊の",
+        "攻撃を30%、対物を60%上昇",
+        "（自身が主将の場合、対物上昇を軍勢全体に付与）",
+        "攻撃対象に対物300%の攻撃"
+      ],
       "skills": [
         "威風",
         "洞察",
@@ -201,9 +246,16 @@ const APP_DATA = {
       "name": "摎",
       "rarity": "SSR",
       "tenpu": 900,
+      "type": "闘",
       "sourceUrl": "https://gamewith.jp/kingdom-hadou/537926",
       "sourceId": "537926",
       "imageUrl": "https://img.gamewith.jp/article_tools/kingdom-hadou/gacha/chara_77.png",
+      "battleArtName": "破城掃滅",
+      "battleArtEffects": [
+        "自部隊に攻撃速度上昇20％、会心発生上昇30％を付与",
+        "攻撃対象と同じ縦列の部隊に戦威250％の攻撃",
+        "（敵部隊の戦威より自部隊の戦威が上回っている場合、300％に威力上昇）"
+      ],
       "skills": [
         "雄心",
         "練武",
@@ -229,9 +281,14 @@ const APP_DATA = {
       "name": "李牧",
       "rarity": "SSR",
       "tenpu": 900,
+      "type": "妨",
       "sourceUrl": "https://gamewith.jp/kingdom-hadou/546515",
       "sourceId": "546515",
       "imageUrl": "https://img.gamewith.jp/article_tools/kingdom-hadou/gacha/chara_83.png",
+      "battleArtName": "一望千里",
+      "battleArtEffects": [
+        "攻撃対象と同じ縦列の部隊の強化効果を2つ解除し、攻撃を20％、策略を40％低下させ、恐怖を付与し、戦威200％の攻撃"
+      ],
       "skills": [
         "掃討",
         "開智",
@@ -257,9 +314,16 @@ const APP_DATA = {
       "name": "楊端和",
       "rarity": "SSR",
       "tenpu": 900,
+      "type": "妨",
       "sourceUrl": "https://gamewith.jp/kingdom-hadou/519321",
       "sourceId": "519321",
       "imageUrl": "https://img.gamewith.jp/article_tools/kingdom-hadou/gacha/chara_2.png",
+      "battleArtName": "山界の死王",
+      "battleArtEffects": [
+        "自部隊と同じ横列の部隊に攻撃速度上昇20%を付与",
+        "攻撃対象と同じ横列の部隊に恐怖を付与",
+        "攻撃対象に戦威200%の攻撃"
+      ],
       "skills": [
         "鋭鋒",
         "練武",
@@ -285,9 +349,15 @@ const APP_DATA = {
       "name": "汗明",
       "rarity": "SSR",
       "tenpu": 900,
+      "type": "闘",
       "sourceUrl": "https://gamewith.jp/kingdom-hadou/546514",
       "sourceId": "546514",
       "imageUrl": "https://img.gamewith.jp/article_tools/kingdom-hadou/gacha/chara_82.png",
+      "battleArtName": "至強の打擲",
+      "battleArtEffects": [
+        "自部隊の防御を20％上昇させ、会心発生上昇30％を付与",
+        "攻撃対象と同じ横列の部隊に戦威300％の攻撃（自部隊に付与されている強化効果の種類×10%威力上昇。10種類まで計上し、効果最大で100％上昇して400％に威力上昇）"
+      ],
       "skills": [
         "尖撃",
         "練武",
@@ -313,9 +383,15 @@ const APP_DATA = {
       "name": "王翦",
       "rarity": "SSR",
       "tenpu": 900,
+      "type": "護",
       "sourceUrl": "https://gamewith.jp/kingdom-hadou/546512",
       "sourceId": "546512",
       "imageUrl": "https://img.gamewith.jp/article_tools/kingdom-hadou/gacha/chara_80.png",
+      "battleArtName": "千考掌術",
+      "battleArtEffects": [
+        "自部隊と同じ横列の部隊の攻撃を20％、防御を40％上昇させて反撃強化50％を付与",
+        "攻撃対象と同じ横列の部隊に戦慄3％を付与して戦威200％の攻撃"
+      ],
       "skills": [
         "聡明",
         "洞察",
@@ -341,9 +417,16 @@ const APP_DATA = {
       "name": "王賁",
       "rarity": "SSR",
       "tenpu": 900,
+      "type": "闘",
       "sourceUrl": "https://gamewith.jp/kingdom-hadou/533477",
       "sourceId": "533477",
       "imageUrl": "https://img.gamewith.jp/article_tools/kingdom-hadou/gacha/chara_70.png",
+      "battleArtName": "龍指",
+      "battleArtEffects": [
+        "自部隊の攻撃を20％上昇",
+        "攻撃対象と同じ縦列の部隊に戦威250％の攻撃（攻撃対象には350％の攻撃）",
+        "攻撃対象と同じ縦列の部隊の防御を40％低下"
+      ],
       "skills": [
         "尖撃",
         "統制",
@@ -369,9 +452,15 @@ const APP_DATA = {
       "name": "王騎",
       "rarity": "SSR",
       "tenpu": 900,
+      "type": "援",
       "sourceUrl": "https://gamewith.jp/kingdom-hadou/519322",
       "sourceId": "519322",
       "imageUrl": "https://img.gamewith.jp/article_tools/kingdom-hadou/gacha/chara_1.png",
+      "battleArtName": "全軍前進",
+      "battleArtEffects": [
+        "自部隊と同じ横列の部隊の攻撃、防御を15％上昇（自部隊が前列にいる場合、軍勢全体に付与）",
+        "攻撃対象と同じ横列の部隊に戦威200％の攻撃"
+      ],
       "skills": [
         "威風",
         "統制",
@@ -397,9 +486,15 @@ const APP_DATA = {
       "name": "羌瘣",
       "rarity": "SSR",
       "tenpu": 900,
+      "type": "妨",
       "sourceUrl": "https://gamewith.jp/kingdom-hadou/519316",
       "sourceId": "519316",
       "imageUrl": "https://img.gamewith.jp/article_tools/kingdom-hadou/gacha/chara_7.png",
+      "battleArtName": "蚩尤の巫舞",
+      "battleArtEffects": [
+        "自部隊の攻撃、策略を30％上昇",
+        "攻撃対象と同じ縦列の部隊に攻撃速度低下20％を付与し、戦威200％の攻撃（攻撃対象には300％の攻撃）"
+      ],
       "skills": [
         "聡明",
         "開智",
@@ -425,9 +520,14 @@ const APP_DATA = {
       "name": "蒙恬",
       "rarity": "SSR",
       "tenpu": 900,
+      "type": "護",
       "sourceUrl": "https://gamewith.jp/kingdom-hadou/533476",
       "sourceId": "533476",
       "imageUrl": "https://img.gamewith.jp/article_tools/kingdom-hadou/gacha/chara_69.png",
+      "battleArtName": "活路への布石",
+      "battleArtEffects": [
+        "自部隊と同じ横列の部隊の攻撃を20％上昇させ、確率回避50％、会心発生上昇30％を付与"
+      ],
       "skills": [
         "猛者",
         "開智",
@@ -453,9 +553,15 @@ const APP_DATA = {
       "name": "蒙驁",
       "rarity": "SSR",
       "tenpu": 900,
+      "type": "護",
       "sourceUrl": "https://gamewith.jp/kingdom-hadou/536784",
       "sourceId": "536784",
       "imageUrl": "https://img.gamewith.jp/article_tools/kingdom-hadou/gacha/chara_76.png",
+      "battleArtName": "常勝戦術",
+      "battleArtEffects": [
+        "自部隊と同じ横列の部隊の弱化効果を3つ解除し、防御を40％、戦威を20％上昇させ、負傷兵を最大兵力の20％回復",
+        "自部隊に反撃強化50％を付与"
+      ],
       "skills": [
         "頑健",
         "人望",
@@ -481,9 +587,15 @@ const APP_DATA = {
       "name": "輪虎",
       "rarity": "SSR",
       "tenpu": 900,
+      "type": "妨",
       "sourceUrl": "https://gamewith.jp/kingdom-hadou/533474",
       "sourceId": "533474",
       "imageUrl": "https://img.gamewith.jp/article_tools/kingdom-hadou/gacha/chara_67.png",
+      "battleArtName": "天与の剣",
+      "battleArtEffects": [
+        "自部隊に攻撃拡張・横を付与",
+        "攻撃対象と同じ横列の部隊の攻撃、防御、戦威を25％低下させ、戦威200％の攻撃"
+      ],
       "skills": [
         "掃討",
         "糧道",
@@ -509,9 +621,15 @@ const APP_DATA = {
       "name": "騰",
       "rarity": "SSR",
       "tenpu": 900,
+      "type": "援",
       "sourceUrl": "https://gamewith.jp/kingdom-hadou/519319",
       "sourceId": "519319",
       "imageUrl": "https://img.gamewith.jp/article_tools/kingdom-hadou/gacha/chara_4.png",
+      "battleArtName": "廻剣妙技",
+      "battleArtEffects": [
+        "自部隊と同じ縦列の部隊の戦威を20％上昇させ、悠然を付与",
+        "攻撃対象と同じ縦列の部隊に戦威200％の攻撃（攻撃対象には250％の攻撃）"
+      ],
       "skills": [
         "猛者",
         "統制",
@@ -537,9 +655,15 @@ const APP_DATA = {
       "name": "麃公",
       "rarity": "SSR",
       "tenpu": 900,
+      "type": "闘",
       "sourceUrl": "https://gamewith.jp/kingdom-hadou/519320",
       "sourceId": "519320",
       "imageUrl": "https://img.gamewith.jp/article_tools/kingdom-hadou/gacha/chara_3.png",
+      "battleArtName": "活火激発",
+      "battleArtEffects": [
+        "自部隊と同じ横列の部隊に会心発生上昇20％を付与",
+        "攻撃対象と同じ縦列の部隊に戦威250％の攻撃（自部隊が種火状態の場合300％、炎状態の場合350％、大炎状態の場合400％に威力上昇）"
+      ],
       "skills": [
         "尖撃",
         "洞察",
@@ -565,9 +689,15 @@ const APP_DATA = {
       "name": "シュンメン",
       "rarity": "SSR",
       "tenpu": 850,
+      "type": "援",
       "sourceUrl": "https://gamewith.jp/kingdom-hadou/519309",
       "sourceId": "519309",
       "imageUrl": "https://img.gamewith.jp/article_tools/kingdom-hadou/gacha/chara_14.png",
+      "battleArtName": "鳥牙族の疾駆",
+      "battleArtEffects": [
+        "自部隊と同じ横列の部隊の戦威を20％上昇させ、会心威力上昇20％を付与",
+        "自部隊に攻撃速度上昇20％を付与"
+      ],
       "skills": [
         "掃討",
         "開智",
@@ -593,9 +723,15 @@ const APP_DATA = {
       "name": "タジフ",
       "rarity": "SSR",
       "tenpu": 850,
+      "type": "闘",
       "sourceUrl": "https://gamewith.jp/kingdom-hadou/519311",
       "sourceId": "519311",
       "imageUrl": "https://img.gamewith.jp/article_tools/kingdom-hadou/gacha/chara_12.png",
+      "battleArtName": "山界の鉄槌",
+      "battleArtEffects": [
+        "自部隊の防御を30％上昇させ、堅固5％を付与",
+        "攻撃対象に対物300％の攻撃"
+      ],
       "skills": [
         "鋭鋒",
         "統制",
@@ -621,9 +757,16 @@ const APP_DATA = {
       "name": "ランカイ",
       "rarity": "SSR",
       "tenpu": 850,
+      "type": "妨",
       "sourceUrl": "https://gamewith.jp/kingdom-hadou/519310",
       "sourceId": "519310",
       "imageUrl": "https://img.gamewith.jp/article_tools/kingdom-hadou/gacha/chara_13.png",
+      "battleArtName": "獣の暴",
+      "battleArtEffects": [
+        "攻撃対象と同じ横列の部隊の攻撃、防御を10％低下（自部隊の兵力が50％以上の場合は",
+        "攻撃低下が30％に効果上昇）",
+        "攻撃対象と同じ横列の部隊に戦威200％の攻撃"
+      ],
       "skills": [
         "攻城",
         "練武",
@@ -649,9 +792,15 @@ const APP_DATA = {
       "name": "介子坊",
       "rarity": "SSR",
       "tenpu": 850,
+      "type": "闘",
       "sourceUrl": "https://gamewith.jp/kingdom-hadou/533478",
       "sourceId": "533478",
       "imageUrl": "https://img.gamewith.jp/article_tools/kingdom-hadou/gacha/chara_71.png",
+      "battleArtName": "正攻不遮",
+      "battleArtEffects": [
+        "自部隊の攻撃を30％上昇",
+        "攻撃対象と同じ横列の部隊に戦威200％の攻撃（攻撃対象には350％の攻撃）"
+      ],
       "skills": [
         "尖撃",
         "練武",
@@ -677,9 +826,15 @@ const APP_DATA = {
       "name": "信(童)",
       "rarity": "SSR",
       "tenpu": 850,
+      "type": "闘",
       "sourceUrl": "https://gamewith.jp/kingdom-hadou/519315",
       "sourceId": "519315",
       "imageUrl": "https://img.gamewith.jp/article_tools/kingdom-hadou/gacha/chara_8.png",
+      "battleArtName": "信念の飛矢",
+      "battleArtEffects": [
+        "自部隊の攻撃を30％上昇",
+        "攻撃対象に戦威300％の攻撃（自部隊の兵力が50％以下の場合、350％に威力上昇）"
+      ],
       "skills": [
         "逆境",
         "練武",
@@ -705,9 +860,14 @@ const APP_DATA = {
       "name": "壁",
       "rarity": "SSR",
       "tenpu": 850,
+      "type": "護",
       "sourceUrl": "https://gamewith.jp/kingdom-hadou/519313",
       "sourceId": "519313",
       "imageUrl": "https://img.gamewith.jp/article_tools/kingdom-hadou/gacha/chara_10.png",
+      "battleArtName": "実直奮励",
+      "battleArtEffects": [
+        "自部隊と同じ横列の部隊の攻撃を15％、防御を25％上昇させ会心発生上昇20％を付与"
+      ],
       "skills": [
         "堅実",
         "人望",
@@ -733,9 +893,15 @@ const APP_DATA = {
       "name": "姜燕",
       "rarity": "SSR",
       "tenpu": 850,
+      "type": "援",
       "sourceUrl": "https://gamewith.jp/kingdom-hadou/533479",
       "sourceId": "533479",
       "imageUrl": "https://img.gamewith.jp/article_tools/kingdom-hadou/gacha/chara_72.png",
+      "battleArtName": "飛閃の鏑矢",
+      "battleArtEffects": [
+        "自部隊と同じ横列の部隊の戦威、対物を40％上昇",
+        "攻撃対象に戦威100％の攻撃（自部隊が後列にいる場合、200％に威力上昇）"
+      ],
       "skills": [
         "猛者",
         "洞察",
@@ -761,9 +927,16 @@ const APP_DATA = {
       "name": "宮元",
       "rarity": "SSR",
       "tenpu": 850,
+      "type": "妨",
       "sourceUrl": "https://gamewith.jp/kingdom-hadou/527705",
       "sourceId": "527705",
       "imageUrl": "https://img.gamewith.jp/article_tools/kingdom-hadou/gacha/chara_66.png",
+      "battleArtName": "冷徹無比",
+      "battleArtEffects": [
+        "自部隊と同じ横列の部隊の負傷兵を最大兵力の20%回復",
+        "攻撃対象と同じ横列の部隊の攻撃を50%低下",
+        "攻撃対象に戦威200%の攻撃"
+      ],
       "skills": [
         "尖撃",
         "開智",
@@ -789,9 +962,14 @@ const APP_DATA = {
       "name": "成恢",
       "rarity": "SSR",
       "tenpu": 850,
+      "type": "妨",
       "sourceUrl": "https://gamewith.jp/kingdom-hadou/546516",
       "sourceId": "546516",
       "imageUrl": "https://img.gamewith.jp/article_tools/kingdom-hadou/gacha/chara_84.png",
+      "battleArtName": "苦悶に至る毒",
+      "battleArtEffects": [
+        "攻撃対象と同じ横列の部隊の防御、策略を15％低下させ、病毒10％を付与"
+      ],
       "skills": [
         "掃討",
         "開智",
@@ -817,9 +995,15 @@ const APP_DATA = {
       "name": "成蟜",
       "rarity": "SSR",
       "tenpu": 850,
+      "type": "妨",
       "sourceUrl": "https://gamewith.jp/kingdom-hadou/519308",
       "sourceId": "519308",
       "imageUrl": "https://img.gamewith.jp/article_tools/kingdom-hadou/gacha/chara_15.png",
+      "battleArtName": "王族の厳命",
+      "battleArtEffects": [
+        "自部隊の策略を30％上昇",
+        "攻撃対象と同じ横列の部隊の防御、策略を20％、戦威を40％低下"
+      ],
       "skills": [
         "枢機",
         "糧道",
@@ -845,9 +1029,14 @@ const APP_DATA = {
       "name": "漂",
       "rarity": "SSR",
       "tenpu": 850,
+      "type": "援",
       "sourceUrl": "https://gamewith.jp/kingdom-hadou/519314",
       "sourceId": "519314",
       "imageUrl": "https://img.gamewith.jp/article_tools/kingdom-hadou/gacha/chara_9.png",
+      "battleArtName": "夢追う剣",
+      "battleArtEffects": [
+        "自部隊と同じ横列の部隊の弱化効果を1つ解除し戦威を10％上昇させ、攻撃速度上昇20％を付与"
+      ],
       "skills": [
         "逆境",
         "洞察",
@@ -873,9 +1062,15 @@ const APP_DATA = {
       "name": "縛虎申",
       "rarity": "SSR",
       "tenpu": 850,
+      "type": "闘",
       "sourceUrl": "https://gamewith.jp/kingdom-hadou/524924",
       "sourceId": "524924",
       "imageUrl": "https://img.gamewith.jp/article_tools/kingdom-hadou/gacha/chara_64.png",
+      "battleArtName": "不退転",
+      "battleArtEffects": [
+        "自部隊の攻撃、対物を10%上昇させて攻撃速度上昇を10%付与",
+        "攻撃対象と同じ縦列の部隊に戦威200%の攻撃（自部隊の兵力が30%以下の場合300%に威力上昇）"
+      ],
       "skills": [
         "掃討",
         "練武",
@@ -901,9 +1096,16 @@ const APP_DATA = {
       "name": "臨武君",
       "rarity": "SSR",
       "tenpu": 850,
+      "type": "闘",
       "sourceUrl": "https://gamewith.jp/kingdom-hadou/546517",
       "sourceId": "546517",
       "imageUrl": "https://img.gamewith.jp/article_tools/kingdom-hadou/gacha/chara_85.png",
+      "battleArtName": "強者狩り",
+      "battleArtEffects": [
+        "攻撃対象と同じ横列の部隊に戦威250％の攻撃",
+        "（自部隊の兵力が50％以上の場合、350％に威力上昇）",
+        "自部隊と同じ横列の部隊の戦威を20％上昇"
+      ],
       "skills": [
         "鋭鋒",
         "人望",
@@ -929,9 +1131,14 @@ const APP_DATA = {
       "name": "録嗚未",
       "rarity": "SSR",
       "tenpu": 850,
+      "type": "闘",
       "sourceUrl": "https://gamewith.jp/kingdom-hadou/519312",
       "sourceId": "519312",
       "imageUrl": "https://img.gamewith.jp/article_tools/kingdom-hadou/gacha/chara_11.png",
+      "battleArtName": "血気十全",
+      "battleArtEffects": [
+        "攻撃対象と同じ縦列の部隊に戦威250％の攻撃（自部隊が前列にいる場合、300％に威力上昇）"
+      ],
       "skills": [
         "尖撃",
         "練武",
@@ -957,9 +1164,15 @@ const APP_DATA = {
       "name": "関常",
       "rarity": "SSR",
       "tenpu": 850,
+      "type": "護",
       "sourceUrl": "https://gamewith.jp/kingdom-hadou/533487",
       "sourceId": "533487",
       "imageUrl": "https://img.gamewith.jp/article_tools/kingdom-hadou/gacha/chara_74.png",
+      "battleArtName": "当機立断",
+      "battleArtEffects": [
+        "自部隊と同じ横列の部隊の防御を40％上昇",
+        "自部隊の戦威を40％上昇させ、堅固5％を付与"
+      ],
       "skills": [
         "尖撃",
         "統制",
@@ -985,9 +1198,15 @@ const APP_DATA = {
       "name": "陸仙",
       "rarity": "SSR",
       "tenpu": 850,
+      "type": "援",
       "sourceUrl": "https://gamewith.jp/kingdom-hadou/533488",
       "sourceId": "533488",
       "imageUrl": "https://img.gamewith.jp/article_tools/kingdom-hadou/gacha/chara_75.png",
+      "battleArtName": "扶翼の烈槍",
+      "battleArtEffects": [
+        "自部隊と同じ横列の攻撃を30％上昇させ、会心威力上昇30％を付与",
+        "攻撃対象に戦威250％の攻撃"
+      ],
       "skills": [
         "鋭鋒",
         "開智",
@@ -1013,9 +1232,16 @@ const APP_DATA = {
       "name": "項翼",
       "rarity": "SSR",
       "tenpu": 850,
+      "type": "闘",
       "sourceUrl": "https://gamewith.jp/kingdom-hadou/546546",
       "sourceId": "546546",
       "imageUrl": "https://img.gamewith.jp/article_tools/kingdom-hadou/gacha/chara_87.png",
+      "battleArtName": "嚇なす妖刀",
+      "battleArtEffects": [
+        "自部隊の防御を25％上昇",
+        "攻撃対象と同じ縦列の部隊に戦威250％の攻撃",
+        "攻撃対象と同じ縦列の部隊の防御を30％低下"
+      ],
       "skills": [
         "発揚",
         "練武",
@@ -1041,9 +1267,14 @@ const APP_DATA = {
       "name": "オギコ",
       "rarity": "SSR",
       "tenpu": 800,
+      "type": "妨",
       "sourceUrl": "https://gamewith.jp/kingdom-hadou/546547",
       "sourceId": "546547",
       "imageUrl": "https://img.gamewith.jp/article_tools/kingdom-hadou/gacha/chara_88.png",
+      "battleArtName": "無垢の遵従",
+      "battleArtEffects": [
+        "攻撃対象と同じ横列の部隊の策略を30％低下させ、それぞれ確率で攻撃、防御、戦威を30％低下"
+      ],
       "skills": [
         "助勢",
         "糧道",
@@ -1069,9 +1300,15 @@ const APP_DATA = {
       "name": "バミュウ",
       "rarity": "SSR",
       "tenpu": 800,
+      "type": "援",
       "sourceUrl": "https://gamewith.jp/kingdom-hadou/546518",
       "sourceId": "546518",
       "imageUrl": "https://img.gamewith.jp/article_tools/kingdom-hadou/gacha/chara_86.png",
+      "battleArtName": "喜悦の従属",
+      "battleArtEffects": [
+        "自部隊と同じ横列の部隊の攻撃、策略を20％上昇",
+        "（自身が副将の場合、40％に効果上昇）"
+      ],
       "skills": [
         "扶助",
         "糧道",
@@ -1097,9 +1334,14 @@ const APP_DATA = {
       "name": "ムタ",
       "rarity": "SSR",
       "tenpu": 800,
+      "type": "妨",
       "sourceUrl": "https://gamewith.jp/kingdom-hadou/522277",
       "sourceId": "522277",
       "imageUrl": "https://img.gamewith.jp/article_tools/kingdom-hadou/gacha/chara_63.png",
+      "battleArtName": "脅威の毒矢",
+      "battleArtEffects": [
+        "攻撃対象と同じ横列の部隊の攻撃を15%低下させ、病毒5%を付与"
+      ],
       "skills": [
         "鋭鋒",
         "練武",
@@ -1124,9 +1366,14 @@ const APP_DATA = {
       "name": "同金",
       "rarity": "SSR",
       "tenpu": 800,
+      "type": "援",
       "sourceUrl": "https://gamewith.jp/kingdom-hadou/519299",
       "sourceId": "519299",
       "imageUrl": "https://img.gamewith.jp/article_tools/kingdom-hadou/gacha/chara_24.png",
+      "battleArtName": "寡言豪胆",
+      "battleArtEffects": [
+        "自部隊同じ横列の部隊の攻撃、対物を30％上昇"
+      ],
       "skills": [
         "鋭鋒",
         "統制",
@@ -1151,9 +1398,14 @@ const APP_DATA = {
       "name": "向",
       "rarity": "SSR",
       "tenpu": 800,
+      "type": "援",
       "sourceUrl": "https://gamewith.jp/kingdom-hadou/519293",
       "sourceId": "519293",
       "imageUrl": "https://img.gamewith.jp/article_tools/kingdom-hadou/gacha/chara_30.png",
+      "battleArtName": "心照らす灯火",
+      "battleArtEffects": [
+        "自部隊と同じ縦列の部隊の攻撃を30％上昇させ、弱化効果を1つ解除"
+      ],
       "skills": [
         "堅実",
         "糧道",
@@ -1179,9 +1431,15 @@ const APP_DATA = {
       "name": "尚鹿",
       "rarity": "SSR",
       "tenpu": 800,
+      "type": "護",
       "sourceUrl": "https://gamewith.jp/kingdom-hadou/519297",
       "sourceId": "519297",
       "imageUrl": "https://img.gamewith.jp/article_tools/kingdom-hadou/gacha/chara_26.png",
+      "battleArtName": "騎馬飄々",
+      "battleArtEffects": [
+        "自部隊と同じ縦列の部隊の防御を20％上昇させ、会心威力上昇10％を付与（自部隊が中列にいる場合",
+        "会心威力上昇が20％に効果上昇）"
+      ],
       "skills": [
         "頑健",
         "洞察",
@@ -1207,9 +1465,14 @@ const APP_DATA = {
       "name": "干央",
       "rarity": "SSR",
       "tenpu": 800,
+      "type": "闘",
       "sourceUrl": "https://gamewith.jp/kingdom-hadou/519305",
       "sourceId": "519305",
       "imageUrl": "https://img.gamewith.jp/article_tools/kingdom-hadou/gacha/chara_18.png",
+      "battleArtName": "死闘敢戦",
+      "battleArtEffects": [
+        "攻撃対象と同じ横列の部隊に戦威150％の攻撃（自部隊の兵力が30％以下の場合、300％に威力上昇）"
+      ],
       "skills": [
         "鋭鋒",
         "統制",
@@ -1234,9 +1497,14 @@ const APP_DATA = {
       "name": "徐完",
       "rarity": "SSR",
       "tenpu": 800,
+      "type": "闘",
       "sourceUrl": "https://gamewith.jp/kingdom-hadou/519294",
       "sourceId": "519294",
       "imageUrl": "https://img.gamewith.jp/article_tools/kingdom-hadou/gacha/chara_29.png",
+      "battleArtName": "朱凶の剣",
+      "battleArtEffects": [
+        "攻撃対象と同じ縦列の部隊に戦威150％の攻撃（攻撃する敵部隊の兵力が30％以下の場合200％に威力上昇）"
+      ],
       "skills": [
         "鋭鋒",
         "練武",
@@ -1261,9 +1529,15 @@ const APP_DATA = {
       "name": "昌文君",
       "rarity": "SSR",
       "tenpu": 800,
+      "type": "護",
       "sourceUrl": "https://gamewith.jp/kingdom-hadou/519301",
       "sourceId": "519301",
       "imageUrl": "https://img.gamewith.jp/article_tools/kingdom-hadou/gacha/chara_22.png",
+      "battleArtName": "王の柱石",
+      "battleArtEffects": [
+        "自部隊と同じ横列の部隊の防御、策略を25％上昇",
+        "攻撃対象に戦威150％の攻撃"
+      ],
       "skills": [
         "尖撃",
         "洞察",
@@ -1289,9 +1563,15 @@ const APP_DATA = {
       "name": "楚水",
       "rarity": "SSR",
       "tenpu": 800,
+      "type": "援",
       "sourceUrl": "https://gamewith.jp/kingdom-hadou/519302",
       "sourceId": "519302",
       "imageUrl": "https://img.gamewith.jp/article_tools/kingdom-hadou/gacha/chara_21.png",
+      "battleArtName": "忠武突貫",
+      "battleArtEffects": [
+        "自部隊の攻撃を20％上昇（自部隊が前列にいる場合、30％に効果上昇）",
+        "攻撃対象と同じ縦列の部隊に戦威100％の攻撃"
+      ],
       "skills": [
         "掃討",
         "統制",
@@ -1317,9 +1597,14 @@ const APP_DATA = {
       "name": "河了貂",
       "rarity": "SSR",
       "tenpu": 800,
+      "type": "護",
       "sourceUrl": "https://gamewith.jp/kingdom-hadou/519307",
       "sourceId": "519307",
       "imageUrl": "https://img.gamewith.jp/article_tools/kingdom-hadou/gacha/chara_16.png",
+      "battleArtName": "河了貂也",
+      "battleArtEffects": [
+        "自部隊と同じ横列の部隊の戦威、策略を15％上昇させ負傷兵を最大兵力の20％回復"
+      ],
       "skills": [
         "聡明",
         "糧道",
@@ -1345,9 +1630,14 @@ const APP_DATA = {
       "name": "渕",
       "rarity": "SSR",
       "tenpu": 800,
+      "type": "護",
       "sourceUrl": "https://gamewith.jp/kingdom-hadou/519306",
       "sourceId": "519306",
       "imageUrl": "https://img.gamewith.jp/article_tools/kingdom-hadou/gacha/chara_17.png",
+      "battleArtName": "集の全力",
+      "battleArtEffects": [
+        "自部隊と同じ横列の部隊の防御40％上昇"
+      ],
       "skills": [
         "頑健",
         "糧道",
@@ -1372,9 +1662,15 @@ const APP_DATA = {
       "name": "玄峰",
       "rarity": "SSR",
       "tenpu": 800,
+      "type": "妨",
       "sourceUrl": "https://gamewith.jp/kingdom-hadou/533480",
       "sourceId": "533480",
       "imageUrl": "https://img.gamewith.jp/article_tools/kingdom-hadou/gacha/chara_73.png",
+      "battleArtName": "盤上遊戯",
+      "battleArtEffects": [
+        "自部隊に確率回避30％を付与",
+        "攻撃対象と同じ横列の部隊の防御、策略を35％低下"
+      ],
       "skills": [
         "発揚",
         "糧道",
@@ -1400,9 +1696,14 @@ const APP_DATA = {
       "name": "瑠衣",
       "rarity": "SSR",
       "tenpu": 800,
+      "type": "援",
       "sourceUrl": "https://gamewith.jp/kingdom-hadou/540104",
       "sourceId": "540104",
       "imageUrl": "https://img.gamewith.jp/article_tools/kingdom-hadou/gacha/chara_78.png",
+      "battleArtName": "比翼連理",
+      "battleArtEffects": [
+        "自部隊と同じ縦列の攻撃、策略を30％上昇"
+      ],
       "skills": [
         "堅実",
         "洞察",
@@ -1428,9 +1729,14 @@ const APP_DATA = {
       "name": "白亀西",
       "rarity": "SSR",
       "tenpu": 800,
+      "type": "援",
       "sourceUrl": "https://gamewith.jp/kingdom-hadou/519298",
       "sourceId": "519298",
       "imageUrl": "https://img.gamewith.jp/article_tools/kingdom-hadou/gacha/chara_25.png",
+      "battleArtName": "軍威高揚",
+      "battleArtEffects": [
+        "自部隊と同じ横列の部隊の攻撃を40％上昇"
+      ],
       "skills": [
         "威風",
         "人望",
@@ -1456,9 +1762,15 @@ const APP_DATA = {
       "name": "紫夏",
       "rarity": "SSR",
       "tenpu": 800,
+      "type": "妨",
       "sourceUrl": "https://gamewith.jp/kingdom-hadou/519291",
       "sourceId": "519291",
       "imageUrl": "https://img.gamewith.jp/article_tools/kingdom-hadou/gacha/chara_32.png",
+      "battleArtName": "月下の闇商",
+      "battleArtEffects": [
+        "自部隊と同じ横列の部隊の弱化効果を1つ解除",
+        "攻撃対象と同じ横列の部隊の攻撃、策略を30％低下"
+      ],
       "skills": [
         "不屈",
         "人望",
@@ -1484,9 +1796,14 @@ const APP_DATA = {
       "name": "蒙毅",
       "rarity": "SSR",
       "tenpu": 800,
+      "type": "援",
       "sourceUrl": "https://gamewith.jp/kingdom-hadou/519296",
       "sourceId": "519296",
       "imageUrl": "https://img.gamewith.jp/article_tools/kingdom-hadou/gacha/chara_27.png",
+      "battleArtName": "慧眼明察",
+      "battleArtEffects": [
+        "自部隊と同じ横列の部隊の策略、対物を30％上昇"
+      ],
       "skills": [
         "攻城",
         "開智",
@@ -1511,9 +1828,14 @@ const APP_DATA = {
       "name": "陽",
       "rarity": "SSR",
       "tenpu": 800,
+      "type": "護",
       "sourceUrl": "https://gamewith.jp/kingdom-hadou/519292",
       "sourceId": "519292",
       "imageUrl": "https://img.gamewith.jp/article_tools/kingdom-hadou/gacha/chara_31.png",
+      "battleArtName": "皆を包む陽光",
+      "battleArtEffects": [
+        "自部隊と同じ横列の部隊の防御を20%上昇させ負傷兵を最大兵力の20%回復"
+      ],
       "skills": [
         "聡明",
         "糧道",
@@ -1539,9 +1861,15 @@ const APP_DATA = {
       "name": "隆国",
       "rarity": "SSR",
       "tenpu": 800,
+      "type": "援",
       "sourceUrl": "https://gamewith.jp/kingdom-hadou/519300",
       "sourceId": "519300",
       "imageUrl": "https://img.gamewith.jp/article_tools/kingdom-hadou/gacha/chara_23.png",
+      "battleArtName": "知勇兼備",
+      "battleArtEffects": [
+        "自部隊と同じ横列の部隊の策略を40％上昇",
+        "攻撃対象と同じ横列の部隊に戦威150％の攻撃"
+      ],
       "skills": [
         "聡明",
         "開智",
@@ -1566,9 +1894,15 @@ const APP_DATA = {
       "name": "魏加",
       "rarity": "SSR",
       "tenpu": 800,
+      "type": "妨",
       "sourceUrl": "https://gamewith.jp/kingdom-hadou/519295",
       "sourceId": "519295",
       "imageUrl": "https://img.gamewith.jp/article_tools/kingdom-hadou/gacha/chara_28.png",
+      "battleArtName": "落鳥一矢",
+      "battleArtEffects": [
+        "攻撃対象と同じ縦列の部隊に攻撃速度低下20％を付与",
+        "攻撃対象に戦威150％の攻撃"
+      ],
       "skills": [
         "尖撃",
         "練武",
@@ -1594,9 +1928,15 @@ const APP_DATA = {
       "name": "鱗坊",
       "rarity": "SSR",
       "tenpu": 800,
+      "type": "妨",
       "sourceUrl": "https://gamewith.jp/kingdom-hadou/519304",
       "sourceId": "519304",
       "imageUrl": "https://img.gamewith.jp/article_tools/kingdom-hadou/gacha/chara_19.png",
+      "battleArtName": "悪罵挑発",
+      "battleArtEffects": [
+        "自部隊の防御を15％上昇",
+        "攻撃対象と同じ縦列の部隊の防御、策略を30％低下"
+      ],
       "skills": [
         "頑健",
         "開智",
@@ -1621,9 +1961,15 @@ const APP_DATA = {
       "name": "黄離弦",
       "rarity": "SSR",
       "tenpu": 800,
+      "type": "闘",
       "sourceUrl": "https://gamewith.jp/kingdom-hadou/519303",
       "sourceId": "519303",
       "imageUrl": "https://img.gamewith.jp/article_tools/kingdom-hadou/gacha/chara_20.png",
+      "battleArtName": "強弓一矢",
+      "battleArtEffects": [
+        "自部隊に会心発生上昇20％を付与",
+        "攻撃対象に戦威150％の攻撃（自部隊が後列にいる場合、250％に威力上昇）"
+      ],
       "skills": [
         "発揚",
         "練武",
@@ -1648,9 +1994,15 @@ const APP_DATA = {
       "name": "カク備",
       "rarity": "SR",
       "tenpu": 650,
+      "type": "援",
       "sourceUrl": "https://gamewith.jp/kingdom-hadou/519279",
       "sourceId": "519279",
       "imageUrl": "https://img.gamewith.jp/article_tools/kingdom-hadou/gacha/chara_44.png",
+      "battleArtName": "俊英立身",
+      "battleArtEffects": [
+        "自部隊と同じ横列の部隊の対物を30％上昇",
+        "自部隊の攻撃を10％上昇"
+      ],
       "skills": [
         "攻城",
         "人望"
@@ -1673,9 +2025,14 @@ const APP_DATA = {
       "name": "丁之",
       "rarity": "SR",
       "tenpu": 650,
+      "type": "援",
       "sourceUrl": "https://gamewith.jp/kingdom-hadou/519276",
       "sourceId": "519276",
       "imageUrl": "https://img.gamewith.jp/article_tools/kingdom-hadou/gacha/chara_47.png",
+      "battleArtName": "尽忠猛進",
+      "battleArtEffects": [
+        "自部隊と同じ縦列の部隊の攻撃を10％上昇（自部隊の兵力が50％以下の場合、30％に効果上昇）"
+      ],
       "skills": [
         "鋭鋒",
         "練武"
@@ -1697,9 +2054,15 @@ const APP_DATA = {
       "name": "中鉄",
       "rarity": "SR",
       "tenpu": 650,
+      "type": "闘",
       "sourceUrl": "https://gamewith.jp/kingdom-hadou/519288",
       "sourceId": "519288",
       "imageUrl": "https://img.gamewith.jp/article_tools/kingdom-hadou/gacha/chara_35.png",
+      "battleArtName": "富村の殺し屋",
+      "battleArtEffects": [
+        "自部隊の攻撃を20％上昇",
+        "攻撃対象に戦威150％の攻撃（自部隊が前列にいる場合、200％に威力上昇）"
+      ],
       "skills": [
         "鋭鋒",
         "練武"
@@ -1721,9 +2084,15 @@ const APP_DATA = {
       "name": "去亥",
       "rarity": "SR",
       "tenpu": 650,
+      "type": "妨",
       "sourceUrl": "https://gamewith.jp/kingdom-hadou/519283",
       "sourceId": "519283",
       "imageUrl": "https://img.gamewith.jp/article_tools/kingdom-hadou/gacha/chara_40.png",
+      "battleArtName": "突撃の怒号",
+      "battleArtEffects": [
+        "攻撃対象と同じ横列の部隊の防御を25％低下",
+        "自部隊の戦威を10％上昇"
+      ],
       "skills": [
         "豪傑",
         "統制"
@@ -1745,9 +2114,15 @@ const APP_DATA = {
       "name": "崇原",
       "rarity": "SR",
       "tenpu": 650,
+      "type": "闘",
       "sourceUrl": "https://gamewith.jp/kingdom-hadou/519287",
       "sourceId": "519287",
       "imageUrl": "https://img.gamewith.jp/article_tools/kingdom-hadou/gacha/chara_36.png",
+      "battleArtName": "剣閃一薙",
+      "battleArtEffects": [
+        "自部隊に会心威力上昇20％を付与",
+        "攻撃対象に戦威200％の攻撃"
+      ],
       "skills": [
         "掃討",
         "練武"
@@ -1770,9 +2145,15 @@ const APP_DATA = {
       "name": "来輝",
       "rarity": "SR",
       "tenpu": 650,
+      "type": "闘",
       "sourceUrl": "https://gamewith.jp/kingdom-hadou/519277",
       "sourceId": "519277",
       "imageUrl": "https://img.gamewith.jp/article_tools/kingdom-hadou/gacha/chara_46.png",
+      "battleArtName": "万死一生",
+      "battleArtEffects": [
+        "自部隊の防御を10％上昇",
+        "攻撃対象と同じ縦列の部隊に戦威150％の攻撃"
+      ],
       "skills": [
         "奮戦",
         "糧道"
@@ -1794,9 +2175,15 @@ const APP_DATA = {
       "name": "松左",
       "rarity": "SR",
       "tenpu": 650,
+      "type": "援",
       "sourceUrl": "https://gamewith.jp/kingdom-hadou/519285",
       "sourceId": "519285",
       "imageUrl": "https://img.gamewith.jp/article_tools/kingdom-hadou/gacha/chara_38.png",
+      "battleArtName": "自在なる槍",
+      "battleArtEffects": [
+        "自部隊と同じ横列の部隊の弱化効果を1つ解除",
+        "攻撃対象に150％の攻撃"
+      ],
       "skills": [
         "猛者",
         "開智"
@@ -1818,9 +2205,14 @@ const APP_DATA = {
       "name": "沛浪",
       "rarity": "SR",
       "tenpu": 650,
+      "type": "援",
       "sourceUrl": "https://gamewith.jp/kingdom-hadou/519290",
       "sourceId": "519290",
       "imageUrl": "https://img.gamewith.jp/article_tools/kingdom-hadou/gacha/chara_33.png",
+      "battleArtName": "古強者の戦",
+      "battleArtEffects": [
+        "自部隊と同じ横列の部隊に会心発生上昇15％を付与"
+      ],
       "skills": [
         "豪傑",
         "統制"
@@ -1843,9 +2235,15 @@ const APP_DATA = {
       "name": "田有",
       "rarity": "SR",
       "tenpu": 650,
+      "type": "闘",
       "sourceUrl": "https://gamewith.jp/kingdom-hadou/519289",
       "sourceId": "519289",
       "imageUrl": "https://img.gamewith.jp/article_tools/kingdom-hadou/gacha/chara_34.png",
+      "battleArtName": "巨漢の一撃",
+      "battleArtEffects": [
+        "自部隊の攻撃、防御を10％上昇",
+        "攻撃対象に対物200％の攻撃"
+      ],
       "skills": [
         "攻城",
         "糧道"
@@ -1868,9 +2266,14 @@ const APP_DATA = {
       "name": "田永",
       "rarity": "SR",
       "tenpu": 650,
+      "type": "妨",
       "sourceUrl": "https://gamewith.jp/kingdom-hadou/519286",
       "sourceId": "519286",
       "imageUrl": "https://img.gamewith.jp/article_tools/kingdom-hadou/gacha/chara_37.png",
+      "battleArtName": "荒くれの罵声",
+      "battleArtEffects": [
+        "攻撃対象と同じ横列の部隊の攻撃、戦威を15％低下"
+      ],
       "skills": [
         "頑健",
         "統制"
@@ -1893,9 +2296,14 @@ const APP_DATA = {
       "name": "番陽",
       "rarity": "SR",
       "tenpu": 650,
+      "type": "妨",
       "sourceUrl": "https://gamewith.jp/kingdom-hadou/519281",
       "sourceId": "519281",
       "imageUrl": "https://img.gamewith.jp/article_tools/kingdom-hadou/gacha/chara_42.png",
+      "battleArtName": "大喝一声",
+      "battleArtEffects": [
+        "攻撃対象と同じ横列の部隊の攻撃を10％低下させ、攻撃速度低下15％を付与"
+      ],
       "skills": [
         "頑健",
         "統制"
@@ -1918,9 +2326,15 @@ const APP_DATA = {
       "name": "石",
       "rarity": "SR",
       "tenpu": 650,
+      "type": "護",
       "sourceUrl": "https://gamewith.jp/kingdom-hadou/519282",
       "sourceId": "519282",
       "imageUrl": "https://img.gamewith.jp/article_tools/kingdom-hadou/gacha/chara_41.png",
+      "battleArtName": "青石族の笛",
+      "battleArtEffects": [
+        "自部隊と同じ横列の部隊の策略を15％上昇（自部隊が中列にいる場合、30％に効果上昇）",
+        "自部隊と同じ横列の部隊の防御を15％上昇"
+      ],
       "skills": [
         "聡明",
         "糧道"
@@ -1942,9 +2356,15 @@ const APP_DATA = {
       "name": "竜川",
       "rarity": "SR",
       "tenpu": 650,
+      "type": "護",
       "sourceUrl": "https://gamewith.jp/kingdom-hadou/519284",
       "sourceId": "519284",
       "imageUrl": "https://img.gamewith.jp/article_tools/kingdom-hadou/gacha/chara_39.png",
+      "battleArtName": "三倍力",
+      "battleArtEffects": [
+        "自部隊と同じ縦列の部隊の防御を15％上昇",
+        "自部隊の攻撃、対物を10％上昇"
+      ],
       "skills": [
         "威風",
         "糧道"
@@ -1967,9 +2387,14 @@ const APP_DATA = {
       "name": "肆氏",
       "rarity": "SR",
       "tenpu": 650,
+      "type": "妨",
       "sourceUrl": "https://gamewith.jp/kingdom-hadou/519278",
       "sourceId": "519278",
       "imageUrl": "https://img.gamewith.jp/article_tools/kingdom-hadou/gacha/chara_45.png",
+      "battleArtName": "深謀暗躍",
+      "battleArtEffects": [
+        "攻撃対象と同じ横列の部隊の防御を20％、策略を30％低下"
+      ],
       "skills": [
         "聡明",
         "開智"
@@ -1992,9 +2417,15 @@ const APP_DATA = {
       "name": "胡漸",
       "rarity": "SR",
       "tenpu": 650,
+      "type": "護",
       "sourceUrl": "https://gamewith.jp/kingdom-hadou/519280",
       "sourceId": "519280",
       "imageUrl": "https://img.gamewith.jp/article_tools/kingdom-hadou/gacha/chara_43.png",
+      "battleArtName": "老将の妙案",
+      "battleArtEffects": [
+        "自部隊と同じ横列の部隊の戦威、策略を10％上昇",
+        "（自部隊の兵力が50％以下の場合、30％に効果上昇）"
+      ],
       "skills": [
         "献策",
         "統制"
