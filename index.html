@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>キングダム覇道 SSR / SR ステータス・技能・連鎖率検索</title>
+    <title>キングダム覇道 戦力・DB・相性検索</title>
     <style>
       :root {
         --bg: #f3ead9;
@@ -694,17 +694,275 @@
         white-space: pre-line;
       }
 
+      .app-view[hidden] {
+        display: none !important;
+      }
+
+      .view-stack {
+        margin-top: 20px;
+        display: grid;
+        gap: 20px;
+      }
+
+      .view-nav {
+        margin-top: 20px;
+        padding: 14px;
+      }
+
+      .tab-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
+      .tab-button {
+        min-height: 46px;
+        padding: 0 16px;
+        border-radius: 999px;
+        border: 1px solid rgba(109, 57, 17, 0.18);
+        background: rgba(255, 255, 255, 0.72);
+        color: var(--ink);
+      }
+
+      .tab-button.is-active {
+        color: #fff9f1;
+        border-color: transparent;
+        background: linear-gradient(135deg, var(--gold) 0%, var(--gold-deep) 100%);
+      }
+
+      .toolbar-grid {
+        margin-top: 18px;
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 14px;
+        align-items: end;
+      }
+
+      .toolbar-summary {
+        margin-top: 18px;
+        color: var(--gold-deep);
+        font-weight: 700;
+      }
+
+      .card-actions {
+        margin-top: 14px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .mini-button {
+        min-height: 40px;
+        padding: 0 12px;
+        border-radius: 999px;
+        border: 1px solid rgba(109, 57, 17, 0.16);
+        background: rgba(255, 255, 255, 0.82);
+        color: var(--ink);
+        font-size: 0.84rem;
+      }
+
+      .meta-chip-list {
+        margin-top: 14px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .meta-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 7px 10px;
+        border-radius: 999px;
+        border: 1px solid rgba(109, 57, 17, 0.12);
+        background: rgba(255, 255, 255, 0.7);
+        color: var(--muted);
+        font-size: 0.82rem;
+        line-height: 1.2;
+      }
+
+      .meta-chip.is-highlight {
+        color: var(--gold-deep);
+        border-color: rgba(156, 95, 34, 0.3);
+        background: rgba(156, 95, 34, 0.12);
+      }
+
+      .personality-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 10px;
+        border-radius: 999px;
+        border: 1px solid rgba(54, 90, 116, 0.12);
+        background: rgba(54, 90, 116, 0.08);
+        color: var(--muted);
+        font-size: 0.82rem;
+      }
+
+      .personality-chip small {
+        color: var(--partial);
+        font-weight: 700;
+      }
+
+      .personality-chip.is-shared {
+        border-color: rgba(156, 95, 34, 0.28);
+        background: rgba(156, 95, 34, 0.12);
+        color: var(--gold-deep);
+      }
+
+      .skill-card-grid,
+      .module-grid,
+      .quick-grid {
+        display: grid;
+        gap: 14px;
+      }
+
+      .skill-card-grid,
+      .module-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .quick-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
+
+      .skill-card,
+      .module-card,
+      .quick-card {
+        padding: 20px;
+        border-radius: 22px;
+        background: rgba(255, 255, 255, 0.8);
+        border: 1px solid rgba(109, 57, 17, 0.14);
+      }
+
+      .skill-card-head,
+      .module-card-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 12px;
+      }
+
+      .skill-title-button {
+        border: 0;
+        background: transparent;
+        padding: 0;
+        color: var(--ink);
+        cursor: pointer;
+        text-align: left;
+        font: inherit;
+        font-weight: 700;
+        font-size: 1.08rem;
+      }
+
+      .skill-summary,
+      .module-card p,
+      .quick-card p,
+      .quick-card li,
+      .effect-box p {
+        color: var(--muted);
+        line-height: 1.7;
+      }
+
+      .effect-grid {
+        margin-top: 14px;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      .effect-box {
+        padding: 14px;
+        border-radius: 18px;
+        background: rgba(246, 239, 229, 0.72);
+      }
+
+      .effect-box h3 {
+        margin-bottom: 6px;
+        font-size: 0.9rem;
+        color: var(--gold-deep);
+      }
+
+      .holder-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .holder-button {
+        min-height: 38px;
+        padding: 0 12px;
+        border-radius: 999px;
+        border: 1px solid rgba(109, 57, 17, 0.16);
+        background: rgba(255, 255, 255, 0.82);
+        color: var(--ink);
+        font-size: 0.82rem;
+      }
+
+      .quick-card ul {
+        list-style: none;
+        padding: 0;
+        margin: 12px 0 0;
+        display: grid;
+        gap: 8px;
+      }
+
+      .quick-card li {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+      }
+
+      .status-pill {
+        display: inline-flex;
+        align-items: center;
+        padding: 6px 10px;
+        border-radius: 999px;
+        font-size: 0.76rem;
+        font-weight: 700;
+      }
+
+      .status-pill.is-live {
+        background: rgba(54, 90, 116, 0.12);
+        color: var(--partial);
+      }
+
+      .status-pill.is-next {
+        background: rgba(156, 95, 34, 0.12);
+        color: var(--gold-deep);
+      }
+
+      .status-pill.is-plan {
+        background: rgba(122, 45, 24, 0.12);
+        color: var(--exact);
+      }
+
+      .source-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
+      .source-list a {
+        color: var(--gold-deep);
+      }
+
       @media (max-width: 1080px) {
         .aux-grid,
         .filters-grid,
-        .card-grid {
+        .card-grid,
+        .skill-card-grid,
+        .module-grid,
+        .quick-grid {
           grid-template-columns: 1fr;
         }
       }
 
       @media (max-width: 940px) {
         .search-grid,
-        .info-grid {
+        .info-grid,
+        .toolbar-grid,
+        .effect-grid {
           grid-template-columns: 1fr;
         }
 
@@ -757,21 +1015,34 @@
   <body>
     <main class="page">
       <section class="hero">
-        <p class="eyebrow">Kingdom Hadou / SSR + SR Finder</p>
-        <h1>キングダム覇道 SSR / SR ステータス・技能・連鎖率検索</h1>
+        <p class="eyebrow">Kingdom Hadou / Battle Power + DB + Synergy</p>
+        <h1>キングダム覇道 戦力・DB・相性検索</h1>
         <p>
-          攻撃・防御・戦威・策略の上位2項目で武将を探しつつ、前列・中列・後列、主将・副将・補佐の技能条件でも絞り込めます。
-          さらに、指定武将を主将に置いた場合の副将連鎖率順にも対応しています。魅力は戦力計算に関わらないため除外しています。
+          既存の戦力検索に加えて、武将DB、技能DB、相性検索を同じサイトにまとめた版です。
+          SSR / SR の武将・技能データを横断して、全文検索、タグ検索、技能条件検索、連鎖率ベースの相性確認まで扱えます。
+          魅力は戦力計算に関わらないため除外しています。
         </p>
         <div class="hero-meta">
           <span>総数 <strong id="datasetCount"></strong></span>
           <span>SSR <strong id="ssrCount"></strong></span>
           <span>SR <strong id="srCount"></strong></span>
-          <span>対象ステータス: 攻撃 / 防御 / 戦威 / 策略</span>
-          <span>対応: 技能説明 / 画像 / 連鎖率</span>
+          <span>技能 <strong id="skillCount"></strong></span>
+          <span>データソース <strong id="sourceCount"></strong></span>
+          <span>対応: 戦力検索 / 武将DB / 技能DB / 相性検索</span>
         </div>
       </section>
 
+      <section class="panel view-nav">
+        <div class="tab-list">
+          <button class="tab-button" type="button" data-view-tab="power">戦力検索</button>
+          <button class="tab-button" type="button" data-view-tab="character">武将DB</button>
+          <button class="tab-button" type="button" data-view-tab="skill">技能DB</button>
+          <button class="tab-button" type="button" data-view-tab="synergy">相性検索</button>
+          <button class="tab-button" type="button" data-view-tab="board">機能ボード</button>
+        </div>
+      </section>
+
+      <section class="app-view view-stack" id="view-power">
       <section class="panel">
         <div class="panel-header">
           <div>
@@ -885,6 +1156,234 @@
             <span class="count-pill" id="partialCount"></span>
           </div>
           <div class="card-grid" id="partialList"></div>
+        </section>
+      </section>
+      </section>
+
+      <section class="app-view view-stack" id="view-character" hidden>
+        <section class="panel">
+          <div class="panel-header">
+            <div>
+              <h2>武将DB</h2>
+              <p>
+                武将名、技能名、個性、上位ステータス、役割タグをまとめて検索できます。
+                タグ検索は AND 条件、全文検索は名前だけでなく技能要約と個性にも効きます。
+              </p>
+            </div>
+          </div>
+
+          <div class="toolbar-grid">
+            <div class="field">
+              <label for="characterKeyword">全文検索</label>
+              <input id="characterKeyword" type="text" placeholder="例: 王騎 / 攻陣 / 武勇 / 防御1位">
+              <p class="field-note">武将名、技能名、技能説明、個性、役割タグまでまとめて検索します。</p>
+            </div>
+
+            <div class="field">
+              <label for="characterSort">並び順</label>
+              <select id="characterSort" aria-label="武将DBの並び順"></select>
+              <p class="field-note">DB 表示専用の並び順です。</p>
+            </div>
+
+            <div class="button-row">
+              <button class="secondary-button" id="characterResetButton" type="button">武将DBをリセット</button>
+            </div>
+          </div>
+
+          <div class="filters-grid">
+            <fieldset class="chip-fieldset">
+              <legend>レアリティ</legend>
+              <div class="chip-grid" id="characterRarityFilters" role="group" aria-label="武将DBのレアリティ"></div>
+            </fieldset>
+
+            <fieldset class="chip-fieldset">
+              <legend>タグ検索</legend>
+              <div class="chip-grid" id="characterTagFilters" role="group" aria-label="武将DBのタグ検索"></div>
+            </fieldset>
+          </div>
+
+          <div class="toolbar-summary" id="characterSummary"></div>
+        </section>
+
+        <section class="result-section exact-section">
+          <div class="result-header">
+            <div>
+              <h2>武将一覧</h2>
+              <p>技能チップを押すと解説を開けます。カードのボタンから相性検索へ直接移動できます。</p>
+            </div>
+            <span class="count-pill" id="characterCount"></span>
+          </div>
+          <div class="card-grid" id="characterList"></div>
+        </section>
+      </section>
+
+      <section class="app-view view-stack" id="view-skill" hidden>
+        <section class="panel">
+          <div class="panel-header">
+            <div>
+              <h2>技能DB</h2>
+              <p>
+                技能名、概要、初期効果、最大効果、所持武将をまとめて確認できます。
+                条件検索で前列・中列・後列、主将・副将・補佐を絞れます。
+              </p>
+            </div>
+          </div>
+
+          <div class="toolbar-grid">
+            <div class="field">
+              <label for="skillKeyword">全文検索</label>
+              <input id="skillKeyword" type="text" placeholder="例: 攻陣 / 防御 / 兵力">
+              <p class="field-note">技能名、概要、効果文、所持武将名まで検索します。</p>
+            </div>
+
+            <div class="field">
+              <label for="skillSort">並び順</label>
+              <select id="skillSort" aria-label="技能DBの並び順"></select>
+              <p class="field-note">GameWith 掲載順、所持武将数順、名前順に切り替えられます。</p>
+            </div>
+
+            <div class="button-row">
+              <button class="secondary-button" id="skillResetButton" type="button">技能DBをリセット</button>
+            </div>
+          </div>
+
+          <div class="filters-grid">
+            <fieldset class="chip-fieldset">
+              <legend>技能条件</legend>
+              <div class="chip-grid" id="skillConditionFilters" role="group" aria-label="技能DBの条件検索"></div>
+            </fieldset>
+          </div>
+
+          <div class="toolbar-summary" id="skillSummary"></div>
+        </section>
+
+        <section class="result-section exact-section">
+          <div class="result-header">
+            <div>
+              <h2>技能一覧</h2>
+              <p>所持武将ボタンを押すと武将DBに飛んで、その武将を中心に見られます。</p>
+            </div>
+            <span class="count-pill" id="skillDbCount"></span>
+          </div>
+          <div class="skill-card-grid" id="skillList"></div>
+        </section>
+      </section>
+
+      <section class="app-view view-stack" id="view-synergy" hidden>
+        <section class="panel">
+          <div class="panel-header">
+            <div>
+              <h2>相性検索</h2>
+              <p>
+                指定武将を主将に置いたときの副将連鎖率を軸に、共通個性と役割条件も合わせて確認する初版です。
+                前列・中列・後列フィルタで候補を詰められます。
+              </p>
+            </div>
+          </div>
+
+          <div class="toolbar-grid">
+            <div class="field">
+              <label for="synergyCommander">基準武将</label>
+              <input
+                id="synergyCommander"
+                type="text"
+                list="commanderOptions"
+                placeholder="例: 王騎"
+                aria-label="相性検索の基準武将"
+              >
+              <p class="field-note">この武将を主将に置いた場合を基準に並べます。</p>
+            </div>
+
+            <div class="field">
+              <label for="synergyKeyword">候補の全文検索</label>
+              <input id="synergyKeyword" type="text" placeholder="例: 攻陣 / 武勇 / 王賁">
+              <p class="field-note">候補側にも全文検索をかけられます。</p>
+            </div>
+
+            <div class="button-row">
+              <button class="secondary-button" id="synergyResetButton" type="button">相性検索をリセット</button>
+            </div>
+          </div>
+
+          <div class="filters-grid">
+            <fieldset class="chip-fieldset">
+              <legend>レアリティ</legend>
+              <div class="chip-grid" id="synergyRarityFilters" role="group" aria-label="相性検索のレアリティ"></div>
+            </fieldset>
+
+            <fieldset class="chip-fieldset">
+              <legend>候補の技能条件</legend>
+              <div class="chip-grid" id="synergyConditionFilters" role="group" aria-label="相性検索の技能条件"></div>
+            </fieldset>
+          </div>
+
+          <div class="toolbar-summary" id="synergySummary"></div>
+        </section>
+
+        <section class="result-section exact-section">
+          <div class="result-header">
+            <div>
+              <h2>条件別おすすめ</h2>
+              <p>総合上位と、前列・中列・後列の上位候補を先にまとめます。</p>
+            </div>
+          </div>
+          <div class="quick-grid" id="synergyQuickGrid"></div>
+        </section>
+
+        <section class="result-section partial-section">
+          <div class="result-header">
+            <div>
+              <h2>相性一覧</h2>
+              <p>連鎖率、基礎値、個性加算、共通個性の内訳をカード内に表示します。</p>
+            </div>
+            <span class="count-pill" id="synergyCount"></span>
+          </div>
+          <div class="card-grid" id="synergyList"></div>
+        </section>
+      </section>
+
+      <section class="app-view view-stack" id="view-board" hidden>
+        <section class="panel">
+          <div class="panel-header">
+            <div>
+              <h2>機能ボード</h2>
+              <p>
+                いま使える機能と、次に作る計算系・AI系の候補を整理したボードです。
+                まずは DB / 検索 / 相性の土台を固め、その上に計算機能を積む構成にしています。
+              </p>
+            </div>
+          </div>
+
+          <div class="info-grid">
+            <article class="info-card">
+              <h2>現在のデータ範囲</h2>
+              <p>SSR / SR の武将データと技能データを使っています。全文検索、タグ検索、技能検索、相性確認はこの範囲で動きます。</p>
+            </article>
+            <article class="info-card">
+              <h2>利用中のソース</h2>
+              <div class="source-list" id="sourceLinkList"></div>
+            </article>
+          </div>
+        </section>
+
+        <section class="result-section exact-section">
+          <div class="result-header">
+            <div>
+              <h2>今すぐ使える機能</h2>
+              <p>各カードのボタンから対応タブへ移動できます。</p>
+            </div>
+          </div>
+          <div class="module-grid" id="liveFeatureList"></div>
+        </section>
+
+        <section class="result-section partial-section">
+          <div class="result-header">
+            <div>
+              <h2>次に積む候補</h2>
+              <p>計算式や装備データの確定が必要な機能をここにまとめています。</p>
+            </div>
+          </div>
+          <div class="module-grid" id="plannedFeatureList"></div>
         </section>
       </section>
     </main>
