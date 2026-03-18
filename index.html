@@ -3,6 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="icon" href="data:,">
     <title>キングダム覇道 戦力・DB・相性検索</title>
     <style>
       :root {
@@ -238,7 +239,7 @@
       .filters-grid {
         margin-top: 18px;
         display: grid;
-        grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
         gap: 14px;
       }
 
@@ -1285,6 +1286,16 @@
             </fieldset>
 
             <fieldset class="chip-fieldset">
+              <legend>タイプ</legend>
+              <div class="chip-grid" id="characterTypeFilters" role="group" aria-label="武将DBのタイプ検索"></div>
+            </fieldset>
+
+            <fieldset class="chip-fieldset">
+              <legend>目的</legend>
+              <div class="chip-grid" id="characterObjectiveFilters" role="group" aria-label="武将DBの目的検索"></div>
+            </fieldset>
+
+            <fieldset class="chip-fieldset">
               <legend>タグ検索</legend>
               <div class="chip-grid" id="characterTagFilters" role="group" aria-label="武将DBのタグ検索"></div>
             </fieldset>
@@ -1344,6 +1355,11 @@
             <fieldset class="chip-fieldset">
               <legend>技能条件</legend>
               <div class="chip-grid" id="skillConditionFilters" role="group" aria-label="技能DBの条件検索"></div>
+            </fieldset>
+
+            <fieldset class="chip-fieldset">
+              <legend>効果種別</legend>
+              <div class="chip-grid" id="skillEffectFilters" role="group" aria-label="技能DBの効果種別検索"></div>
             </fieldset>
           </div>
 
@@ -1495,6 +1511,26 @@
         <section class="result-section exact-section">
           <div class="result-header">
             <div>
+              <h2>S3採点ガイド</h2>
+              <p>support spec の目的別ウェイトと評価軸を、今選んでいる目的に合わせて見やすく要約します。</p>
+            </div>
+          </div>
+          <div class="module-grid" id="s3WeightGrid"></div>
+        </section>
+
+        <section class="result-section partial-section">
+          <div class="result-header">
+            <div>
+              <h2>役割要件と入力補正</h2>
+              <p>自動編成ロジックで見る必須役割、優先役割、育成度や装備入力の補正をまとめて確認できます。</p>
+            </div>
+          </div>
+          <div class="quick-grid" id="s3RoleRuleGrid"></div>
+        </section>
+
+        <section class="result-section exact-section">
+          <div class="result-header">
+            <div>
               <h2>注目武将</h2>
               <p>仕様書の starter data をもとに、Season 3 の目的別スコアとスロット適性で並べています。</p>
             </div>
@@ -1522,6 +1558,36 @@
             <span class="count-pill" id="s3SkillCount"></span>
           </div>
           <div class="skill-card-grid" id="s3SkillList"></div>
+        </section>
+
+        <section class="result-section exact-section">
+          <div class="result-header">
+            <div>
+              <h2>よく見られている技能</h2>
+              <p>所持武将数と S3 登場有無をもとに、横断的に重要度が高い技能を拾います。</p>
+            </div>
+          </div>
+          <div class="skill-card-grid" id="s3PopularSkillList"></div>
+        </section>
+
+        <section class="result-section partial-section">
+          <div class="result-header">
+            <div>
+              <h2>目的別注目コア</h2>
+              <p>自動編成 spec の役割要件、主将適性、副将相性をまとめて、すぐ使える核を作ります。</p>
+            </div>
+          </div>
+          <div class="quick-grid" id="s3CoreGrid"></div>
+        </section>
+
+        <section class="result-section exact-section">
+          <div class="result-header">
+            <div>
+              <h2>更新履歴</h2>
+              <p>masterRevision と変更点を公開して、S3 中の評価差分を追えるようにします。</p>
+            </div>
+          </div>
+          <div class="module-grid" id="s3UpdateList"></div>
         </section>
 
         <section class="result-section exact-section">
