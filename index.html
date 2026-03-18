@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>キングダム覇道 SSR / SR ステータス・技能検索</title>
+    <title>キングダム覇道 SSR / SR ステータス・技能・連鎖率検索</title>
     <style>
       :root {
         --bg: #f3ead9;
@@ -51,7 +51,7 @@
       }
 
       .page {
-        width: min(1200px, calc(100% - 32px));
+        width: min(1220px, calc(100% - 32px));
         margin: 0 auto;
         padding: 28px 0 56px;
       }
@@ -85,6 +85,7 @@
       h1,
       h2,
       h3,
+      h4,
       p {
         margin: 0;
       }
@@ -104,7 +105,7 @@
       }
 
       .hero p {
-        max-width: 820px;
+        max-width: 860px;
         color: var(--muted);
         line-height: 1.7;
       }
@@ -136,37 +137,51 @@
         margin-top: 8px;
         color: var(--muted);
         line-height: 1.7;
-        max-width: 760px;
+        max-width: 800px;
+      }
+
+      .search-grid,
+      .aux-grid {
+        display: grid;
+        gap: 14px;
       }
 
       .search-grid {
-        display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr)) auto;
-        gap: 14px;
         align-items: end;
         margin-top: 18px;
       }
 
-      .field {
+      .aux-grid {
+        margin-top: 14px;
+        grid-template-columns: minmax(0, 1.4fr) minmax(320px, 0.8fr);
+      }
+
+      .field,
+      .toggle-card {
         display: grid;
         gap: 8px;
       }
 
-      .field label {
+      .field label,
+      .toggle-card strong {
         font-weight: 700;
       }
 
-      .field-note {
+      .field-note,
+      .toggle-card p {
         color: var(--muted);
         font-size: 0.9rem;
         line-height: 1.6;
       }
 
+      input,
       select,
       button {
         font: inherit;
       }
 
+      input[type="text"],
       select {
         width: 100%;
         min-height: 52px;
@@ -175,6 +190,25 @@
         border: 1px solid rgba(109, 57, 17, 0.24);
         background: var(--paper-strong);
         color: var(--ink);
+      }
+
+      .toggle-card {
+        padding: 16px;
+        border-radius: 20px;
+        border: 1px solid rgba(109, 57, 17, 0.12);
+        background: rgba(255, 255, 255, 0.58);
+      }
+
+      .toggle-switch {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .toggle-switch input {
+        width: 20px;
+        height: 20px;
+        accent-color: var(--gold);
       }
 
       .button-row {
@@ -204,7 +238,7 @@
       .filters-grid {
         margin-top: 18px;
         display: grid;
-        grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+        grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
         gap: 14px;
       }
 
@@ -371,6 +405,31 @@
         border: 1px solid rgba(109, 57, 17, 0.14);
       }
 
+      .card-layout {
+        display: grid;
+        grid-template-columns: 104px minmax(0, 1fr);
+        gap: 16px;
+        align-items: start;
+      }
+
+      .character-thumb-wrap {
+        display: flex;
+        justify-content: center;
+      }
+
+      .character-thumb {
+        width: 104px;
+        height: 104px;
+        object-fit: cover;
+        border-radius: 22px;
+        background: rgba(243, 234, 217, 0.92);
+        border: 1px solid rgba(109, 57, 17, 0.12);
+      }
+
+      .card-main {
+        min-width: 0;
+      }
+
       .card-header {
         display: flex;
         justify-content: space-between;
@@ -421,6 +480,43 @@
         color: var(--partial);
       }
 
+      .chain-box {
+        margin-top: 14px;
+        padding: 12px 14px;
+        border-radius: 18px;
+        background: rgba(156, 95, 34, 0.08);
+        border: 1px solid rgba(156, 95, 34, 0.18);
+      }
+
+      .chain-head {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 8px;
+      }
+
+      .chain-pill {
+        display: inline-flex;
+        align-items: center;
+        padding: 6px 10px;
+        border-radius: 999px;
+        background: rgba(122, 45, 24, 0.12);
+        color: var(--exact);
+        font-size: 0.84rem;
+        font-weight: 700;
+      }
+
+      .chain-pill-muted {
+        background: rgba(54, 90, 116, 0.12);
+        color: var(--partial);
+      }
+
+      .chain-traits {
+        color: var(--muted);
+        font-size: 0.88rem;
+        line-height: 1.65;
+      }
+
       .skill-group {
         margin-top: 14px;
       }
@@ -444,10 +540,14 @@
         gap: 3px;
         padding: 9px 11px;
         border-radius: 16px;
-        text-decoration: none;
-        color: inherit;
-        background: rgba(243, 234, 217, 0.78);
         border: 1px solid rgba(109, 57, 17, 0.12);
+        background: rgba(243, 234, 217, 0.78);
+        color: inherit;
+        text-align: left;
+      }
+
+      button.skill-chip {
+        cursor: pointer;
       }
 
       .skill-chip strong {
@@ -457,6 +557,16 @@
       .skill-chip small {
         color: var(--muted);
         font-size: 0.76rem;
+        line-height: 1.4;
+      }
+
+      .skill-chip.is-matched {
+        border-color: rgba(156, 95, 34, 0.34);
+        background: rgba(156, 95, 34, 0.12);
+      }
+
+      .skill-chip.is-primary-match {
+        box-shadow: inset 0 0 0 1px rgba(122, 45, 24, 0.35);
       }
 
       .stats-grid {
@@ -506,14 +616,89 @@
         padding: 20px;
       }
 
-      @media (max-width: 1040px) {
+      .skill-dialog {
+        width: min(620px, calc(100% - 24px));
+        border: none;
+        padding: 0;
+        background: transparent;
+      }
+
+      .skill-dialog::backdrop {
+        background: rgba(34, 24, 17, 0.55);
+      }
+
+      .skill-dialog-card {
+        position: relative;
+        padding: 24px;
+        border-radius: 24px;
+        background: var(--paper-strong);
+        border: 1px solid rgba(109, 57, 17, 0.14);
+        box-shadow: var(--shadow);
+      }
+
+      .dialog-close {
+        position: absolute;
+        top: 14px;
+        right: 14px;
+        min-height: 40px;
+        padding: 0 14px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.82);
+        border: 1px solid rgba(109, 57, 17, 0.16);
+      }
+
+      .dialog-eyebrow {
+        margin-bottom: 8px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        font-size: 0.74rem;
+        color: var(--gold-deep);
+      }
+
+      .dialog-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 14px;
+      }
+
+      .dialog-tag {
+        display: inline-flex;
+        align-items: center;
+        padding: 6px 10px;
+        border-radius: 999px;
+        background: rgba(156, 95, 34, 0.12);
+        color: var(--gold-deep);
+        font-size: 0.82rem;
+        font-weight: 700;
+      }
+
+      .dialog-tag-muted {
+        background: rgba(54, 90, 116, 0.12);
+        color: var(--partial);
+      }
+
+      .dialog-section {
+        margin-top: 18px;
+      }
+
+      .dialog-section h4 {
+        margin-bottom: 6px;
+        color: var(--gold-deep);
+        font-size: 0.9rem;
+      }
+
+      .dialog-body {
+        color: var(--muted);
+        line-height: 1.75;
+        white-space: pre-line;
+      }
+
+      @media (max-width: 1080px) {
+        .aux-grid,
         .filters-grid,
         .card-grid {
           grid-template-columns: 1fr;
-        }
-
-        .stats-grid {
-          grid-template-columns: repeat(2, minmax(0, 1fr));
         }
       }
 
@@ -526,11 +711,25 @@
         .button-row button {
           flex: 1 1 0;
         }
+
+        .stats-grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+
+      @media (max-width: 720px) {
+        .card-layout {
+          grid-template-columns: 1fr;
+        }
+
+        .character-thumb-wrap {
+          justify-content: flex-start;
+        }
       }
 
       @media (max-width: 640px) {
         .page {
-          width: min(100% - 20px, 1180px);
+          width: min(100% - 20px, 1220px);
           padding-top: 16px;
           padding-bottom: 34px;
         }
@@ -538,7 +737,8 @@
         .hero,
         .panel,
         .result-section,
-        .character-card {
+        .character-card,
+        .skill-dialog-card {
           padding: 18px;
           border-radius: 22px;
         }
@@ -558,17 +758,17 @@
     <main class="page">
       <section class="hero">
         <p class="eyebrow">Kingdom Hadou / SSR + SR Finder</p>
-        <h1>キングダム覇道 SSR / SR ステータス・技能検索</h1>
+        <h1>キングダム覇道 SSR / SR ステータス・技能・連鎖率検索</h1>
         <p>
-          攻撃・防御・戦威・策略の上位2項目で武将を探せる検索アプリです。技能条件にも対応し、
-          前列・中列・後列、主将・副将・補佐で絞り込めます。魅力は戦力計算に関わらないため除外しています。
+          攻撃・防御・戦威・策略の上位2項目で武将を探しつつ、前列・中列・後列、主将・副将・補佐の技能条件でも絞り込めます。
+          さらに、指定武将を主将に置いた場合の副将連鎖率順にも対応しています。魅力は戦力計算に関わらないため除外しています。
         </p>
         <div class="hero-meta">
           <span>総数 <strong id="datasetCount"></strong></span>
           <span>SSR <strong id="ssrCount"></strong></span>
           <span>SR <strong id="srCount"></strong></span>
           <span>対象ステータス: 攻撃 / 防御 / 戦威 / 策略</span>
-          <span>出典: GameWith 武将一覧 / 技能一覧</span>
+          <span>対応: 技能説明 / 画像 / 連鎖率</span>
         </div>
       </section>
 
@@ -577,8 +777,8 @@
           <div>
             <h2>検索条件</h2>
             <p>
-              1つのステータス検索なら 1位一致 / 2位一致、2つのステータス検索なら 完全一致 / 逆順一致 で表示します。
-              技能条件は同じ画面で同時に絞り込めます。
+              ステータス検索、技能条件フィルタ、連鎖率ソートを同じ画面で使えます。
+              技能条件を入れた場合は技能順が先、連鎖率順をオンにした場合は連鎖率が最優先で並びます。
             </p>
           </div>
         </div>
@@ -600,6 +800,30 @@
             <div class="button-row">
               <button class="primary-button" type="submit">検索</button>
               <button class="secondary-button" id="resetButton" type="button">リセット</button>
+            </div>
+          </div>
+
+          <div class="aux-grid">
+            <div class="field">
+              <label for="chainCommander">連鎖率の基準武将</label>
+              <input
+                id="chainCommander"
+                type="text"
+                list="commanderOptions"
+                placeholder="主将にする武将名を入力"
+                aria-label="連鎖率の基準武将"
+              >
+              <datalist id="commanderOptions"></datalist>
+              <p class="field-note">連鎖率順をオンにすると、この武将を主将に置いた場合の副将連鎖率で並べます。</p>
+            </div>
+
+            <div class="toggle-card">
+              <strong>追加ソート</strong>
+              <label class="toggle-switch">
+                <input id="chainSortEnabled" type="checkbox">
+                <span>連鎖率順を最優先にする</span>
+              </label>
+              <p>オンの間は、技能順やステータス順より先に連鎖率順で並びます。</p>
             </div>
           </div>
 
@@ -628,17 +852,12 @@
             <p>1位・2位の順番まで一致する武将を 完全一致、上位2項目は同じでも順番が逆の武将を 逆順一致 として表示します。</p>
           </article>
           <article class="info-card">
-            <h2>技能条件フィルタ</h2>
-            <p>前列・中列・後列と、主将・副将・補佐で絞り込みできます。選んだ条件に一致した技能名もカード内に表示します。</p>
+            <h2>技能条件と技能順</h2>
+            <p>前列・中列・後列、主将・副将・補佐で絞り込めます。技能条件を使った場合は、同じ技能を持つ武将どうしがまとまるように並びます。</p>
           </article>
           <article class="info-card">
-            <h2>データ出典</h2>
-            <p>
-              <a href="https://gamewith.jp/kingdom-hadou/519260" target="_blank" rel="noreferrer">GameWith の武将一覧</a>
-              と
-              <a href="https://gamewith.jp/kingdom-hadou/543359" target="_blank" rel="noreferrer">技能一覧</a>
-              を突き合わせて作成しています。武将の所持技能は武将一覧、技能の発動条件は技能一覧を参照しています。
-            </p>
+            <h2>連鎖率ソート</h2>
+            <p>GameWith 編成シミュレーターの個性データと連鎖率ロジックを使い、指定武将を主将に置いた場合の副将連鎖率順で並べます。</p>
           </article>
         </div>
       </section>
@@ -669,6 +888,30 @@
         </section>
       </section>
     </main>
+
+    <dialog class="skill-dialog" id="skillDialog">
+      <div class="skill-dialog-card">
+        <button class="secondary-button dialog-close" id="skillDialogClose" type="button">閉じる</button>
+        <p class="dialog-eyebrow">Skill Detail</p>
+        <h3 id="skillDialogTitle"></h3>
+        <div class="dialog-meta" id="skillDialogMeta"></div>
+
+        <section class="dialog-section" id="skillDialogSummaryBlock">
+          <h4>概要</h4>
+          <p class="dialog-body" id="skillDialogSummary"></p>
+        </section>
+
+        <section class="dialog-section" id="skillDialogInitialBlock">
+          <h4>初期効果</h4>
+          <p class="dialog-body" id="skillDialogInitial"></p>
+        </section>
+
+        <section class="dialog-section" id="skillDialogMaxBlock">
+          <h4>最大効果</h4>
+          <p class="dialog-body" id="skillDialogMax"></p>
+        </section>
+      </div>
+    </dialog>
 
     <script src="./data.js"></script>
     <script src="./app.js"></script>
