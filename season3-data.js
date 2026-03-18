@@ -631,6 +631,258 @@ const SEASON3_DATA = {
       }
     }
   ],
+  "builderWeights": {
+    "seasonKey": "s3",
+    "masterRevision": "S3-R1",
+    "investmentTierMultipliers": {
+      "trained": 1.0,
+      "usable": 0.78,
+      "untrained": 0.45
+    },
+    "lockMultipliers": {
+      "locked": 1.05,
+      "neutral": 1.0,
+      "excluded": 0.0
+    },
+    "equipmentMultipliers": {
+      "none": 1.0,
+      "matched": 1.04,
+      "mismatched": 0.96
+    },
+    "unitWeights": {
+      "pvp": {
+        "slotFitScore": 0.18,
+        "objectiveFitScore": 0.18,
+        "synergyScore": 0.18,
+        "tempoScore": 0.16,
+        "pressureScore": 0.12,
+        "sustainScore": 0.1,
+        "utilityScore": 0.04,
+        "investmentScore": 0.04
+      },
+      "siege": {
+        "slotFitScore": 0.14,
+        "objectiveFitScore": 0.22,
+        "synergyScore": 0.16,
+        "tempoScore": 0.1,
+        "pressureScore": 0.08,
+        "sustainScore": 0.08,
+        "utilityScore": 0.06,
+        "investmentScore": 0.16
+      },
+      "defense": {
+        "slotFitScore": 0.16,
+        "objectiveFitScore": 0.18,
+        "synergyScore": 0.16,
+        "tempoScore": 0.08,
+        "pressureScore": 0.08,
+        "sustainScore": 0.18,
+        "utilityScore": 0.08,
+        "investmentScore": 0.08
+      },
+      "gathering": {
+        "slotFitScore": 0.1,
+        "objectiveFitScore": 0.24,
+        "synergyScore": 0.1,
+        "tempoScore": 0.12,
+        "pressureScore": 0.02,
+        "sustainScore": 0.12,
+        "utilityScore": 0.2,
+        "investmentScore": 0.1
+      }
+    },
+    "armyWeights": {
+      "pvp": {
+        "armyPowerScore": 0.24,
+        "roleCoverageScore": 0.18,
+        "commanderQualityScore": 0.16,
+        "synergyCoverageScore": 0.14,
+        "stabilityScore": 0.12,
+        "objectivePurityScore": 0.08,
+        "investmentEfficiencyScore": 0.08
+      },
+      "siege": {
+        "armyPowerScore": 0.2,
+        "roleCoverageScore": 0.16,
+        "commanderQualityScore": 0.14,
+        "synergyCoverageScore": 0.12,
+        "stabilityScore": 0.1,
+        "objectivePurityScore": 0.16,
+        "investmentEfficiencyScore": 0.12
+      },
+      "defense": {
+        "armyPowerScore": 0.18,
+        "roleCoverageScore": 0.2,
+        "commanderQualityScore": 0.14,
+        "synergyCoverageScore": 0.14,
+        "stabilityScore": 0.18,
+        "objectivePurityScore": 0.08,
+        "investmentEfficiencyScore": 0.08
+      },
+      "gathering": {
+        "armyPowerScore": 0.08,
+        "roleCoverageScore": 0.12,
+        "commanderQualityScore": 0.08,
+        "synergyCoverageScore": 0.08,
+        "stabilityScore": 0.14,
+        "objectivePurityScore": 0.24,
+        "investmentEfficiencyScore": 0.26
+      }
+    },
+    "penalties": {
+      "badAideUsage": 12,
+      "missingFrontline": 15,
+      "missingControlInPvp": 10,
+      "missingSiegeCore": 14,
+      "tooManyUntrainedCommanders": 18,
+      "duplicateWeaknessCluster": 8
+    }
+  },
+  "roleBuckets": {
+    "seasonKey": "s3",
+    "masterRevision": "S3-R1",
+    "objectives": {
+      "pvp": {
+        "required": [
+          {
+            "tag": "role.frontline-anchor",
+            "minUnits": 1,
+            "weight": 1.0
+          },
+          {
+            "tag": "role.burst-commander",
+            "minUnits": 1,
+            "weight": 0.9
+          },
+          {
+            "tag": "role.disruptor",
+            "minUnits": 1,
+            "weight": 0.9
+          }
+        ],
+        "preferred": [
+          {
+            "tag": "role.counter-enabler",
+            "minUnits": 1,
+            "weight": 0.6
+          },
+          {
+            "tag": "tempo.attack-speed-down",
+            "minUnits": 1,
+            "weight": 0.5
+          }
+        ]
+      },
+      "siege": {
+        "required": [
+          {
+            "tag": "role.siege-breaker",
+            "minUnits": 1,
+            "weight": 1.0
+          },
+          {
+            "tag": "siege.structure-damage-up",
+            "minUnits": 2,
+            "weight": 0.9
+          },
+          {
+            "tag": "role.frontline-anchor",
+            "minUnits": 1,
+            "weight": 0.7
+          }
+        ],
+        "preferred": [
+          {
+            "tag": "tempo.attack-speed-up",
+            "minUnits": 1,
+            "weight": 0.5
+          },
+          {
+            "tag": "role.flex-support",
+            "minUnits": 1,
+            "weight": 0.4
+          }
+        ]
+      },
+      "defense": {
+        "required": [
+          {
+            "tag": "role.frontline-anchor",
+            "minUnits": 2,
+            "weight": 1.0
+          },
+          {
+            "tag": "def.damage-cut",
+            "minUnits": 1,
+            "weight": 0.8
+          },
+          {
+            "tag": "role.disruptor",
+            "minUnits": 1,
+            "weight": 0.7
+          }
+        ],
+        "preferred": [
+          {
+            "tag": "role.counter-enabler",
+            "minUnits": 1,
+            "weight": 0.6
+          },
+          {
+            "tag": "def.debuff-immunity",
+            "minUnits": 1,
+            "weight": 0.4
+          }
+        ]
+      },
+      "gathering": {
+        "required": [
+          {
+            "tag": "obj.gathering",
+            "minUnits": 1,
+            "weight": 1.0
+          }
+        ],
+        "preferred": [
+          {
+            "tag": "role.flex-support",
+            "minUnits": 1,
+            "weight": 0.5
+          }
+        ]
+      }
+    }
+  },
+  "updates": [
+    {
+      "revisionKey": "S3-R1",
+      "effectiveAt": "2026-03-19",
+      "title": "Season 3 初期スナップショット",
+      "changedHeroes": [
+        "王翦",
+        "李牧",
+        "汗明",
+        "オルド",
+        "呉鳳明"
+      ],
+      "changedSkills": [
+        "不敗",
+        "才賢",
+        "巨人",
+        "山読"
+      ],
+      "changedFormulas": [
+        "Season 3 目的別スコアを導入",
+        "スロット適性を 主将 / 副将 / 補佐 で分離",
+        "対人 / 攻城 / 防衛 / 調達 の重みを分離"
+      ],
+      "notes": [
+        "装備品と函谷関 防衛戦を Season 3 前提として扱う",
+        "旧シーズン評価は既定表示に出さない",
+        "勝率ではなく有利度と根拠内訳を優先表示する"
+      ]
+    }
+  ],
   "sources": [
     {
       "label": "シーズン3新キャラと変更点",
