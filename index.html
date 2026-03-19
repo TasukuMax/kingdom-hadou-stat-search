@@ -2509,11 +2509,41 @@
         <section class="result-section partial-section">
           <div class="result-header">
             <div>
+              <h2>編成診断</h2>
+              <p>support-spec の採点基準に寄せて、役割不足、採用基準、陣形比較、信頼度をまとめて見ます。</p>
+            </div>
+          </div>
+          <div class="builder-overview-grid army-summary-grid" id="armyAuditGrid"></div>
+        </section>
+
+        <section class="result-section partial-section">
+          <div class="result-header">
+            <div>
               <h2>5部隊の詳細</h2>
               <p>各部隊の列、主将 / 副将 / 補佐、採用理由、連鎖率、特徴タグ、弱点を一覧で見ます。</p>
             </div>
           </div>
           <div class="army-unit-grid" id="armyUnitGrid"></div>
+        </section>
+
+        <section class="result-section exact-section">
+          <div class="result-header">
+            <div>
+              <h2>主将候補ランキング</h2>
+              <p>今の条件で主将向きの武将を並べ、相性が良い副将ペアまで先読みします。</p>
+            </div>
+          </div>
+          <div class="quick-grid" id="armyCommanderGrid"></div>
+        </section>
+
+        <section class="result-section partial-section">
+          <div class="result-header">
+            <div>
+              <h2>副将ペア候補</h2>
+              <p>軸主将に対して噛み合う副将2人組を、連鎖率と支援相性込みで候補化します。</p>
+            </div>
+          </div>
+          <div class="quick-grid" id="armyViceGrid"></div>
         </section>
 
         <section class="result-section exact-section">
@@ -2529,11 +2559,31 @@
         <section class="result-section partial-section">
           <div class="result-header">
             <div>
+              <h2>1枠差し替え提案</h2>
+              <p>今の25体を大きく崩さず、1枠だけ変えて改善しやすい候補を出します。</p>
+            </div>
+          </div>
+          <div class="quick-grid" id="armySwapGrid"></div>
+        </section>
+
+        <section class="result-section partial-section">
+          <div class="result-header">
+            <div>
               <h2>差し替え候補</h2>
               <p>今回落選した中で、役割不足やコンセプト純度を埋めやすい予備候補を出します。</p>
             </div>
           </div>
           <div class="quick-grid" id="armyReserveGrid"></div>
+        </section>
+
+        <section class="result-section partial-section">
+          <div class="result-header">
+            <div>
+              <h2>なぜ落選したか</h2>
+              <p>有力でも今回は採用されなかった武将について、役割重複や適性不足を説明します。</p>
+            </div>
+          </div>
+          <div class="quick-grid" id="armyExcludedGrid"></div>
         </section>
       </section>
 
