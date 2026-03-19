@@ -642,11 +642,27 @@
         gap: 14px;
       }
 
+      .preset-grid {
+        margin-top: 18px;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 14px;
+      }
+
       .journey-card {
         padding: 20px;
         border-radius: var(--radius-lg);
         background:
           linear-gradient(180deg, rgba(255, 252, 246, 0.9), rgba(241, 231, 217, 0.78));
+        border: 1px solid rgba(125, 89, 47, 0.14);
+        box-shadow: var(--shadow-soft);
+      }
+
+      .preset-card {
+        padding: 20px;
+        border-radius: var(--radius-lg);
+        background:
+          linear-gradient(180deg, rgba(255, 252, 246, 0.88), rgba(239, 229, 214, 0.74));
         border: 1px solid rgba(125, 89, 47, 0.14);
         box-shadow: var(--shadow-soft);
       }
@@ -1295,6 +1311,93 @@
         letter-spacing: 0.01em;
       }
 
+      .compare-panel {
+        margin-top: 20px;
+        padding: 20px;
+        border-radius: 22px;
+        background:
+          linear-gradient(180deg, rgba(255, 252, 246, 0.82), rgba(243, 233, 220, 0.68));
+        border: 1px solid rgba(125, 89, 47, 0.14);
+        box-shadow: var(--shadow-soft);
+      }
+
+      .compare-grid {
+        margin-top: 14px;
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 14px;
+      }
+
+      .compare-card {
+        padding: 18px;
+        border-radius: 20px;
+        background:
+          linear-gradient(180deg, rgba(255, 254, 250, 0.96), rgba(241, 231, 217, 0.86));
+        border: 1px solid rgba(125, 89, 47, 0.14);
+        box-shadow: var(--shadow-soft);
+      }
+
+      .compare-card-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        align-items: flex-start;
+      }
+
+      .compare-card-id {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+      }
+
+      .compare-thumb {
+        width: 56px;
+        height: 56px;
+        border-radius: 16px;
+        object-fit: cover;
+        background: rgba(243, 234, 217, 0.92);
+        border: 1px solid rgba(109, 57, 17, 0.12);
+      }
+
+      .compare-metric-grid {
+        margin-top: 14px;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      .compare-metric-grid div {
+        padding: 10px 12px;
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.7);
+        border: 1px solid rgba(125, 89, 47, 0.1);
+      }
+
+      .compare-metric-grid dt {
+        color: var(--muted);
+        font-size: 0.8rem;
+      }
+
+      .compare-metric-grid dd {
+        margin-top: 4px;
+        font-size: 1.02rem;
+        font-weight: 700;
+        color: var(--ink);
+      }
+
+      .compare-note {
+        margin-top: 12px;
+        color: var(--muted);
+        line-height: 1.7;
+      }
+
+      .compare-actions {
+        margin-top: 14px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
       .section-details {
         margin-top: 16px;
         border-radius: 20px;
@@ -1869,6 +1972,12 @@
           0 10px 20px rgba(38, 25, 16, 0.08);
       }
 
+      .mini-button.is-toned {
+        background: rgba(156, 95, 34, 0.12);
+        color: var(--gold-deep);
+        border-color: rgba(156, 95, 34, 0.22);
+      }
+
       .favorite-button {
         min-height: 42px;
         display: inline-flex;
@@ -2276,10 +2385,12 @@
         }
 
         .journey-grid,
+        .preset-grid,
         .toolbar-grid,
         .builder-select-grid,
         .module-grid,
         .quick-grid,
+        .compare-grid,
         .skill-card-grid {
           grid-template-columns: 1fr;
         }
@@ -2353,14 +2464,16 @@
 
         .journey-actions,
         .button-row,
-        .card-actions {
+        .card-actions,
+        .compare-actions {
           flex-direction: column;
         }
 
         .journey-actions .mini-button,
         .button-row .secondary-button,
         .favorite-button,
-        .card-actions .mini-button {
+        .card-actions .mini-button,
+        .compare-actions .mini-button {
           width: 100%;
           justify-content: center;
         }
@@ -2472,6 +2585,47 @@
               <button class="mini-button" type="button" data-hero-shortcut="army-siege">対物軍勢から始める</button>
               <button class="mini-button" type="button" data-switch-view="board">S3ハブを見る</button>
             </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="panel preset-panel">
+        <div class="panel-header">
+          <div>
+            <h2>研究ベース攻略プリセット</h2>
+            <p>公式ガイドと攻略記事で繰り返し重視される判断を、そのまま絞り込みプリセットにしています。</p>
+          </div>
+        </div>
+        <div class="preset-grid">
+          <article class="preset-card">
+            <span class="journey-eyebrow">編成の基本</span>
+            <h3>主将候補を先に見る</h3>
+            <p>主将は部隊の軸なので、まず主将適性順で有力候補を掴みます。</p>
+            <button class="mini-button" type="button" data-apply-research-preset="commander">主将候補を開く</button>
+          </article>
+          <article class="preset-card">
+            <span class="journey-eyebrow">連鎖重視</span>
+            <h3>副将向きから詰める</h3>
+            <p>連鎖率と差し込み価値を先に見て、副将候補を広く洗います。</p>
+            <button class="mini-button" type="button" data-apply-research-preset="vice">副将候補を開く</button>
+          </article>
+          <article class="preset-card">
+            <span class="journey-eyebrow">補助技能</span>
+            <h3>補佐向きから探す</h3>
+            <p>補佐は技能価値が重要なので、補佐適性順で支援役を先に見ます。</p>
+            <button class="mini-button" type="button" data-apply-research-preset="aide">補佐候補を開く</button>
+          </article>
+          <article class="preset-card">
+            <span class="journey-eyebrow">攻城戦</span>
+            <h3>対物特化を洗う</h3>
+            <p>攻城戦・砦戦向けに、対物タグと攻城用途を持つ候補へ絞ります。</p>
+            <button class="mini-button" type="button" data-apply-research-preset="siege">攻城候補を開く</button>
+          </article>
+          <article class="preset-card">
+            <span class="journey-eyebrow">低レア活用</span>
+            <h3>SR補助候補を探す</h3>
+            <p>低レアでも使いやすい補助役を、SRかつ補佐向きでまとめて見ます。</p>
+            <button class="mini-button" type="button" data-apply-research-preset="srAide">SR候補を開く</button>
           </article>
         </div>
       </section>
@@ -2679,6 +2833,20 @@
           </details>
 
           <div class="toolbar-summary" id="characterSummary"></div>
+
+          <div class="compare-panel">
+            <div class="result-header">
+              <div>
+                <h2>武将比較</h2>
+                <p id="characterCompareSummary">カードの「比較に追加」で最大3体まで横並び比較できます。</p>
+              </div>
+              <div class="button-row">
+                <span class="count-pill" id="characterCompareCount">0/3</span>
+                <button class="secondary-button" id="characterCompareResetButton" type="button">比較をクリア</button>
+              </div>
+            </div>
+            <div class="compare-grid" id="characterCompareList"></div>
+          </div>
 
           <details class="section-details">
             <summary>武将DBの見方</summary>
