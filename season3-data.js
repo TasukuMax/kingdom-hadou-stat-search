@@ -1,6 +1,6 @@
 const SEASON3_DATA = {
   "seasonKey": "s3",
-  "seasonLabel": "Season 3 Only",
+  "seasonLabel": "Season 3限定",
   "theme": "合従軍 集結",
   "masterRevision": "S3-R1",
   "updatedAt": "2026-03-19",
@@ -1014,7 +1014,7 @@ const SEASON3_DATA = {
       "name": "S3差分ビューア",
       "category": "season",
       "priority": "P1",
-      "summary": "S3内revision差分を表示する。",
+      "summary": "S3内データ版差分を表示する。",
       "inputs": [
         "revisionA",
         "revisionB"
@@ -1098,7 +1098,7 @@ const SEASON3_DATA = {
       "name": "共有互換チェック",
       "category": "share",
       "priority": "P1",
-      "summary": "共有URLのrevision互換性を確認する。",
+      "summary": "共有URLのデータ版互換性を確認する。",
       "inputs": [
         "shareUrl"
       ],
@@ -1528,7 +1528,7 @@ const SEASON3_DATA = {
     {
       "revisionKey": "S3-R1",
       "effectiveAt": "2026-03-19",
-      "title": "Season 3 初期スナップショット",
+      "title": "S3初期スナップショット",
       "changedHeroes": [
         "王翦",
         "李牧",
@@ -1543,12 +1543,12 @@ const SEASON3_DATA = {
         "山読"
       ],
       "changedFormulas": [
-        "Season 3 目的別スコアを導入",
+        "S3目的別スコアを導入",
         "スロット適性を 主将 / 副将 / 補佐 で分離",
         "対人 / 攻城 / 防衛 / 調達 の重みを分離"
       ],
       "notes": [
-        "装備品と函谷関 防衛戦を Season 3 前提として扱う",
+        "装備品と函谷関 防衛戦をS3前提として扱う",
         "旧シーズン評価は既定表示に出さない",
         "勝率ではなく有利度と根拠内訳を優先表示する"
       ]
