@@ -483,6 +483,7 @@
       .button-row {
         display: flex;
         gap: 10px;
+        flex-wrap: wrap;
       }
 
       button {
@@ -508,6 +509,13 @@
         color: var(--ink);
         border: 1px solid rgba(125, 89, 47, 0.22);
         box-shadow: var(--shadow-soft);
+      }
+
+      .utility-toggle.is-active {
+        color: #fff8ee;
+        border-color: rgba(188, 128, 56, 0.34);
+        background:
+          linear-gradient(135deg, rgba(183, 126, 47, 0.96), rgba(120, 72, 24, 0.92));
       }
 
       button:hover {
@@ -625,6 +633,53 @@
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
         gap: 14px;
+      }
+
+      .journey-grid {
+        margin-top: 18px;
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 14px;
+      }
+
+      .journey-card {
+        padding: 20px;
+        border-radius: var(--radius-lg);
+        background:
+          linear-gradient(180deg, rgba(255, 252, 246, 0.9), rgba(241, 231, 217, 0.78));
+        border: 1px solid rgba(125, 89, 47, 0.14);
+        box-shadow: var(--shadow-soft);
+      }
+
+      .journey-eyebrow {
+        display: inline-flex;
+        align-items: center;
+        min-height: 28px;
+        padding: 0 10px;
+        border-radius: 999px;
+        background: rgba(156, 95, 34, 0.12);
+        color: var(--gold-deep);
+        font-size: 0.78rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+      }
+
+      .journey-card h3 {
+        margin-top: 12px;
+        font-size: 1.1rem;
+      }
+
+      .journey-card p {
+        margin-top: 10px;
+        color: var(--muted);
+        line-height: 1.7;
+      }
+
+      .journey-actions {
+        margin-top: 14px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
       }
 
       .info-card {
@@ -756,6 +811,10 @@
         display: flex;
         flex-direction: column;
         gap: 4px;
+      }
+
+      .slot-fit-summary h4 {
+        font-size: 1rem;
       }
 
       .inline-summary p:last-child {
@@ -1810,6 +1869,28 @@
           0 10px 20px rgba(38, 25, 16, 0.08);
       }
 
+      .favorite-button {
+        min-height: 42px;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 0 12px;
+        border-radius: 999px;
+        border: 1px solid rgba(156, 95, 34, 0.16);
+        background: rgba(255, 255, 255, 0.78);
+        color: var(--gold-deep);
+        font-size: 0.84rem;
+        font-weight: 700;
+        box-shadow: var(--shadow-soft);
+      }
+
+      .favorite-button.is-active {
+        background:
+          linear-gradient(135deg, rgba(227, 187, 109, 0.98), rgba(156, 95, 34, 0.94));
+        color: #fffaf0;
+        border-color: rgba(156, 95, 34, 0.28);
+      }
+
       .meta-chip-list {
         margin-top: 14px;
         display: flex;
@@ -1903,6 +1984,12 @@
         justify-content: space-between;
         align-items: flex-start;
         gap: 12px;
+      }
+
+      .skill-card-head > div:last-child {
+        display: grid;
+        justify-items: end;
+        gap: 10px;
       }
 
       .skill-title-button {
@@ -2188,6 +2275,15 @@
           gap: 10px;
         }
 
+        .journey-grid,
+        .toolbar-grid,
+        .builder-select-grid,
+        .module-grid,
+        .quick-grid,
+        .skill-card-grid {
+          grid-template-columns: 1fr;
+        }
+
         .hero-actions .mini-button:first-child {
           grid-column: 1 / -1;
         }
@@ -2255,6 +2351,20 @@
           display: none;
         }
 
+        .journey-actions,
+        .button-row,
+        .card-actions {
+          flex-direction: column;
+        }
+
+        .journey-actions .mini-button,
+        .button-row .secondary-button,
+        .favorite-button,
+        .card-actions .mini-button {
+          width: 100%;
+          justify-content: center;
+        }
+
         .timeline-axis {
           gap: 4px;
         }
@@ -2313,6 +2423,56 @@
           <span>Season <strong id="seasonLabel"></strong></span>
           <span>Revision <strong id="seasonRevision"></strong></span>
           <span>更新基準 <strong id="seasonUpdatedAt"></strong></span>
+        </div>
+      </section>
+
+      <section class="panel journey-panel">
+        <div class="panel-header">
+          <div>
+            <h2>プレイヤー別スタート</h2>
+            <p>今の悩みに近い入口から入れるように、よく使う流れをまとめました。</p>
+          </div>
+        </div>
+        <div class="journey-grid">
+          <article class="journey-card">
+            <span class="journey-eyebrow">初心者</span>
+            <h3>何を育てるか迷う</h3>
+            <p>まずは伸びやすい武将と役割を把握して、主将候補を掴む流れです。</p>
+            <ul class="bullet-list">
+              <li>戦力検索で伸びやすい上位2ステを確認</li>
+              <li>武将DBで主将 / 副将 / 補佐の向きを見る</li>
+            </ul>
+            <div class="journey-actions">
+              <button class="mini-button" type="button" data-hero-shortcut="power-attack-defense">戦力検索から始める</button>
+              <button class="mini-button" type="button" data-switch-view="character">武将DBを開く</button>
+            </div>
+          </article>
+          <article class="journey-card">
+            <span class="journey-eyebrow">中級者</span>
+            <h3>固定主将で噛み合いを見たい</h3>
+            <p>相性検索と編成ツールで、副将と補佐の噛み合いを詰める流れです。</p>
+            <ul class="bullet-list">
+              <li>相性検索で連鎖率と共通個性を確認</li>
+              <li>編成ツールで9x9盤面とタイムラインを確認</li>
+            </ul>
+            <div class="journey-actions">
+              <button class="mini-button" type="button" data-hero-shortcut="synergy-ouki">相性検索を試す</button>
+              <button class="mini-button" type="button" data-switch-view="builder">編成ツールを開く</button>
+            </div>
+          </article>
+          <article class="journey-card">
+            <span class="journey-eyebrow">上位層</span>
+            <h3>軍勢コンセプトで詰めたい</h3>
+            <p>軍勢自動編成とS3ハブを往復して、役割不足や今週の強化先まで詰める流れです。</p>
+            <ul class="bullet-list">
+              <li>対物 / 反撃 / 妨害などの軍勢コンセプトを切替</li>
+              <li>S3ハブで目的別の注目候補を再確認</li>
+            </ul>
+            <div class="journey-actions">
+              <button class="mini-button" type="button" data-hero-shortcut="army-siege">対物軍勢から始める</button>
+              <button class="mini-button" type="button" data-switch-view="board">S3ハブを見る</button>
+            </div>
+          </article>
         </div>
       </section>
 
@@ -2481,6 +2641,7 @@
             </div>
 
             <div class="button-row">
+              <button class="secondary-button utility-toggle" id="characterFavoriteToggle" type="button" aria-pressed="false">お気に入りを見る 0</button>
               <button class="secondary-button" id="characterResetButton" type="button">武将DBをリセット</button>
             </div>
           </div>
@@ -2531,6 +2692,16 @@
           </details>
         </section>
 
+        <section class="result-section partial-section">
+          <div class="result-header">
+            <div>
+              <h2>迷ったときの優先候補</h2>
+              <p>今の絞り込み条件の中で、主将 / 副将 / 補佐ごとに先に見たい候補を並べます。</p>
+            </div>
+          </div>
+          <div class="quick-grid" id="characterQuickGrid"></div>
+        </section>
+
         <section class="result-section exact-section">
           <div class="result-header">
             <div>
@@ -2568,6 +2739,7 @@
             </div>
 
             <div class="button-row">
+              <button class="secondary-button utility-toggle" id="skillFavoriteToggle" type="button" aria-pressed="false">お気に入りを見る 0</button>
               <button class="secondary-button" id="skillResetButton" type="button">技能DBをリセット</button>
             </div>
           </div>
