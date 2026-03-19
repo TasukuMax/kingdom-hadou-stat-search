@@ -981,7 +981,10 @@
       .builder-select-grid,
       .builder-overview-grid,
       .builder-slot-grid,
-      .timeline-list {
+      .timeline-list,
+      .formation-card-grid,
+      .board-grid,
+      .builder-active-effects {
         display: grid;
         gap: 14px;
       }
@@ -1002,6 +1005,36 @@
 
       .army-summary-grid {
         grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      }
+
+      .formation-card-grid {
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      }
+
+      .formation-card {
+        padding: 18px;
+        border-radius: 22px;
+        border: 1px solid rgba(109, 57, 17, 0.14);
+        background: rgba(255, 255, 255, 0.8);
+      }
+
+      .formation-card.is-active {
+        background: rgba(244, 232, 208, 0.82);
+        border-color: rgba(156, 95, 34, 0.34);
+        box-shadow: 0 12px 30px rgba(109, 57, 17, 0.12);
+      }
+
+      .formation-card button {
+        width: 100%;
+        border: 0;
+        background: transparent;
+        padding: 0;
+        text-align: left;
+        color: inherit;
+      }
+
+      .formation-card p {
+        color: var(--muted);
       }
 
       .army-unit-grid {
@@ -1222,7 +1255,7 @@
 
       .timeline-axis {
         display: grid;
-        grid-template-columns: repeat(9, minmax(0, 1fr));
+        grid-template-columns: repeat(7, minmax(0, 1fr));
         gap: 8px;
       }
 
@@ -1246,40 +1279,62 @@
 
       .timeline-track {
         position: relative;
-        min-height: 76px;
+        min-height: 112px;
         border-radius: 20px;
         border: 1px solid rgba(109, 57, 17, 0.12);
         overflow: hidden;
         background:
-          linear-gradient(to right, rgba(109, 57, 17, 0.08) 1px, transparent 1px) 0 0 / calc(100% / 9) 100%,
+          linear-gradient(to right, rgba(109, 57, 17, 0.08) 1px, transparent 1px) 0 0 / calc(100% / 6) 100%,
           rgba(243, 234, 217, 0.68);
       }
 
       .timeline-event {
         position: absolute;
-        top: 10px;
-        bottom: 10px;
-        left: calc(((var(--order) - 1) * 100%) / 9 + 6px);
-        width: calc((100% / 9) - 12px);
+        top: 8px;
+        left: calc((var(--start) / 60) * 100% + 6px);
+        width: max(calc(((var(--end) - var(--start)) / 60) * 100% - 12px), 36px);
+        min-height: 34px;
         border-radius: 18px;
         display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
+        justify-content: space-between;
+        align-items: flex-start;
         gap: 4px;
-        text-align: center;
-        padding: 8px;
+        text-align: left;
+        padding: 7px 10px;
         font-weight: 700;
         box-shadow: inset 0 0 0 1px rgba(109, 57, 17, 0.08);
       }
 
       .timeline-event strong {
-        font-size: 1rem;
+        font-size: 0.94rem;
       }
 
       .timeline-event span {
-        font-size: 0.8rem;
+        font-size: 0.74rem;
         line-height: 1.35;
+      }
+
+      .timeline-event.is-estimated {
+        border: 1px dashed rgba(109, 57, 17, 0.4);
+      }
+
+      .timeline-marker {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        left: calc((var(--at) / 60) * 100%);
+        background: rgba(84, 46, 15, 0.42);
+      }
+
+      .timeline-now {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 3px;
+        left: calc((var(--at) / 60) * 100%);
+        background: rgba(54, 90, 116, 0.7);
+        box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.8);
       }
 
       .timeline-track.tone-support .timeline-event {
@@ -1305,6 +1360,113 @@
       .timeline-track.tone-utility .timeline-event {
         background: rgba(156, 95, 34, 0.16);
         color: var(--gold-deep);
+      }
+
+      .board-shell {
+        display: grid;
+        gap: 14px;
+      }
+
+      .board-grid {
+        grid-template-columns: repeat(9, minmax(0, 1fr));
+        gap: 4px;
+      }
+
+      .board-cell {
+        aspect-ratio: 1;
+        border-radius: 12px;
+        border: 1px solid rgba(109, 57, 17, 0.1);
+        background: rgba(255, 255, 255, 0.72);
+        position: relative;
+        overflow: hidden;
+        display: grid;
+        place-items: center;
+        text-align: center;
+        padding: 4px;
+        font-size: 0.7rem;
+      }
+
+      .board-cell.is-friendly {
+        background: rgba(61, 123, 87, 0.1);
+      }
+
+      .board-cell.is-enemy {
+        background: rgba(156, 62, 34, 0.08);
+      }
+
+      .board-cell.has-buff {
+        box-shadow: inset 0 0 0 2px rgba(61, 123, 87, 0.34);
+      }
+
+      .board-cell.has-debuff {
+        box-shadow: inset 0 0 0 2px rgba(156, 62, 34, 0.34);
+      }
+
+      .board-cell.has-heal {
+        box-shadow: inset 0 0 0 2px rgba(58, 120, 111, 0.34);
+      }
+
+      .board-cell.has-utility {
+        box-shadow: inset 0 0 0 2px rgba(84, 46, 15, 0.28);
+      }
+
+      .board-cell.is-target {
+        outline: 3px solid rgba(54, 90, 116, 0.55);
+      }
+
+      .board-cell button {
+        position: absolute;
+        inset: 0;
+        border: 0;
+        background: transparent;
+      }
+
+      .board-cell-label {
+        font-weight: 700;
+      }
+
+      .board-cell-note {
+        color: var(--muted);
+        font-size: 0.64rem;
+      }
+
+      .legend-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .legend-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        min-height: 34px;
+        padding: 0 12px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.84);
+        border: 1px solid rgba(109, 57, 17, 0.14);
+      }
+
+      .legend-swatch {
+        width: 12px;
+        height: 12px;
+        border-radius: 999px;
+      }
+
+      .legend-swatch.is-buff {
+        background: rgba(61, 123, 87, 0.6);
+      }
+
+      .legend-swatch.is-debuff {
+        background: rgba(156, 62, 34, 0.6);
+      }
+
+      .legend-swatch.is-heal {
+        background: rgba(58, 120, 111, 0.6);
+      }
+
+      .legend-swatch.is-utility {
+        background: rgba(84, 46, 15, 0.45);
       }
 
       .card-actions {
@@ -2052,17 +2214,24 @@
             <summary>この画面の前提</summary>
             <div class="details-body">
               <ul class="bullet-list">
-                <li>タイムラインは秒数ではなく、GameWith の主将 / 副将1 / 副将2 と連鎖順 早い / 普通 / 遅い をそのまま順番化しています。</li>
-                <li>補佐は技能条件と重複技能、列条件の確認に使います。</li>
+                <li>陣形ごとの初回20秒と、その後の発動間隔は GameWith の陣形記事を基準にしています。</li>
+                <li>戦法の効果時間は公開テキストに秒数がないものが多いため、表示上は `確定秒` と `推定秒` を分けています。</li>
+                <li>補佐は技能条件と重複技能の確認に使い、戦法タイムラインには入りません。</li>
               </ul>
             </div>
           </details>
 
           <div class="builder-select-grid">
             <div class="field">
-              <label for="builderRow">部隊の列</label>
-              <select id="builderRow" aria-label="部隊の列"></select>
-              <p class="field-note">前列 / 中列 / 後列で有効になる技能と、戦法の追加効果判定に使います。</p>
+              <label for="builderFormation">陣形</label>
+              <select id="builderFormation" aria-label="陣形"></select>
+              <p class="field-note">戦法の発動タイミングと、部隊の置き場所を決めます。</p>
+            </div>
+
+            <div class="field">
+              <label for="builderFormationSlot">この部隊の位置</label>
+              <select id="builderFormationSlot" aria-label="この部隊の位置"></select>
+              <p class="field-note">選んだ位置から前列 / 中列 / 後列判定と、9x9盤面の基準座標を決めます。</p>
             </div>
 
             <div class="field">
@@ -2117,6 +2286,31 @@
             </div>
           </details>
 
+          <details class="section-details" open>
+            <summary>戦法盤面と秒数</summary>
+            <div class="details-body">
+              <div class="builder-select-grid">
+                <div class="field">
+                  <label for="builderTargetSlot">基準敵部隊</label>
+                  <select id="builderTargetSlot" aria-label="基準敵部隊"></select>
+                  <p class="field-note">単体 / 同縦列 / 同横列の敵範囲は、この敵部隊を基準に出します。</p>
+                </div>
+
+                <div class="field">
+                  <label for="builderPreviewSecond">表示秒数</label>
+                  <input id="builderPreviewSecond" type="range" min="0" max="60" step="1" value="20">
+                  <p class="field-note" id="builderPreviewSecondLabel">20秒時点の盤面を表示します。</p>
+                </div>
+
+                <div class="field">
+                  <strong>盤面の見方</strong>
+                  <div class="legend-row" id="builderBoardLegend"></div>
+                  <p class="field-note">敵マスをタップすると、単体対象の基準を切り替えられます。</p>
+                </div>
+              </div>
+            </div>
+          </details>
+
           <div class="toolbar-summary" id="builderSummary"></div>
           <p class="field-note" id="builderValidation" hidden></p>
         </section>
@@ -2125,11 +2319,31 @@
           <div class="result-header">
             <div>
               <h2>連鎖順タイムライン</h2>
-              <p>1〜9 は GameWith の連鎖順ルールです。主将 / 副将1 / 副将2 に置いたときの発動順だけを安全に表示します。</p>
+              <p>GameWith の連鎖順 1〜9 と陣形ごとの発動間隔から、戦法が入る秒数と効果時間を見ます。</p>
             </div>
             <span class="count-pill" id="builderTimelineCount"></span>
           </div>
           <div id="builderTimeline"></div>
+        </section>
+
+        <section class="result-section partial-section">
+          <div class="result-header">
+            <div>
+              <h2>9x9戦法盤面</h2>
+              <p>選択中の秒で、どのマスにバフ / デバフ / ダメージが残っているかを確認します。</p>
+            </div>
+          </div>
+          <div class="module-grid">
+            <article class="module-card">
+              <div class="board-shell">
+                <div class="board-grid" id="builderBoardGrid"></div>
+              </div>
+            </article>
+            <article class="module-card">
+              <h2>その秒で有効な効果</h2>
+              <div class="builder-active-effects" id="builderActiveEffects"></div>
+            </article>
+          </div>
         </section>
 
         <section class="result-section partial-section">
@@ -2194,7 +2408,15 @@
               <select id="armyConcept" aria-label="軍勢コンセプト"></select>
               <p class="field-note">対軍勢バランス、対物特化、反撃特化、弱化妨害、防衛耐久を切り替えられます。</p>
             </div>
+
+            <div class="field">
+              <label for="armyFormation">陣形</label>
+              <select id="armyFormation" aria-label="陣形"></select>
+              <p class="field-note">自動選択も可能です。指定すると、その陣形の能力補正と発動間隔を採点へ反映します。</p>
+            </div>
           </div>
+
+          <div class="formation-card-grid" id="armyFormationInfoGrid"></div>
 
           <details class="section-details" open>
             <summary>手持ち武将と育成状況</summary>
