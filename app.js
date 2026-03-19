@@ -598,9 +598,9 @@ const FORMATION_DEFS = [
     timings: [20, 8, 8, 8, 8, 8],
     bonuses: [{ type: "援", minUnits: 3, stats: { war: 20 } }],
     slots: [
-      { key: "first", label: "1st", rowKey: "front", gridCol: 1, gridRow: 0 },
-      { key: "second", label: "2nd", rowKey: "middle", gridCol: 0, gridRow: 1 },
-      { key: "third", label: "3rd", rowKey: "middle", gridCol: 1, gridRow: 1 },
+      { key: "first", label: "1st", rowKey: "middle", gridCol: 1, gridRow: 1 },
+      { key: "second", label: "2nd", rowKey: "front", gridCol: 1, gridRow: 0 },
+      { key: "third", label: "3rd", rowKey: "middle", gridCol: 0, gridRow: 1 },
       { key: "fourth", label: "4th", rowKey: "middle", gridCol: 2, gridRow: 1 },
       { key: "fifth", label: "5th", rowKey: "back", gridCol: 1, gridRow: 2 }
     ]
@@ -612,7 +612,7 @@ const FORMATION_DEFS = [
     description: "高い攻撃補正と左から右へ流れるテンポが特徴で、通常攻撃や対物寄りの軍勢と相性が良い陣形です。",
     sourceSummary: "闘タイプ3部隊以上で攻撃+30%、援タイプ3部隊以上で攻撃+20%・戦威+10%",
     sourceDate: "GameWith 2026年3月14日",
-    timings: [20, 8, 6, 10, 6, 10],
+    timings: [20, 8, 6, 8, 6, 10],
     bonuses: [
       { type: "闘", minUnits: 3, stats: { attack: 30 } },
       { type: "援", minUnits: 3, stats: { attack: 20, war: 10 } }
@@ -620,9 +620,9 @@ const FORMATION_DEFS = [
     slots: [
       { key: "first", label: "1st", rowKey: "front", gridCol: 1, gridRow: 0 },
       { key: "second", label: "2nd", rowKey: "middle", gridCol: 0, gridRow: 1 },
-      { key: "third", label: "3rd", rowKey: "middle", gridCol: 1, gridRow: 1 },
+      { key: "third", label: "3rd", rowKey: "back", gridCol: 0, gridRow: 2 },
       { key: "fourth", label: "4th", rowKey: "middle", gridCol: 2, gridRow: 1 },
-      { key: "fifth", label: "5th", rowKey: "back", gridCol: 1, gridRow: 2 }
+      { key: "fifth", label: "5th", rowKey: "back", gridCol: 2, gridRow: 2 }
     ]
   },
   {
@@ -632,15 +632,15 @@ const FORMATION_DEFS = [
     description: "前列から中列へ噛ませる形で防御を積みやすく、反撃や耐久寄りの軍勢と噛み合う陣形です。",
     sourceSummary: "闘タイプ3部隊以上で攻撃+10%・防御+30%、援タイプ3部隊以上で戦威+10%・防御+30%",
     sourceDate: "GameWith 2026年3月14日",
-    timings: [20, 8, 6, 6, 10, 10],
+    timings: [20, 6, 8, 6, 10, 8],
     bonuses: [
       { type: "闘", minUnits: 3, stats: { attack: 10, defense: 30 } },
       { type: "援", minUnits: 3, stats: { war: 10, defense: 30 } }
     ],
     slots: [
-      { key: "first", label: "1st", rowKey: "front", gridCol: 1, gridRow: 0 },
-      { key: "second", label: "2nd", rowKey: "middle", gridCol: 0, gridRow: 1 },
-      { key: "third", label: "3rd", rowKey: "front", gridCol: 2, gridRow: 0 },
+      { key: "first", label: "1st", rowKey: "front", gridCol: 0, gridRow: 0 },
+      { key: "second", label: "2nd", rowKey: "front", gridCol: 2, gridRow: 0 },
+      { key: "third", label: "3rd", rowKey: "middle", gridCol: 0, gridRow: 1 },
       { key: "fourth", label: "4th", rowKey: "middle", gridCol: 2, gridRow: 1 },
       { key: "fifth", label: "5th", rowKey: "back", gridCol: 1, gridRow: 2 }
     ]
@@ -675,11 +675,11 @@ const FORMATION_DEFS = [
       { type: "援", minUnits: 4, stats: { war: 20, strategy: 40 } }
     ],
     slots: [
-      { key: "first", label: "1st", rowKey: "middle", gridCol: 0, gridRow: 1 },
+      { key: "first", label: "1st", rowKey: "middle", gridCol: 1, gridRow: 1 },
       { key: "second", label: "2nd", rowKey: "middle", gridCol: 2, gridRow: 1 },
-      { key: "third", label: "3rd", rowKey: "back", gridCol: 1, gridRow: 2 },
+      { key: "third", label: "3rd", rowKey: "back", gridCol: 2, gridRow: 2 },
       { key: "fourth", label: "4th", rowKey: "front", gridCol: 0, gridRow: 0 },
-      { key: "fifth", label: "5th", rowKey: "front", gridCol: 2, gridRow: 0 }
+      { key: "fifth", label: "5th", rowKey: "front", gridCol: 1, gridRow: 0 }
     ]
   }
 ];
@@ -4182,59 +4182,109 @@ function getBuilderTimelinePrimaryTone(effects = []) {
   }, "empty");
 }
 
-function buildBuilderTimelineRows(timelineEntries) {
-  const rows = timelineEntries.flatMap((entry) => {
-    const grouped = new Map();
-    for (const effect of entry.windows) {
-      const clippedStart = Math.max(0, Math.min(BUILDER_TIMELINE_MAX_SECOND, effect.startSecond));
-      const clippedEnd = Math.max(0, Math.min(BUILDER_TIMELINE_MAX_SECOND, effect.endSecond));
-      if (clippedEnd <= clippedStart) {
-        continue;
-      }
+function buildBuilderTimelineRowSegments(effects) {
+  const boundaries = uniqueValues([
+    0,
+    BUILDER_TIMELINE_MAX_SECOND,
+    ...effects.flatMap((effect) => [effect.clippedStart, effect.clippedEnd])
+  ]).sort((left, right) => left - right);
+  const segments = [];
 
-      const key = `${entry.key}-${effect.startSecond}`;
-      if (!grouped.has(key)) {
-        grouped.set(key, {
-          id: `timeline-row-${entry.key}-${effect.startSecond}`,
-          startSecond: clippedStart,
-          endSecond: clippedEnd,
-          previewSecond: clippedStart,
-          triggerSecond: effect.startSecond,
-          characterName: effect.characterName,
-          sourceLabel: effect.sourceLabel,
-          battleArtName: effect.battleArtName,
-          activationRate: effect.activationRate,
-          orderScore: entry.orderScore ?? 0,
+  for (let index = 0; index < boundaries.length - 1; index += 1) {
+    const startSecond = boundaries[index];
+    const endSecond = boundaries[index + 1];
+    if (endSecond <= startSecond) {
+      continue;
+    }
+
+    const activeEffects = effects
+      .filter((effect) => effect.clippedStart < endSecond && effect.clippedEnd > startSecond)
+      .sort(compareBuilderEffects);
+    if (!activeEffects.length) {
+      continue;
+    }
+
+    segments.push({
+      id: `timeline-slot-segment-${startSecond}-${endSecond}`,
+      startSecond,
+      endSecond,
+      previewSecond: Math.min(
+        BUILDER_TIMELINE_MAX_SECOND,
+        Math.max(startSecond, Math.floor((startSecond + endSecond) / 2))
+      ),
+      label: summarizeBuilderCellEffects(activeEffects) || `${activeEffects.length}件`,
+      tone: getBuilderTimelinePrimaryTone(activeEffects),
+      estimated: activeEffects.some((effect) => effect.estimated),
+      activeEffects
+    });
+  }
+
+  return segments;
+}
+
+function buildBuilderTimelineRows(timelineWindows, formation, formationSlotKey, targetSlotKey) {
+  const rowMap = new Map();
+
+  for (const effect of timelineWindows) {
+    const clippedStart = Math.max(0, Math.min(BUILDER_TIMELINE_MAX_SECOND, effect.startSecond));
+    const clippedEnd = Math.max(0, Math.min(BUILDER_TIMELINE_MAX_SECOND, effect.endSecond));
+    if (clippedEnd <= clippedStart) {
+      continue;
+    }
+
+    const targetSlotKeys = resolveBuilderEffectTargetSlots(
+      effect,
+      formation,
+      effect.sourceSlotKey || formationSlotKey,
+      targetSlotKey
+    );
+    for (const slotKey of targetSlotKeys) {
+      const slot = getFormationSlotMeta(formation, slotKey);
+      const rowId = `${effect.side}-${slotKey}`;
+      if (!rowMap.has(rowId)) {
+        rowMap.set(rowId, {
+          id: `timeline-row-${rowId}`,
+          side: effect.side,
+          slotKey,
+          slotLabel: slot.label,
+          rowKey: slot.rowKey,
+          sortOrder: (effect.side === "ally" ? 0 : 10) + FORMATION_SLOT_KEY_ORDER.indexOf(slotKey),
+          title: `${effect.side === "ally" ? "味方" : "敵"} ${slot.label}`,
+          subtitle: [
+            builderRowLabelFor(slot.rowKey),
+            effect.side === "ally" && slotKey === formationSlotKey ? "自部隊" : "",
+            effect.side === "enemy" && slotKey === targetSlotKey ? "基準敵" : ""
+          ]
+            .filter(Boolean)
+            .join(" / "),
           effects: []
         });
       }
 
-      const row = grouped.get(key);
-      row.endSecond = Math.max(row.endSecond, clippedEnd);
-      row.effects.push({
+      rowMap.get(rowId).effects.push({
         ...effect,
         clippedStart,
-        clippedEnd
+        clippedEnd,
+        targetSlotKey: slotKey
       });
     }
+  }
 
-    return [...grouped.values()];
-  });
-
-  return rows
-    .map((row) => ({
-      ...row,
-      effects: row.effects.sort(compareBuilderEffects),
-      estimated: row.effects.some((effect) => effect.estimated),
-      tone: getBuilderTimelinePrimaryTone(row.effects)
-    }))
-    .sort(
-      (left, right) =>
-        left.startSecond - right.startSecond ||
-        left.orderScore - right.orderScore ||
-        right.activationRate - left.activationRate ||
-        left.characterName.localeCompare(right.characterName, "ja")
-    );
+  return [...rowMap.values()]
+    .map((row) => {
+      const effects = row.effects.sort(compareBuilderEffects);
+      const segments = buildBuilderTimelineRowSegments(effects);
+      return {
+        ...row,
+        effects,
+        segments,
+        previewSecond: segments[0]?.previewSecond ?? 0,
+        estimated: effects.some((effect) => effect.estimated),
+        tone: getBuilderTimelinePrimaryTone(effects)
+      };
+    })
+    .filter((row) => row.segments.length)
+    .sort((left, right) => left.sortOrder - right.sortOrder || left.title.localeCompare(right.title, "ja"));
 }
 
 function summarizeBuilderCellEffects(effects) {
@@ -4399,7 +4449,7 @@ function buildBuilderState() {
     .sort((left, right) => left.orderScore - right.orderScore || compareCharactersBase(left.character, right.character));
   const timelineWindows = timelineEntries.flatMap((entry) => entry.windows).sort(compareBuilderEffects);
   const timelineSegments = buildBuilderTimelineSegments(timelineEntries);
-  const timelineRows = buildBuilderTimelineRows(timelineEntries);
+  const timelineRows = buildBuilderTimelineRows(timelineWindows, formation, formationSlot.key, targetSlotKey);
 
   const overviewNotes = [];
   if (!commander && selectedEntries.length) {
@@ -4834,7 +4884,7 @@ function renderBuilderView() {
   }
 
   if (!state.commander && state.selectedEntries.length) {
-    validationMessages.push("主将を選ぶと連鎖率とタイムラインを計算できます。");
+    validationMessages.push("主将を選ぶと連鎖率と効果帯を計算できます。");
   }
 
   elements.builderSummary.textContent = formatSummaryText(
@@ -4928,6 +4978,153 @@ function renderBuilderTimeline(state) {
             </div>
           </div>
           <div class="builder-timeline-track" style="--lanes:${Math.max(row.effects.length, 1)}">
+            ${barMarkup}
+            <div class="builder-timeline-now" style="--at:${state.previewSecond}"></div>
+          </div>
+          <div class="builder-timeline-row-foot">${effectMetaMarkup}</div>
+        </button>
+      `;
+    })
+    .join("");
+
+  return `
+    <div class="builder-timeline-shell">
+      <div class="builder-timeline-axis">${axisMarkup}</div>
+      <div class="builder-timeline-rows">${rowMarkup}</div>
+    </div>
+  `;
+}
+
+function renderBuilderView() {
+  if (!elements.builderView) {
+    return;
+  }
+
+  const state = buildBuilderState();
+  const validationMessages = [];
+
+  if (state.duplicateNames.length) {
+    validationMessages.push(
+      `重複武将: ${state.duplicateNames.map((row) => `${row.name} ×${row.count}`).join(" / ")}`
+    );
+  }
+
+  if (!state.commander && state.selectedEntries.length) {
+    validationMessages.push("主将を選ぶと連鎖率と効果帯を計算できます。");
+  }
+
+  elements.builderSummary.textContent = formatSummaryText(
+    [
+      `陣形: ${state.formation.label}`,
+      `位置: ${state.formationSlot.label}`,
+      `列: ${builderRowLabelFor(state.rowKey)}`,
+      `主将: ${state.commander?.name ?? "未選択"}`,
+      `選択枠: ${state.selectedEntries.length}/${BUILDER_SLOT_DEFS.length}`,
+      `対象位置: ${state.timelineRows.length}マス`,
+      `現在: ${state.previewSecond}秒`
+    ],
+    "編成条件を指定してください。"
+  );
+  setBuilderValidation(validationMessages.join(" / "));
+  elements.builderTimelineCount.textContent = `0～${BUILDER_TIMELINE_MAX_SECOND}秒 / ${state.timelineRows.length}マス`;
+  if (elements.builderPreviewSecondLabel) {
+    elements.builderPreviewSecondLabel.textContent = `${state.previewSecond}秒時点の3×3盤面を表示します。効果帯を押すとその秒へ移動します。`;
+  }
+  const timelineSection = elements.builderTimeline?.closest(".result-section");
+  const timelineHeading = timelineSection?.querySelector(".result-header h2");
+  const timelineLead = timelineSection?.querySelector(".result-header p");
+  if (timelineHeading) {
+    timelineHeading.textContent = "0～50秒の効果帯";
+  }
+  if (timelineLead) {
+    timelineLead.textContent = "戦法ごとではなく、味方3×3と敵3×3のどこに何秒から何秒まで効果が残るかを位置別にまとめます。";
+  }
+  if (elements.builderBoardLegend) {
+    elements.builderBoardLegend.innerHTML = renderBuilderBoardLegend();
+  }
+  elements.builderTimeline.innerHTML = renderBuilderTimeline(state);
+  elements.builderBoardGrid.innerHTML = renderBuilderBoard(state);
+  elements.builderActiveEffects.innerHTML = renderBuilderActiveEffects(state);
+  elements.builderOverviewGrid.innerHTML = renderBuilderOverview(state);
+  elements.builderSlotGrid.innerHTML = BUILDER_SLOT_DEFS.map((slot) => {
+    const entry = state.slotEntries.find((row) => row.key === slot.key);
+    return renderBuilderSlotCard(entry, state.rowKey);
+  }).join("");
+}
+
+function renderBuilderTimeline(state) {
+  if (!state.commander) {
+    return renderEmptyState("主将を選ぶと、0～50秒でどの位置に効果が乗るかをまとめて表示します。");
+  }
+
+  if (!state.timelineRows.length) {
+    return renderEmptyState("戦法を表示できる武将がまだ選ばれていません。");
+  }
+
+  const axisMarkup = Array.from(
+    { length: BUILDER_TIMELINE_MAX_SECOND / 10 + 1 },
+    (_, index) => `<span>${index * 10}秒</span>`
+  ).join("");
+  const rowMarkup = state.timelineRows
+    .map((row) => {
+      const currentEffects = row.effects.filter(
+        (effect) =>
+          state.previewSecond >= effect.clippedStart &&
+          (state.previewSecond < effect.clippedEnd ||
+            (effect.clippedEnd === BUILDER_TIMELINE_MAX_SECOND && state.previewSecond === BUILDER_TIMELINE_MAX_SECOND))
+      );
+      const isActive = currentEffects.length > 0;
+      const barMarkup = row.segments
+        .map(
+          (segment) => `
+            <span
+              class="builder-timeline-bar tone-${escapeHtml(segment.tone || "utility")} ${segment.estimated ? "is-estimated" : ""}"
+              style="--start:${segment.startSecond}; --end:${segment.endSecond}; --lane:0"
+              title="${escapeHtml(
+                segment.activeEffects
+                  .map((effect) => `${effect.characterName} / ${effect.shortLabel} / ${effect.startSecond}～${effect.endSecond}秒`)
+                  .join(" | ")
+              )}"
+              data-builder-preview-second="${segment.previewSecond}"
+            >
+              <span>${escapeHtml(segment.label)}</span>
+            </span>
+          `
+        )
+        .join("");
+      const effectMetaMarkup = currentEffects.length
+        ? currentEffects
+            .map(
+              (effect) => `
+                <span class="timeline-effect-chip tone-${escapeHtml(effect.tone || "utility")}">
+                  <strong>${escapeHtml(`${effect.characterName} / ${effect.shortLabel}`)}</strong>
+                  <small>${escapeHtml(`${effect.startSecond}～${effect.endSecond}秒 / ${getBuilderEffectScopeLabel(effect)}`)}</small>
+                </span>
+              `
+            )
+            .join("")
+        : `<span class="timeline-effect-chip is-empty"><strong>${escapeHtml(`${state.previewSecond}秒は効果なし`)}</strong><small>${escapeHtml(
+            row.title
+          )}</small></span>`;
+
+      return `
+        <button
+          class="builder-timeline-row ${isActive ? "is-active" : ""}"
+          type="button"
+          data-builder-preview-second="${row.previewSecond}"
+        >
+          <div class="builder-timeline-row-head">
+            <div>
+              <div class="builder-timeline-source">${escapeHtml(row.subtitle || "対象スロット")}</div>
+              <strong class="builder-timeline-title">${escapeHtml(row.title)}</strong>
+            </div>
+            <div class="builder-timeline-meta">
+              <span>${escapeHtml(`${row.segments.length}区間`)}</span>
+              <span>${escapeHtml(`累計 ${row.effects.length}件`)}</span>
+              <span>${escapeHtml(isActive ? `${state.previewSecond}秒で ${currentEffects.length}件` : `${state.previewSecond}秒はなし`)}</span>
+            </div>
+          </div>
+          <div class="builder-timeline-track" style="--lanes:1">
             ${barMarkup}
             <div class="builder-timeline-now" style="--at:${state.previewSecond}"></div>
           </div>
@@ -5097,13 +5294,13 @@ function renderBuilderView() {
       `列: ${builderRowLabelFor(state.rowKey)}`,
       `主将: ${state.commander?.name ?? "未選択"}`,
       `選択枠: ${state.selectedEntries.length}/${BUILDER_SLOT_DEFS.length}`,
-      `表示行: ${state.timelineRows.length}行`,
+      `対象位置: ${state.timelineRows.length}マス`,
       `現在: ${state.previewSecond}秒`
     ],
     "編成条件を指定してください。"
   );
   setBuilderValidation(validationMessages.join(" / "));
-  elements.builderTimelineCount.textContent = `0～${BUILDER_TIMELINE_MAX_SECOND}秒 / ${state.timelineRows.length}行`;
+  elements.builderTimelineCount.textContent = `0～${BUILDER_TIMELINE_MAX_SECOND}秒 / ${state.timelineRows.length}マス`;
   const timelineSection = elements.builderTimeline?.closest(".result-section");
   const boardSection = elements.builderBoardGrid?.closest(".result-section");
   const activeEffectsCard = elements.builderActiveEffects?.closest(".module-card");
@@ -5111,10 +5308,10 @@ function renderBuilderView() {
     const heading = timelineSection.querySelector("h2");
     const description = timelineSection.querySelector(".result-header p");
     if (heading) {
-      heading.textContent = "戦法タイムライン";
+      heading.textContent = "0～50秒の効果帯";
     }
     if (description) {
-      description.textContent = "0～50秒の間で、どの戦法がいつ発動し、どの効果が何秒続くかを横並びで確認します。";
+      description.textContent = "戦法ごとではなく、味方3×3と敵3×3のどこに何秒から何秒まで効果が残るかを位置別にまとめます。";
     }
   }
   if (boardSection) {
@@ -5134,7 +5331,7 @@ function renderBuilderView() {
     }
   }
   if (elements.builderPreviewSecondLabel) {
-    elements.builderPreviewSecondLabel.textContent = `${state.previewSecond}秒時点の盤面と継続効果を表示します。タイムライン行を押すとその秒へ移動します。`;
+    elements.builderPreviewSecondLabel.textContent = `${state.previewSecond}秒時点の盤面と継続効果を表示します。効果帯を押すとその秒へ移動します。`;
   }
   if (elements.builderBoardLegend) {
     elements.builderBoardLegend.innerHTML = renderBuilderBoardLegend();
