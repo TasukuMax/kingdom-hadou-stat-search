@@ -206,6 +206,168 @@
         box-shadow: inset 0 1px 0 rgba(255, 249, 239, 0.08);
       }
 
+      .hero-command {
+        display: grid;
+        gap: 12px;
+        padding: 16px;
+        border-radius: 24px;
+        background: rgba(255, 249, 236, 0.06);
+        border: 1px solid rgba(244, 212, 155, 0.14);
+        box-shadow:
+          inset 0 1px 0 rgba(255, 247, 227, 0.08),
+          0 16px 32px rgba(0, 0, 0, 0.16);
+      }
+
+      .hero-command-head strong {
+        color: #fff2d6;
+        font-family: "Noto Serif JP", serif;
+        font-size: 1.02rem;
+      }
+
+      .hero-command-head p {
+        margin-top: 4px;
+        color: rgba(247, 236, 218, 0.74);
+        font-size: 0.88rem;
+        line-height: 1.7;
+      }
+
+      .hero-command-summary {
+        padding: 10px 14px;
+        border-radius: 16px;
+        background: rgba(255, 248, 232, 0.05);
+        border: 1px solid rgba(244, 212, 155, 0.12);
+        color: rgba(255, 238, 208, 0.82);
+        font-size: 0.82rem;
+        line-height: 1.6;
+      }
+
+      .hero-command-box {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 10px;
+        align-items: center;
+      }
+
+      .hero-command-box input[type="text"] {
+        min-height: 52px;
+        background: rgba(255, 250, 240, 0.08);
+        border-color: rgba(244, 212, 155, 0.18);
+        color: #fff3dd;
+        box-shadow:
+          inset 0 1px 0 rgba(255, 249, 239, 0.08),
+          0 10px 24px rgba(0, 0, 0, 0.12);
+      }
+
+      .hero-command-box input::placeholder {
+        color: rgba(255, 236, 198, 0.46);
+      }
+
+      .hero-command-clear {
+        min-height: 52px;
+        padding-inline: 16px;
+      }
+
+      .hero-shortcut-strip,
+      .hero-command-results {
+        display: grid;
+        gap: 10px;
+      }
+
+      .hero-shortcut-strip {
+        grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+      }
+
+      .hero-command-results {
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      }
+
+      .hero-shortcut-chip,
+      .hero-result-card {
+        width: 100%;
+        border: 1px solid rgba(244, 212, 155, 0.14);
+        background: rgba(255, 249, 236, 0.06);
+        color: #fff0d0;
+        box-shadow:
+          inset 0 1px 0 rgba(255, 247, 227, 0.08),
+          0 12px 24px rgba(0, 0, 0, 0.12);
+      }
+
+      .hero-shortcut-chip {
+        min-height: 64px;
+        padding: 10px 14px;
+        border-radius: 18px;
+        text-align: left;
+      }
+
+      .hero-shortcut-chip strong,
+      .hero-result-card strong {
+        display: block;
+        font-size: 0.96rem;
+        font-weight: 700;
+      }
+
+      .hero-shortcut-chip small,
+      .hero-result-card small {
+        display: block;
+        margin-top: 4px;
+        color: rgba(247, 236, 218, 0.66);
+        line-height: 1.55;
+      }
+
+      .hero-result-card {
+        min-height: 98px;
+        padding: 14px 16px;
+        border-radius: 18px;
+        text-align: left;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .hero-result-card::before {
+        content: "";
+        position: absolute;
+        inset: 0 auto 0 0;
+        width: 4px;
+        background: rgba(244, 212, 155, 0.34);
+      }
+
+      .hero-result-card[data-hero-kind="character"]::before,
+      .hero-result-card[data-hero-kind="builder"]::before,
+      .hero-result-card[data-hero-kind="synergy"]::before {
+        background: linear-gradient(180deg, #f6d48e 0%, #b77927 100%);
+      }
+
+      .hero-result-card[data-hero-kind="skill"]::before {
+        background: linear-gradient(180deg, #f0c48b 0%, #7d9f76 100%);
+      }
+
+      .hero-result-card[data-hero-kind="shortcut"]::before {
+        background: linear-gradient(180deg, #f7e2b2 0%, #9b6b2f 100%);
+      }
+
+      .hero-result-card[data-hero-kind="view"]::before {
+        background: linear-gradient(180deg, #f2d7aa 0%, #865a3c 100%);
+      }
+
+      .hero-result-meta {
+        display: inline-flex;
+        align-items: center;
+        margin-bottom: 8px;
+        padding: 4px 8px;
+        border-radius: 999px;
+        background: rgba(255, 240, 214, 0.08);
+        border: 1px solid rgba(244, 212, 155, 0.14);
+        font-size: 0.74rem;
+        letter-spacing: 0.05em;
+      }
+
+      .hero-highlight {
+        padding: 0 0.18em;
+        border-radius: 0.35em;
+        background: rgba(246, 212, 142, 0.22);
+        color: #fff3d7;
+      }
+
       .panel {
         margin-top: 22px;
         padding: 22px;
@@ -1045,6 +1207,10 @@
         box-shadow: inset 0 1px 0 rgba(255, 247, 227, 0.06);
       }
 
+      .tab-label-short {
+        display: none;
+      }
+
       .tab-button.is-active {
         color: #fffaf1;
         border-color: rgba(255, 226, 175, 0.26);
@@ -1818,7 +1984,9 @@
       .army-unit-card,
       .info-card,
       .army-summary-card,
-      .formation-card {
+      .formation-card,
+      .hero-shortcut-chip,
+      .hero-result-card {
         transition:
           transform 220ms ease,
           box-shadow 220ms ease,
@@ -1832,7 +2000,9 @@
       .army-unit-card:hover,
       .info-card:hover,
       .army-summary-card:hover,
-      .formation-card:hover {
+      .formation-card:hover,
+      .hero-shortcut-chip:hover,
+      .hero-result-card:hover {
         transform: translateY(-2px);
         box-shadow:
           0 24px 44px rgba(20, 12, 6, 0.18),
@@ -1881,6 +2051,49 @@
 
       .source-list a {
         color: var(--gold-deep);
+      }
+
+      .mobile-dock {
+        position: fixed;
+        left: 50%;
+        bottom: 16px;
+        z-index: 42;
+        display: none;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 8px;
+        width: min(100% - 20px, 520px);
+        padding: 10px;
+        transform: translateX(-50%);
+        border-radius: 22px;
+        background:
+          linear-gradient(180deg, rgba(30, 21, 16, 0.94), rgba(20, 15, 11, 0.92));
+        border: 1px solid rgba(215, 171, 101, 0.16);
+        box-shadow:
+          0 24px 38px rgba(0, 0, 0, 0.32),
+          inset 0 1px 0 rgba(255, 232, 193, 0.08);
+        backdrop-filter: blur(18px);
+      }
+
+      .dock-button {
+        min-height: 46px;
+        padding: 0 10px;
+        border-radius: 16px;
+        border: 1px solid rgba(236, 205, 150, 0.12);
+        background: rgba(255, 248, 235, 0.06);
+        color: rgba(255, 235, 198, 0.86);
+        font-size: 0.84rem;
+        box-shadow: inset 0 1px 0 rgba(255, 247, 227, 0.05);
+      }
+
+      .dock-button.is-active {
+        background:
+          linear-gradient(135deg, #e3bb6d 0%, var(--gold) 34%, var(--gold-deep) 100%);
+        color: #fffaf1;
+        border-color: rgba(255, 226, 175, 0.22);
+      }
+
+      .dock-button-top {
+        color: var(--gold-soft);
       }
 
       @media (max-width: 1080px) {
@@ -1945,7 +2158,7 @@
         .page {
           width: min(100% - 20px, 1220px);
           padding-top: 14px;
-          padding-bottom: 34px;
+          padding-bottom: 108px;
         }
 
         .hero,
@@ -2001,6 +2214,24 @@
           font-size: 0.86rem;
         }
 
+        .hero-command {
+          padding: 14px;
+          gap: 10px;
+        }
+
+        .hero-command-box {
+          grid-template-columns: 1fr;
+        }
+
+        .hero-command-clear {
+          width: 100%;
+        }
+
+        .hero-shortcut-strip,
+        .hero-command-results {
+          grid-template-columns: 1fr;
+        }
+
         .view-nav {
           top: 8px;
           padding: 10px;
@@ -2010,6 +2241,14 @@
           min-height: 46px;
           padding: 0 14px;
           font-size: 0.92rem;
+        }
+
+        .tab-label-full {
+          display: none;
+        }
+
+        .tab-label-short {
+          display: inline;
         }
 
         .source-link {
@@ -2022,6 +2261,10 @@
 
         .timeline-event {
           padding: 6px;
+        }
+
+        .mobile-dock {
+          display: grid;
         }
       }
     </style>
@@ -2036,6 +2279,26 @@
           SSR / SR の武将・技能データを横断して、戦力検索、武将DB、技能DB、相性検索、編成ツール、
           軍勢自動編成を一つにまとめています。
         </p>
+        <div class="hero-command">
+          <div class="hero-command-head">
+            <div>
+              <strong>横断クイック検索</strong>
+              <p>/ または Ctrl+K で、武将・技能・画面へ直接移動できます。</p>
+            </div>
+          </div>
+          <div class="hero-command-box">
+            <input
+              id="heroCommandInput"
+              type="text"
+              placeholder="例: 王騎 / 攻陣 / 武将DB / 対物軍勢"
+              aria-label="横断クイック検索"
+            >
+            <button class="secondary-button hero-command-clear" id="heroCommandClear" type="button">クリア</button>
+          </div>
+          <div class="hero-command-summary" id="heroCommandSummary"></div>
+          <div class="hero-shortcut-strip" id="heroShortcutStrip"></div>
+          <div class="hero-command-results" id="heroCommandResults"></div>
+        </div>
         <div class="hero-actions">
           <button class="mini-button" type="button" data-switch-view="power">戦力検索を開く</button>
           <button class="mini-button" type="button" data-switch-view="army">軍勢自動編成を開く</button>
@@ -2055,15 +2318,23 @@
 
       <section class="panel view-nav">
         <div class="tab-list">
-          <button class="tab-button" type="button" data-view-tab="power">戦力検索</button>
-          <button class="tab-button" type="button" data-view-tab="character">武将DB</button>
-          <button class="tab-button" type="button" data-view-tab="skill">技能DB</button>
-          <button class="tab-button" type="button" data-view-tab="synergy">相性検索</button>
-          <button class="tab-button" type="button" data-view-tab="builder">編成ツールβ</button>
-          <button class="tab-button" type="button" data-view-tab="army">軍勢自動編成β</button>
-          <button class="tab-button" type="button" data-view-tab="board">S3ハブ</button>
+          <button class="tab-button" type="button" data-view-tab="power"><span class="tab-label-full">戦力検索</span><span class="tab-label-short">検索</span></button>
+          <button class="tab-button" type="button" data-view-tab="character"><span class="tab-label-full">武将DB</span><span class="tab-label-short">武将</span></button>
+          <button class="tab-button" type="button" data-view-tab="skill"><span class="tab-label-full">技能DB</span><span class="tab-label-short">技能</span></button>
+          <button class="tab-button" type="button" data-view-tab="synergy"><span class="tab-label-full">相性検索</span><span class="tab-label-short">相性</span></button>
+          <button class="tab-button" type="button" data-view-tab="builder"><span class="tab-label-full">編成ツールβ</span><span class="tab-label-short">編成</span></button>
+          <button class="tab-button" type="button" data-view-tab="army"><span class="tab-label-full">軍勢自動編成β</span><span class="tab-label-short">軍勢</span></button>
+          <button class="tab-button" type="button" data-view-tab="board"><span class="tab-label-full">S3ハブ</span><span class="tab-label-short">S3</span></button>
         </div>
       </section>
+
+      <div class="mobile-dock" id="mobileDock" aria-label="クイック移動">
+        <button class="dock-button" type="button" data-view-tab="power">検索</button>
+        <button class="dock-button" type="button" data-view-tab="character">武将</button>
+        <button class="dock-button" type="button" data-view-tab="army">軍勢</button>
+        <button class="dock-button" type="button" data-view-tab="builder">編成</button>
+        <button class="dock-button dock-button-top" type="button" data-scroll-top="true">Top</button>
+      </div>
 
       <section class="app-view view-stack" id="view-power">
       <section class="panel">
