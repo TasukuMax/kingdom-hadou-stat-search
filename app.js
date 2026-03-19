@@ -416,6 +416,121 @@ const BUILDER_ROW_DEFS = [
   { key: "back", label: "後列" }
 ];
 
+const FORMATION_DEFS = [
+  {
+    key: "basic",
+    label: "基本陣",
+    shortLabel: "基本",
+    description: "8秒刻みで一定に回る基準陣形です。バフと攻撃を交互に重ねやすく、扱いが安定します。",
+    sourceSummary: "援タイプ3部隊以上で戦威+20%",
+    sourceDate: "GameWith 2026年3月14日",
+    timings: [20, 8, 8, 8, 8, 8],
+    bonuses: [{ type: "援", minUnits: 3, stats: { war: 20 } }],
+    slots: [
+      { key: "first", label: "1st", rowKey: "middle", gridCol: 1, gridRow: 1 },
+      { key: "second", label: "2nd", rowKey: "front", gridCol: 2, gridRow: 0 },
+      { key: "third", label: "3rd", rowKey: "middle", gridCol: 0, gridRow: 1 },
+      { key: "fourth", label: "4th", rowKey: "middle", gridCol: 2, gridRow: 1 },
+      { key: "fifth", label: "5th", rowKey: "back", gridCol: 0, gridRow: 2 }
+    ]
+  },
+  {
+    key: "suikou",
+    label: "錐行陣",
+    shortLabel: "錐行",
+    description: "高い攻撃補正と左から右へ流れるテンポが特徴で、通常攻撃や対物寄りの軍勢と相性が良い陣形です。",
+    sourceSummary: "闘タイプ3部隊以上で攻撃+30%、援タイプ3部隊以上で攻撃+20%・戦威+10%",
+    sourceDate: "GameWith 2026年3月14日",
+    timings: [20, 8, 6, 10, 6, 10],
+    bonuses: [
+      { type: "闘", minUnits: 3, stats: { attack: 30 } },
+      { type: "援", minUnits: 3, stats: { attack: 20, war: 10 } }
+    ],
+    slots: [
+      { key: "first", label: "1st", rowKey: "front", gridCol: 1, gridRow: 0 },
+      { key: "second", label: "2nd", rowKey: "middle", gridCol: 0, gridRow: 1 },
+      { key: "third", label: "3rd", rowKey: "middle", gridCol: 1, gridRow: 1 },
+      { key: "fourth", label: "4th", rowKey: "middle", gridCol: 2, gridRow: 1 },
+      { key: "fifth", label: "5th", rowKey: "back", gridCol: 1, gridRow: 2 }
+    ]
+  },
+  {
+    key: "kakuyoku",
+    label: "鶴翼陣",
+    shortLabel: "鶴翼",
+    description: "前列から中列へ噛ませる形で防御を積みやすく、反撃や耐久寄りの軍勢と噛み合う陣形です。",
+    sourceSummary: "闘タイプ3部隊以上で攻撃+10%・防御+30%、援タイプ3部隊以上で戦威+10%・防御+30%",
+    sourceDate: "GameWith 2026年3月14日",
+    timings: [20, 8, 6, 6, 10, 10],
+    bonuses: [
+      { type: "闘", minUnits: 3, stats: { attack: 10, defense: 30 } },
+      { type: "援", minUnits: 3, stats: { war: 10, defense: 30 } }
+    ],
+    slots: [
+      { key: "first", label: "1st", rowKey: "front", gridCol: 1, gridRow: 0 },
+      { key: "second", label: "2nd", rowKey: "middle", gridCol: 0, gridRow: 1 },
+      { key: "third", label: "3rd", rowKey: "front", gridCol: 2, gridRow: 0 },
+      { key: "fourth", label: "4th", rowKey: "middle", gridCol: 2, gridRow: 1 },
+      { key: "fifth", label: "5th", rowKey: "back", gridCol: 1, gridRow: 2 }
+    ]
+  },
+  {
+    key: "houjin",
+    label: "方陣",
+    shortLabel: "方陣",
+    description: "戦法火力に寄せやすく、中央を守って後列や外周の火力へ繋げる運用に向く陣形です。",
+    sourceSummary: "闘タイプ3部隊以上で攻撃+10%・戦威+20%",
+    sourceDate: "GameWith 2026年3月14日",
+    timings: [20, 8, 12, 8, 6, 6],
+    bonuses: [{ type: "闘", minUnits: 3, stats: { attack: 10, war: 20 } }],
+    slots: [
+      { key: "first", label: "1st", rowKey: "front", gridCol: 0, gridRow: 0 },
+      { key: "second", label: "2nd", rowKey: "front", gridCol: 2, gridRow: 0 },
+      { key: "third", label: "3rd", rowKey: "back", gridCol: 2, gridRow: 2 },
+      { key: "fourth", label: "4th", rowKey: "back", gridCol: 0, gridRow: 2 },
+      { key: "fifth", label: "5th", rowKey: "middle", gridCol: 1, gridRow: 1 }
+    ]
+  },
+  {
+    key: "sakubou",
+    label: "策謀陣",
+    shortLabel: "策謀",
+    description: "1st と 2nd がすぐ続くため、横列・縦列バフや弱化を重ねやすい妨害寄りの陣形です。",
+    sourceSummary: "闘タイプ4部隊以上で攻撃+20%・策略+40%、援タイプ4部隊以上で戦威+20%・策略+40%",
+    sourceDate: "GameWith 2026年3月14日",
+    timings: [20, 6, 6, 8, 8, 8],
+    bonuses: [
+      { type: "闘", minUnits: 4, stats: { attack: 20, strategy: 40 } },
+      { type: "援", minUnits: 4, stats: { war: 20, strategy: 40 } }
+    ],
+    slots: [
+      { key: "first", label: "1st", rowKey: "middle", gridCol: 0, gridRow: 1 },
+      { key: "second", label: "2nd", rowKey: "middle", gridCol: 2, gridRow: 1 },
+      { key: "third", label: "3rd", rowKey: "back", gridCol: 1, gridRow: 2 },
+      { key: "fourth", label: "4th", rowKey: "front", gridCol: 0, gridRow: 0 },
+      { key: "fifth", label: "5th", rowKey: "front", gridCol: 2, gridRow: 0 }
+    ]
+  }
+];
+
+const FORMATION_MAP = Object.fromEntries(FORMATION_DEFS.map((formation) => [formation.key, formation]));
+const FORMATION_SELECT_DEFS = FORMATION_DEFS.map((formation) => ({
+  key: formation.key,
+  label: formation.label
+}));
+const ARMY_FORMATION_SELECT_DEFS = [
+  { key: "auto", label: "自動選択" },
+  ...FORMATION_SELECT_DEFS
+];
+const FORMATION_SLOT_KEY_ORDER = ["first", "second", "third", "fourth", "fifth"];
+const FORMATION_SLOT_LABELS = {
+  first: "1st",
+  second: "2nd",
+  third: "3rd",
+  fourth: "4th",
+  fifth: "5th"
+};
+
 const TACTIC_ORDER_SCORES = {
   commander: { 早い: 1, 普通: 4, 遅い: 7 },
   vice1: { 早い: 2, 普通: 5, 遅い: 8 },
@@ -1308,7 +1423,11 @@ const elements = {
   synergyList: document.querySelector("#synergyList"),
 
   builderView: document.querySelector("#view-builder"),
-  builderRow: document.querySelector("#builderRow"),
+  builderFormation: document.querySelector("#builderFormation"),
+  builderFormationSlot: document.querySelector("#builderFormationSlot"),
+  builderTargetSlot: document.querySelector("#builderTargetSlot"),
+  builderPreviewSecond: document.querySelector("#builderPreviewSecond"),
+  builderPreviewSecondLabel: document.querySelector("#builderPreviewSecondLabel"),
   builderCommander: document.querySelector("#builderCommander"),
   builderVice1: document.querySelector("#builderVice1"),
   builderVice2: document.querySelector("#builderVice2"),
@@ -1322,6 +1441,9 @@ const elements = {
   builderValidation: document.querySelector("#builderValidation"),
   builderTimelineCount: document.querySelector("#builderTimelineCount"),
   builderTimeline: document.querySelector("#builderTimeline"),
+  builderBoardGrid: document.querySelector("#builderBoardGrid"),
+  builderBoardLegend: document.querySelector("#builderBoardLegend"),
+  builderActiveEffects: document.querySelector("#builderActiveEffects"),
   builderOverviewGrid: document.querySelector("#builderOverviewGrid"),
   builderSlotGrid: document.querySelector("#builderSlotGrid"),
 
@@ -1329,6 +1451,8 @@ const elements = {
   armySeedCharacter: document.querySelector("#armySeedCharacter"),
   armySeedMode: document.querySelector("#armySeedMode"),
   armyConcept: document.querySelector("#armyConcept"),
+  armyFormation: document.querySelector("#armyFormation"),
+  armyFormationInfoGrid: document.querySelector("#armyFormationInfoGrid"),
   armyRosterSearch: document.querySelector("#armyRosterSearch"),
   armyDefaultInvestment: document.querySelector("#armyDefaultInvestment"),
   armyDefaultEquipment: document.querySelector("#armyDefaultEquipment"),
@@ -2247,6 +2371,80 @@ function builderRowLabelFor(rowKey) {
   return BUILDER_ROW_MAP[rowKey]?.label ?? rowKey;
 }
 
+const BUILDER_CHAIN_SECOND_OFFSETS = {
+  1: 0,
+  2: 2,
+  3: 4,
+  4: 8,
+  5: 10,
+  6: 12,
+  7: 16,
+  8: 18,
+  9: 20
+};
+
+const BUILDER_EFFECT_FALLBACK_SECONDS = {
+  buff: 10,
+  debuff: 10,
+  heal: 6,
+  damage: 1,
+  utility: 8
+};
+
+function builderFormationFor(key) {
+  return FORMATION_MAP[key] ?? FORMATION_DEFS[0];
+}
+
+function formationSlotLabelFor(slotKey) {
+  return FORMATION_SLOT_LABELS[slotKey] ?? slotKey;
+}
+
+function getFormationSlotMeta(formation, slotKey) {
+  return formation.slots.find((slot) => slot.key === slotKey) ?? formation.slots[0];
+}
+
+function getFormationSlotOptionDefs(formation) {
+  return FORMATION_SLOT_KEY_ORDER.map((slotKey) => {
+    const slot = getFormationSlotMeta(formation, slotKey);
+    return {
+      key: slot.key,
+      label: `${slot.label} / ${builderRowLabelFor(slot.rowKey)}`
+    };
+  });
+}
+
+function formatFormationTiming(formation) {
+  return formation.timings.map((value) => `${value}秒`).join(" → ");
+}
+
+function populateBuilderFormationSlotOptions() {
+  if (!elements.builderFormationSlot || !elements.builderFormation) {
+    return;
+  }
+
+  const formation = builderFormationFor(elements.builderFormation.value);
+  const previous = elements.builderFormationSlot.value;
+  populateSimpleSelect(
+    elements.builderFormationSlot,
+    getFormationSlotOptionDefs(formation),
+    formation.slots.some((slot) => slot.key === previous) ? previous : formation.slots[0]?.key
+  );
+}
+
+function populateBuilderTargetSlotOptions() {
+  if (!elements.builderTargetSlot || !elements.builderFormation) {
+    return;
+  }
+
+  const formation = builderFormationFor(elements.builderFormation.value);
+  const previous = elements.builderTargetSlot.value;
+  populateSimpleSelect(
+    elements.builderTargetSlot,
+    getFormationSlotOptionDefs(formation),
+    formation.slots.some((slot) => slot.key === previous) ? previous : formation.slots[0]?.key
+  );
+}
+
 function getBuilderSlotInputs() {
   return {
     commander: elements.builderCommander,
@@ -2376,8 +2574,276 @@ function guessBuilderRowFromGuide(character) {
   return "";
 }
 
+function guessBuilderFormationSlotFromGuide(character, formationKey) {
+  const formation = builderFormationFor(formationKey);
+  const rowGuess = guessBuilderRowFromGuide(character);
+  if (rowGuess) {
+    const slot = formation.slots.find((entry) => entry.rowKey === rowGuess);
+    if (slot) {
+      return slot.key;
+    }
+  }
+  return formation.slots[0]?.key ?? "first";
+}
+
+function classifyBuilderEffectKind(text) {
+  if (/回復/u.test(text)) {
+    return "heal";
+  }
+  if (/(攻撃対象|低下|恐怖|病毒|解除)/u.test(text) && !/上昇/u.test(text)) {
+    return "debuff";
+  }
+  if (/(％|%)の攻撃|ダメージ/u.test(text)) {
+    return "damage";
+  }
+  if (/(悠然|無効|堅固|反撃|回避)/u.test(text)) {
+    return "utility";
+  }
+  return "buff";
+}
+
+function normalizeText(value) {
+  return String(value ?? "").trim();
+}
+
+function splitBuilderEffectSegments(line) {
+  return normalizeText(line)
+    .replace(/●/gu, "|")
+    .split("|")
+    .flatMap((part) =>
+      part.split(/、(?=(?:自部隊|攻撃対象|自身1部隊|自身|軍勢全体|同じ横列の部隊|同じ縦列の部隊))/u)
+    )
+    .map((part) => normalizeText(part))
+    .filter(Boolean);
+}
+
+function parseBuilderEffectSegment(text, tone) {
+  const exactDuration = text.match(/[（(](\d+)秒[）)]/u)?.[1];
+  const kind = classifyBuilderEffectKind(text);
+  const duration = Number(exactDuration ?? BUILDER_EFFECT_FALLBACK_SECONDS[kind] ?? 8);
+  let side = "ally";
+  let scope = "self";
+
+  if (/軍勢全体/u.test(text)) {
+    side = "ally";
+    scope = "army";
+  } else if (/攻撃対象と同じ横列の部隊/u.test(text)) {
+    side = "enemy";
+    scope = "enemyRow";
+  } else if (/攻撃対象と同じ縦列の部隊/u.test(text)) {
+    side = "enemy";
+    scope = "enemyColumn";
+  } else if (/攻撃対象/u.test(text)) {
+    side = "enemy";
+    scope = "target";
+  } else if (/同じ横列の部隊/u.test(text)) {
+    side = "ally";
+    scope = "allyRow";
+  } else if (/同じ縦列の部隊/u.test(text)) {
+    side = "ally";
+    scope = "allyColumn";
+  } else if (/(自部隊|自身1部隊|自身)/u.test(text)) {
+    side = "ally";
+    scope = "self";
+  } else if (kind === "damage" || kind === "debuff") {
+    side = "enemy";
+    scope = "target";
+  }
+
+  return {
+    text,
+    tone,
+    kind,
+    side,
+    scope,
+    duration,
+    estimated: !exactDuration
+  };
+}
+
+function parseBuilderBattleArtEffects(character) {
+  const lines = character.battleArtEffects ?? [];
+  const tone = character.battleArtMeta?.tone ?? "utility";
+  const segments = lines.flatMap((line) =>
+    splitBuilderEffectSegments(line).map((part) => parseBuilderEffectSegment(part, tone))
+  );
+  if (segments.length) {
+    return segments;
+  }
+  return [
+    {
+      text: character.battleArtName || "戦法効果",
+      tone,
+      kind: tone === "damage" ? "damage" : "buff",
+      side: tone === "damage" ? "enemy" : "ally",
+      scope: tone === "damage" ? "target" : "self",
+      duration: tone === "damage" ? 1 : 8,
+      estimated: true
+    }
+  ];
+}
+
+function getFormationSlotBaseSecond(formation, slotKey) {
+  const index = FORMATION_SLOT_KEY_ORDER.indexOf(slotKey);
+  let second = formation.timings[0];
+  for (let offset = 0; offset < index; offset += 1) {
+    second += formation.timings[offset + 1];
+  }
+  return second;
+}
+
+function getFormationCycleLength(formation) {
+  return sumArmyValues(formation.timings.slice(1));
+}
+
+function getBuilderBoardLayout(formation) {
+  const rowMap = [1, 4, 7];
+  const allyColMap = [1, 2, 3];
+
+  return {
+    ally: Object.fromEntries(
+      formation.slots.map((slot) => [
+        slot.key,
+        {
+          ...slot,
+          x: allyColMap[slot.gridCol],
+          y: rowMap[slot.gridRow]
+        }
+      ])
+    ),
+    enemy: Object.fromEntries(
+      formation.slots.map((slot) => [
+        slot.key,
+        {
+          ...slot,
+          x: 8 - allyColMap[slot.gridCol],
+          y: rowMap[slot.gridRow]
+        }
+      ])
+    )
+  };
+}
+
+function buildBuilderTimelineWindows(entry, formation, formationSlotKey) {
+  const baseSecond = getFormationSlotBaseSecond(formation, formationSlotKey);
+  const cycleLength = getFormationCycleLength(formation);
+  const triggerOffset = BUILDER_CHAIN_SECOND_OFFSETS[entry.orderScore] ?? 0;
+  const triggerSeconds = [];
+  const windows = [];
+
+  for (let cycle = 0; cycle < 3; cycle += 1) {
+    const triggerSecond = baseSecond + cycleLength * cycle + triggerOffset;
+    if (triggerSecond > 60) {
+      break;
+    }
+
+    triggerSeconds.push(triggerSecond);
+    for (const effect of parseBuilderBattleArtEffects(entry.character)) {
+      windows.push({
+        ...effect,
+        startSecond: triggerSecond,
+        endSecond: Math.min(60, triggerSecond + Math.max(effect.duration, 1)),
+        characterName: entry.character.name,
+        sourceLabel: entry.label,
+        battleArtName: entry.character.battleArtName || entry.character.name
+      });
+    }
+  }
+
+  return {
+    triggerSeconds,
+    windows
+  };
+}
+
+function resolveBuilderEffectTargetSlots(effect, formation, sourceSlotKey, targetSlotKey) {
+  const sourceSlot = getFormationSlotMeta(formation, sourceSlotKey);
+  const targetSlot = getFormationSlotMeta(formation, targetSlotKey);
+
+  if (effect.scope === "army") {
+    return formation.slots.map((slot) => slot.key);
+  }
+  if (effect.scope === "self" || effect.scope === "target") {
+    return [effect.side === "ally" ? sourceSlot.key : targetSlot.key];
+  }
+  if (effect.scope === "allyRow") {
+    return formation.slots.filter((slot) => slot.rowKey === sourceSlot.rowKey).map((slot) => slot.key);
+  }
+  if (effect.scope === "allyColumn") {
+    return formation.slots.filter((slot) => slot.gridCol === sourceSlot.gridCol).map((slot) => slot.key);
+  }
+  if (effect.scope === "enemyRow") {
+    return formation.slots.filter((slot) => slot.rowKey === targetSlot.rowKey).map((slot) => slot.key);
+  }
+  if (effect.scope === "enemyColumn") {
+    return formation.slots.filter((slot) => slot.gridCol === targetSlot.gridCol).map((slot) => slot.key);
+  }
+  return [effect.side === "ally" ? sourceSlot.key : targetSlot.key];
+}
+
+function buildBuilderBoardSnapshot(state) {
+  const layout = getBuilderBoardLayout(state.formation);
+  const cells = Array.from({ length: 81 }, (_, index) => ({
+    x: index % 9,
+    y: Math.floor(index / 9),
+    isFriendly: false,
+    isEnemy: false,
+    isTarget: false,
+    labels: [],
+    effects: []
+  }));
+
+  const cellAt = (x, y) => cells[y * 9 + x];
+  for (const slot of state.formation.slots) {
+    const allyCell = cellAt(layout.ally[slot.key].x, layout.ally[slot.key].y);
+    allyCell.isFriendly = true;
+    allyCell.labels.push(`${slot.label}`);
+    if (slot.key === state.formationSlot.key) {
+      allyCell.labels.push("自部隊");
+    }
+
+    const enemyCell = cellAt(layout.enemy[slot.key].x, layout.enemy[slot.key].y);
+    enemyCell.isEnemy = true;
+    enemyCell.labels.push(`${slot.label}`);
+    if (slot.key === state.targetSlotKey) {
+      enemyCell.isTarget = true;
+    }
+  }
+
+  for (const effect of state.activeEffects) {
+    const targetSlotKeys = resolveBuilderEffectTargetSlots(
+      effect,
+      state.formation,
+      state.formationSlot.key,
+      state.targetSlotKey
+    );
+    const sideMap = effect.side === "ally" ? layout.ally : layout.enemy;
+
+    for (const slotKey of targetSlotKeys) {
+      const point = sideMap[slotKey];
+      const cell = cellAt(point.x, point.y);
+      cell.effects.push(effect);
+    }
+  }
+
+  return cells.map((cell) => ({
+    ...cell,
+    hasBuff: cell.effects.some((effect) => effect.kind === "buff"),
+    hasDebuff: cell.effects.some((effect) => effect.kind === "debuff" || effect.kind === "damage"),
+    hasHeal: cell.effects.some((effect) => effect.kind === "heal"),
+    hasUtility: cell.effects.some((effect) => effect.kind === "utility")
+  }));
+}
+
 function buildBuilderState() {
-  const rowKey = elements.builderRow?.value || "front";
+  const formation = builderFormationFor(elements.builderFormation?.value);
+  const formationSlot = getFormationSlotMeta(
+    formation,
+    elements.builderFormationSlot?.value || formation.slots[0]?.key
+  );
+  const rowKey = formationSlot.rowKey;
+  const targetSlotKey = elements.builderTargetSlot?.value || formation.slots[0]?.key;
+  const previewSecond = Math.max(0, Math.min(60, Number(elements.builderPreviewSecond?.value ?? 20)));
   const slotInputs = getBuilderSlotInputs();
   const toggleMap = getBuilderToggleMap();
   const commander = characterByName[slotInputs.commander?.value] ?? null;
@@ -2447,7 +2913,8 @@ function buildBuilderState() {
       pairingNotes:
         commander && entry.key !== "commander"
           ? describeBuilderPairing(commander, entry.character, rowKey, entry.chainStats)
-          : []
+          : [],
+      ...buildBuilderTimelineWindows(entry, formation, formationSlot.key)
     }))
     .sort((left, right) => left.orderScore - right.orderScore || compareCharactersBase(left.character, right.character));
 
@@ -2464,10 +2931,19 @@ function buildBuilderState() {
   if (timelineEntries.some((entry) => entry.character?.battleArtMeta?.rowBoosts.includes(rowKey))) {
     overviewNotes.push(`${builderRowLabelFor(rowKey)}で追加効果が入る戦法があります。`);
   }
-  overviewNotes.push("タイムラインは秒数ではなく、GameWith の連鎖順ルールを 1〜9 の順番に並べています。");
+  overviewNotes.push(`${formation.label} は ${formatFormationTiming(formation)} で回る想定です。`);
+
+  const activeEffects = timelineEntries
+    .flatMap((entry) => entry.windows)
+    .filter((effect) => previewSecond >= effect.startSecond && previewSecond < effect.endSecond)
+    .sort((left, right) => left.startSecond - right.startSecond || left.characterName.localeCompare(right.characterName, "ja"));
 
   return {
+    formation,
+    formationSlot,
     rowKey,
+    targetSlotKey,
+    previewSecond,
     commander,
     slotEntries,
     selectedEntries,
@@ -2478,6 +2954,13 @@ function buildBuilderState() {
     activeSkillCount,
     inactiveSkillCount,
     timelineEntries,
+    activeEffects,
+    boardCells: buildBuilderBoardSnapshot({
+      formation,
+      formationSlot,
+      targetSlotKey,
+      activeEffects
+    }),
     overviewNotes: uniqueValues(overviewNotes)
   };
 }
@@ -2491,7 +2974,7 @@ function renderBuilderTimeline(state) {
     return renderEmptyState("戦法を表示できる武将がまだ選ばれていません。");
   }
 
-  const axisMarkup = Array.from({ length: 9 }, (_, index) => `<span>${index + 1}</span>`).join("");
+  const axisMarkup = Array.from({ length: 7 }, (_, index) => `<span>${index * 10}秒</span>`).join("");
   const rowMarkup = state.timelineEntries
     .map((entry) => {
       const rowBoostText = entry.character.battleArtMeta?.rowBoosts.includes(state.rowKey)
@@ -2501,6 +2984,21 @@ function renderBuilderTimeline(state) {
         entry.key === "commander"
           ? "主将戦法は必ず発動"
           : `連鎖率 ${formatPercent(entry.chainStats?.rate ?? 0)} / ${rowBoostText}`;
+      const triggerText = entry.triggerSeconds.map((second) => `${second}秒`).join(" / ");
+      const windowMarkup = entry.windows
+        .map((effect, index) => `
+          <div
+            class="timeline-event ${effect.estimated ? "is-estimated" : ""}"
+            style="--start:${effect.startSecond}; --end:${Math.max(effect.endSecond, effect.startSecond + 1)}"
+          >
+            <strong>${escapeHtml(`${effect.startSecond}秒`)}</strong>
+            <span>${escapeHtml(effect.text)}</span>
+          </div>
+        `)
+        .join("");
+      const markerMarkup = entry.triggerSeconds
+        .map((second) => `<div class="timeline-marker" style="--at:${second}"></div>`)
+        .join("");
 
       return `
         <article class="timeline-row-card">
@@ -2514,14 +3012,14 @@ function renderBuilderTimeline(state) {
             </div>
             <div class="meta-chip-list">
               <span class="meta-chip">連鎖順 ${escapeHtml(entry.character.battleArtMeta?.chainOrder || "-")}</span>
+              <span class="meta-chip">発動 ${escapeHtml(triggerText)}</span>
               ${entry.key !== "commander" ? `<span class="meta-chip">${escapeHtml(chainText)}</span>` : ""}
             </div>
           </div>
           <div class="timeline-track tone-${escapeHtml(entry.character.battleArtMeta?.tone || "utility")}">
-            <div class="timeline-event" style="--order:${entry.orderScore}">
-              <strong>${escapeHtml(entry.orderScore)}</strong>
-              <span>${escapeHtml(entry.character.battleArtName || entry.character.name)}</span>
-            </div>
+            ${windowMarkup}
+            ${markerMarkup}
+            <div class="timeline-now" style="--at:${state.previewSecond}"></div>
           </div>
           ${
             entry.pairingNotes.length
@@ -2570,6 +3068,7 @@ function renderBuilderOverview(state) {
     <article class="info-card">
       <h2>部隊サマリー</h2>
       <ul class="bullet-list">
+        <li>陣形: ${escapeHtml(state.formation.label)} / 位置: ${escapeHtml(state.formationSlot.label)}</li>
         <li>列: ${escapeHtml(rowLabel)}</li>
         <li>選択枠: ${escapeHtml(selectionText)}</li>
         <li>タイプ構成: ${escapeHtml(state.typeSummary.join(" / ") || "未選択")}</li>
@@ -2589,6 +3088,81 @@ function renderBuilderOverview(state) {
       <ul class="bullet-list">${noteRows}</ul>
     </article>
   `;
+}
+
+function renderBuilderBoardLegend() {
+  return `
+    <span class="legend-chip"><span class="legend-swatch is-buff"></span>味方バフ</span>
+    <span class="legend-chip"><span class="legend-swatch is-debuff"></span>敵デバフ / ダメージ</span>
+    <span class="legend-chip"><span class="legend-swatch is-heal"></span>回復</span>
+    <span class="legend-chip"><span class="legend-swatch is-utility"></span>堅固 / 悠然 / 解除</span>
+  `;
+}
+
+function renderBuilderBoard(state) {
+  return state.boardCells
+    .map((cell) => {
+      const classes = [
+        "board-cell",
+        cell.isFriendly ? "is-friendly" : "",
+        cell.isEnemy ? "is-enemy" : "",
+        cell.isTarget ? "is-target" : "",
+        cell.hasBuff ? "has-buff" : "",
+        cell.hasDebuff ? "has-debuff" : "",
+        cell.hasHeal ? "has-heal" : "",
+        cell.hasUtility ? "has-utility" : ""
+      ]
+        .filter(Boolean)
+        .join(" ");
+      const label = cell.labels[0] ?? "";
+      const note =
+        cell.labels.includes("自部隊") ? "自部隊" : cell.isTarget ? "基準敵" : cell.effects.length ? `${cell.effects.length}件` : "";
+
+      return `
+        <div class="${classes}">
+          ${cell.isEnemy ? `<button type="button" data-builder-target-slot="${escapeHtml(
+            FORMATION_SLOT_KEY_ORDER.find((slotKey) => {
+              const slot = getBuilderBoardLayout(state.formation).enemy[slotKey];
+              return slot.x === cell.x && slot.y === cell.y;
+            }) || ""
+          )}"></button>` : ""}
+          <div class="board-cell-label">${escapeHtml(label)}</div>
+          <div class="board-cell-note">${escapeHtml(note)}</div>
+        </div>
+      `;
+    })
+    .join("");
+}
+
+function renderBuilderActiveEffects(state) {
+  if (!state.activeEffects.length) {
+    return renderEmptyState(`${state.previewSecond}秒時点で残っているバフ / デバフはありません。`);
+  }
+
+  return state.activeEffects
+    .map(
+      (effect) => `
+        <article class="army-slot-item">
+          <div class="army-list-row">
+            <span>${escapeHtml(effect.sourceLabel)} ${escapeHtml(effect.characterName)}</span>
+            <span>${escapeHtml(`${effect.startSecond}〜${effect.endSecond}秒`)}</span>
+          </div>
+          <div class="army-list-row">
+            <span>戦法</span>
+            <span>${escapeHtml(effect.battleArtName)}</span>
+          </div>
+          <div class="army-list-row">
+            <span>効果</span>
+            <span>${escapeHtml(effect.text)}</span>
+          </div>
+          <div class="army-list-row">
+            <span>表示</span>
+            <span>${escapeHtml(effect.estimated ? "推定秒" : "確定秒")}</span>
+          </div>
+        </article>
+      `
+    )
+    .join("");
 }
 
 function renderBuilderSkillButtons(skillRows, active) {
@@ -2756,16 +3330,27 @@ function renderBuilderView() {
 
   elements.builderSummary.textContent = formatSummaryText(
     [
+      `陣形: ${state.formation.label}`,
+      `位置: ${state.formationSlot.label}`,
       `列: ${builderRowLabelFor(state.rowKey)}`,
       `主将: ${state.commander?.name ?? "未選択"}`,
       `選択枠: ${state.selectedEntries.length}/${BUILDER_SLOT_DEFS.length}`,
-      `戦法表示: ${state.timelineEntries.length}件`
+      `戦法表示: ${state.timelineEntries.length}件`,
+      `表示秒数: ${state.previewSecond}秒`
     ],
     "編成条件を指定してください。"
   );
   setBuilderValidation(validationMessages.join(" / "));
   elements.builderTimelineCount.textContent = `${state.timelineEntries.length}件`;
+  if (elements.builderPreviewSecondLabel) {
+    elements.builderPreviewSecondLabel.textContent = `${state.previewSecond}秒時点の盤面を表示します。`;
+  }
+  if (elements.builderBoardLegend) {
+    elements.builderBoardLegend.innerHTML = renderBuilderBoardLegend();
+  }
   elements.builderTimeline.innerHTML = renderBuilderTimeline(state);
+  elements.builderBoardGrid.innerHTML = renderBuilderBoard(state);
+  elements.builderActiveEffects.innerHTML = renderBuilderActiveEffects(state);
   elements.builderOverviewGrid.innerHTML = renderBuilderOverview(state);
   elements.builderSlotGrid.innerHTML = BUILDER_SLOT_DEFS.map((slot) => {
     const entry = state.slotEntries.find((row) => row.key === slot.key);
@@ -2778,7 +3363,12 @@ function resetBuilderView() {
     return;
   }
 
-  elements.builderRow.value = "front";
+  elements.builderFormation.value = FORMATION_DEFS[0].key;
+  populateBuilderFormationSlotOptions();
+  populateBuilderTargetSlotOptions();
+  elements.builderFormationSlot.value = FORMATION_DEFS[0].slots[0].key;
+  elements.builderTargetSlot.value = FORMATION_DEFS[0].slots[0].key;
+  elements.builderPreviewSecond.value = "20";
   Object.values(getBuilderSlotInputs()).forEach((input) => {
     if (input) {
       input.value = "";
@@ -2824,10 +3414,11 @@ function loadBuilderGuideFormation() {
     slotInputs[slotKey].value = characterByName[nextName] ? nextName : "";
   }
 
-  const guessedRow = guessBuilderRowFromGuide(commander);
-  if (guessedRow) {
-    elements.builderRow.value = guessedRow;
-  }
+  elements.builderFormation.value = elements.builderFormation.value || FORMATION_DEFS[0].key;
+  populateBuilderFormationSlotOptions();
+  populateBuilderTargetSlotOptions();
+  elements.builderFormationSlot.value = guessBuilderFormationSlotFromGuide(commander, elements.builderFormation.value);
+  elements.builderTargetSlot.value = elements.builderFormationSlot.value;
 
   renderBuilderView();
 }
@@ -3859,7 +4450,9 @@ function boot() {
     SEASON3.objectives[0]?.key ?? "pvp"
   );
   populateSimpleSelect(elements.s3SlotFocus, S3_SLOT_FOCUS_DEFS, "balanced");
-  populateSimpleSelect(elements.builderRow, BUILDER_ROW_DEFS, "front");
+  populateSimpleSelect(elements.builderFormation, FORMATION_SELECT_DEFS, FORMATION_DEFS[0].key);
+  populateBuilderFormationSlotOptions();
+  populateBuilderTargetSlotOptions();
   populateCharacterSelect(elements.builderCommander, "主将を選択");
   populateCharacterSelect(elements.builderVice1, "副将1を選択");
   populateCharacterSelect(elements.builderVice2, "副将2を選択");
@@ -3909,7 +4502,21 @@ function boot() {
   elements.synergyView.addEventListener("change", renderSynergy);
   elements.synergyResetButton.addEventListener("click", resetSynergy);
   if (elements.builderView) {
+    elements.builderFormation?.addEventListener("change", () => {
+      populateBuilderFormationSlotOptions();
+      populateBuilderTargetSlotOptions();
+      renderBuilderView();
+    });
+    elements.builderPreviewSecond?.addEventListener("input", renderBuilderView);
     elements.builderView.addEventListener("change", renderBuilderView);
+    elements.builderView.addEventListener("click", (event) => {
+      const targetButton = event.target.closest("[data-builder-target-slot]");
+      if (!targetButton || !elements.builderTargetSlot) {
+        return;
+      }
+      elements.builderTargetSlot.value = targetButton.dataset.builderTargetSlot;
+      renderBuilderView();
+    });
     elements.builderLoadGuideButton?.addEventListener("click", loadBuilderGuideFormation);
     elements.builderResetButton?.addEventListener("click", resetBuilderView);
   }
