@@ -5284,7 +5284,7 @@ function renderBuilderView() {
   }
 
   if (!state.commander && state.selectedEntries.length) {
-    validationMessages.push("主将を選ぶと連鎖率とタイムラインを計算できます。");
+    validationMessages.push("主将を選ぶと連鎖率と効果帯を計算できます。");
   }
 
   elements.builderSummary.textContent = formatSummaryText(
