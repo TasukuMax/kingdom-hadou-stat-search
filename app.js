@@ -26,6 +26,36 @@ const SEASON3 =
       };
 
 const VIEW_KEYS = ["power", "character", "skill", "synergy", "builder", "army", "board"];
+const UI_STATE_STORAGE_KEY = "kh-site-ui-v1";
+const HERO_RECENT_STORAGE_KEY = "kh-hero-recent-v1";
+
+const VIEW_META = {
+  power: { label: "戦力検索", shortLabel: "検索", summary: "上位2ステータス・技能条件・連鎖率から探す" },
+  character: { label: "武将DB", shortLabel: "武将", summary: "武将名・技能・個性・特徴タグを横断検索する" },
+  skill: { label: "技能DB", shortLabel: "技能", summary: "技能名・効果・所持武将から探す" },
+  synergy: { label: "相性検索", shortLabel: "相性", summary: "主将基準の連鎖率と共通個性で並べる" },
+  builder: { label: "編成ツールβ", shortLabel: "編成", summary: "1部隊の主将・副将・補佐・9x9盤面を確認する" },
+  army: { label: "軍勢自動編成β", shortLabel: "軍勢", summary: "25体軍勢を自動提案する" },
+  board: { label: "S3ハブ", shortLabel: "S3", summary: "Season 3 の採点軸と注目候補を見る" }
+};
+
+const HERO_SHORTCUT_DEFS = [
+  { key: "power-attack-defense", label: "攻撃→防御", hint: "戦力検索", description: "王騎型のような攻撃1位・防御2位をすぐ探します。" },
+  { key: "power-war-strategy", label: "戦威→策略", hint: "戦力検索", description: "軍勢・補助寄りの並びをすぐ見ます。" },
+  { key: "character-siege", label: "対物武将", hint: "武将DB", description: "対物タグを持つ武将に絞ります。" },
+  { key: "skill-front", label: "前列技能", hint: "技能DB", description: "前列条件の技能だけを表示します。" },
+  { key: "synergy-ouki", label: "王騎相性", hint: "相性検索", description: "王騎を主将にした副将候補を出します。" },
+  { key: "army-siege", label: "対物軍勢", hint: "軍勢編成", description: "対物特化の軍勢コンセプトへ切り替えます。" }
+];
+
+const HERO_RESULT_TYPE_PRIORITY = {
+  character: 5,
+  skill: 4,
+  synergy: 3,
+  builder: 3,
+  shortcut: 2,
+  view: 1
+};
 
 const STAT_DEFS = [
   { key: "attack", label: "攻撃" },
@@ -812,6 +842,10 @@ function escapeHtml(value) {
     .replaceAll("'", "&#39;");
 }
 
+function escapeRegExp(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 function normalizeSearchText(value) {
   return String(value ?? "")
     .normalize("NFKC")
@@ -1354,6 +1388,12 @@ const elements = {
   seasonLabel: document.querySelector("#seasonLabel"),
   seasonRevision: document.querySelector("#seasonRevision"),
   seasonUpdatedAt: document.querySelector("#seasonUpdatedAt"),
+  heroCommandInput: document.querySelector("#heroCommandInput"),
+  heroCommandClear: document.querySelector("#heroCommandClear"),
+  heroCommandSummary: document.querySelector("#heroCommandSummary"),
+  heroCommandResults: document.querySelector("#heroCommandResults"),
+  heroShortcutStrip: document.querySelector("#heroShortcutStrip"),
+  mobileDock: document.querySelector("#mobileDock"),
   commanderOptions: document.querySelector("#commanderOptions"),
   sourceLinkList: document.querySelector("#sourceLinkList"),
   liveFeatureList: document.querySelector("#liveFeatureList"),
@@ -1500,6 +1540,548 @@ const elements = {
   s3UpdateList: document.querySelector("#s3UpdateList")
 };
 
+function readStoredJson(key, fallback) {
+  try {
+    const raw = window.localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : fallback;
+  } catch (error) {
+    return fallback;
+  }
+}
+
+function writeStoredJson(key, value) {
+  try {
+    window.localStorage.setItem(key, JSON.stringify(value));
+  } catch (error) {
+    // Ignore storage failures so the app stays usable in private mode.
+  }
+}
+
+function getUiState() {
+  return readStoredJson(UI_STATE_STORAGE_KEY, {});
+}
+
+function saveUiState(patch) {
+  const nextState = {
+    ...getUiState(),
+    ...patch
+  };
+  writeStoredJson(UI_STATE_STORAGE_KEY, nextState);
+  return nextState;
+}
+
+function getHeroRecentEntries() {
+  return readStoredJson(HERO_RECENT_STORAGE_KEY, []).filter(
+    (entry) => entry && entry.type && entry.value && entry.label
+  );
+}
+
+function sortHeroEntries(left, right) {
+  return (
+    right.score - left.score ||
+    (HERO_RESULT_TYPE_PRIORITY[right.type] ?? 0) - (HERO_RESULT_TYPE_PRIORITY[left.type] ?? 0) ||
+    left.label.localeCompare(right.label, "ja")
+  );
+}
+
+function pushHeroRecentEntry(entry) {
+  const current = getHeroRecentEntries();
+  const next = [
+    entry,
+    ...current.filter((item) => !(item.type === entry.type && item.value === entry.value))
+  ].slice(0, 6);
+  writeStoredJson(HERO_RECENT_STORAGE_KEY, next);
+  renderHeroCommand();
+}
+
+function setCheckedValuesByName(name, values) {
+  const wanted = new Set(values);
+  document.querySelectorAll(`input[name="${name}"]`).forEach((input) => {
+    input.checked = wanted.has(input.value);
+  });
+}
+
+function getHeroDefaultEntries() {
+  const recentEntries = getHeroRecentEntries().map((entry) => ({
+    ...entry,
+    meta: "最近使った項目",
+    subtitle: entry.summary,
+    score: 90
+  }));
+  const shortcutEntries = HERO_SHORTCUT_DEFS.slice(0, 4).map((entry, index) => ({
+    type: "shortcut",
+    value: entry.key,
+    label: entry.label,
+    meta: "おすすめショートカット",
+    subtitle: `${entry.hint} / ${entry.description}`,
+    score: 72 - index
+  }));
+  const featureEntries = LIVE_FEATURES.slice(0, 4).map((feature, index) => ({
+    type: "view",
+    value: feature.view,
+    label: feature.title,
+    meta: "画面",
+    subtitle: feature.description,
+    score: 60 - index
+  }));
+
+  return dedupeHeroEntries([...recentEntries, ...shortcutEntries, ...featureEntries]).slice(0, 8);
+}
+
+function dedupeHeroEntries(entries) {
+  const seen = new Set();
+  const uniqueEntries = [];
+
+  for (const entry of entries) {
+    const key = `${entry.type}:${entry.value}`;
+    if (seen.has(key)) {
+      continue;
+    }
+
+    seen.add(key);
+    uniqueEntries.push(entry);
+  }
+
+  return uniqueEntries;
+}
+
+function scoreHeroSearchEntry(query, options) {
+  const titles = options.titles?.length ? options.titles : [options.label];
+  const normalizedTitles = titles.map(normalizeSearchText).filter(Boolean);
+  const normalizedSearch = normalizeSearchText(options.searchText);
+  const normalizedSubtitle = normalizeSearchText(options.subtitle ?? "");
+  const weights = {
+    exact: 840,
+    prefix: 620,
+    include: 420,
+    search: 120,
+    subtitle: 48,
+    bonus: 0,
+    ...options.weights
+  };
+
+  let score = weights.bonus;
+  let titleMatched = false;
+
+  for (const normalizedTitle of normalizedTitles) {
+    if (!normalizedTitle) {
+      continue;
+    }
+
+    if (normalizedTitle === query) {
+      score = Math.max(score, weights.exact + weights.bonus);
+      titleMatched = true;
+      continue;
+    }
+
+    if (normalizedTitle.startsWith(query)) {
+      score = Math.max(score, weights.prefix + weights.bonus);
+      titleMatched = true;
+      continue;
+    }
+
+    if (normalizedTitle.includes(query)) {
+      score = Math.max(score, weights.include + weights.bonus);
+      titleMatched = true;
+    }
+  }
+
+  if (normalizedSearch.includes(query)) {
+    score += titleMatched ? Math.round(weights.search * 0.35) : weights.search;
+  }
+
+  if (normalizedSubtitle.includes(query)) {
+    score += weights.subtitle;
+  }
+
+  return score;
+}
+
+function buildHeroCharacterContextEntries(entry) {
+  if (!entry || entry.score < 620) {
+    return [];
+  }
+
+  return [
+    {
+      type: "synergy",
+      value: entry.value,
+      label: `${entry.label}の相性`,
+      meta: "相性導線",
+      subtitle: "主将に置いた連鎖率順へ移動",
+      score: entry.score - 28
+    },
+    {
+      type: "builder",
+      value: `${entry.value}で編成ツール`,
+      label: `${entry.label}で編成`,
+      meta: "編成導線",
+      subtitle: "編成ツールβで主将にセット",
+      score: entry.score - 42
+    }
+  ];
+}
+
+function getHeroSearchEntries(query) {
+  const normalizedQuery = normalizeSearchText(query);
+  if (!normalizedQuery) {
+    return getHeroDefaultEntries();
+  }
+
+  const viewEntries = Object.entries(VIEW_META)
+    .map(([viewKey, meta]) => {
+      const subtitle = meta.summary;
+      return {
+        type: "view",
+        value: viewKey,
+        label: meta.label,
+        meta: "画面",
+        subtitle,
+        score: scoreHeroSearchEntry(normalizedQuery, {
+          label: meta.label,
+          titles: [meta.label, meta.shortLabel],
+          searchText: `${meta.label} ${meta.shortLabel}`,
+          subtitle,
+          weights: {
+            exact: 260,
+            prefix: 210,
+            include: 170,
+            search: 40,
+            subtitle: 24,
+            bonus: 0
+          }
+        })
+      };
+    })
+    .filter((entry) => entry.score > 0);
+
+  const characterEntries = preparedCharacters
+    .map((character) => {
+      const subtitle = `${character.rarity} / ${character.type} / ${
+        character.featureTags.slice(0, 3).join(" / ") || "主要タグなし"
+      }`;
+      return {
+        type: "character",
+        value: character.name,
+        label: character.name,
+        meta: "武将",
+        subtitle,
+        score: scoreHeroSearchEntry(normalizedQuery, {
+          label: character.name,
+          searchText: character.searchText,
+          subtitle,
+          weights: {
+            exact: 980,
+            prefix: 780,
+            include: 560,
+            search: 136,
+            subtitle: 32,
+            bonus: 10
+          }
+        })
+      };
+    })
+    .filter((entry) => entry.score > 0)
+    .sort(sortHeroEntries)
+    .slice(0, 5);
+
+  const skillEntries = preparedSkills
+    .map((skill) => {
+      const subtitle = `${skill.conditions.map(conditionLabelFor).join(" / ") || "条件なし"} / 所持 ${
+        skill.holderCount
+      }体`;
+      return {
+        type: "skill",
+        value: skill.name,
+        label: skill.name,
+        meta: "技能",
+        subtitle,
+        score: scoreHeroSearchEntry(normalizedQuery, {
+          label: skill.name,
+          searchText: skill.searchText,
+          subtitle,
+          weights: {
+            exact: 920,
+            prefix: 720,
+            include: 520,
+            search: 124,
+            subtitle: 28,
+            bonus: 6
+          }
+        })
+      };
+    })
+    .filter((entry) => entry.score > 0)
+    .sort(sortHeroEntries)
+    .slice(0, 5);
+
+  const shortcutEntries = HERO_SHORTCUT_DEFS.map((entry) => {
+    const subtitle = `${entry.hint} / ${entry.description}`;
+    return {
+      type: "shortcut",
+      value: entry.key,
+      label: entry.label,
+      meta: "ショートカット",
+      subtitle,
+      score: scoreHeroSearchEntry(normalizedQuery, {
+        label: entry.label,
+        searchText: `${entry.label} ${entry.hint} ${entry.description}`,
+        subtitle,
+        weights: {
+          exact: 640,
+          prefix: 500,
+          include: 360,
+          search: 90,
+          subtitle: 36,
+          bonus: 4
+        }
+      })
+    };
+  })
+    .filter((entry) => entry.score > 0)
+    .sort(sortHeroEntries)
+    .slice(0, 4);
+
+  const contextEntries = buildHeroCharacterContextEntries(characterEntries[0]);
+
+  return dedupeHeroEntries([
+    ...characterEntries,
+    ...skillEntries,
+    ...shortcutEntries,
+    ...contextEntries,
+    ...viewEntries
+  ])
+    .sort(sortHeroEntries)
+    .slice(0, 8);
+}
+
+function collectHeroResultCounts(entries) {
+  return entries.reduce((counts, entry) => {
+    counts[entry.type] = (counts[entry.type] ?? 0) + 1;
+    return counts;
+  }, {});
+}
+
+function formatHeroResultSummary(query, entries) {
+  if (!query) {
+    const recentCount = entries.filter((entry) => entry.meta === "最近使った項目").length;
+    return recentCount
+      ? `最近使った項目 ${recentCount} 件と、すぐ使う導線を表示しています。`
+      : "よく使う導線を先頭に表示しています。武将名や技能名を打つと直接移動できます。";
+  }
+
+  if (!entries.length) {
+    return `「${query}」に一致する武将・技能・画面は見つかりませんでした。`;
+  }
+
+  const counts = collectHeroResultCounts(entries);
+  const parts = [];
+
+  if (counts.character) {
+    parts.push(`武将 ${counts.character}`);
+  }
+  if (counts.skill) {
+    parts.push(`技能 ${counts.skill}`);
+  }
+  if (counts.shortcut || counts.synergy || counts.builder) {
+    parts.push(`導線 ${(counts.shortcut ?? 0) + (counts.synergy ?? 0) + (counts.builder ?? 0)}`);
+  }
+  if (counts.view) {
+    parts.push(`画面 ${counts.view}`);
+  }
+
+  return `「${query}」の候補 ${entries.length} 件: ${parts.join(" / ")}`;
+}
+
+function highlightHeroText(text, query) {
+  const sourceText = String(text ?? "");
+  const trimmedQuery = String(query ?? "").trim();
+
+  if (!trimmedQuery) {
+    return escapeHtml(sourceText);
+  }
+
+  const matcher = new RegExp(`(${escapeRegExp(trimmedQuery)})`, "ig");
+  const parts = sourceText.split(matcher).filter((part) => part.length > 0);
+
+  if (parts.length <= 1) {
+    return escapeHtml(sourceText);
+  }
+
+  return parts
+    .map((part) =>
+      part.toLowerCase() === trimmedQuery.toLowerCase()
+        ? `<mark class="hero-highlight">${escapeHtml(part)}</mark>`
+        : escapeHtml(part)
+    )
+    .join("");
+}
+
+function renderHeroCommand() {
+  if (!elements.heroCommandResults) {
+    return;
+  }
+
+  const query = elements.heroCommandInput?.value.trim() ?? "";
+  const entries = getHeroSearchEntries(query);
+
+  if (elements.heroCommandSummary) {
+    elements.heroCommandSummary.textContent = formatHeroResultSummary(query, entries);
+  }
+
+  elements.heroCommandResults.innerHTML = entries.length
+    ? entries
+        .map(
+          (entry) => `
+            <button
+              class="hero-result-card"
+              type="button"
+              data-hero-kind="${escapeHtml(entry.type)}"
+              data-hero-action="${escapeHtml(entry.type)}"
+              data-hero-value="${escapeHtml(entry.value)}"
+            >
+              <span class="hero-result-meta">${escapeHtml(entry.meta)}</span>
+              <strong>${highlightHeroText(entry.label, query)}</strong>
+              <small>${highlightHeroText(entry.subtitle || "該当データへ移動します。", query)}</small>
+            </button>
+          `
+        )
+        .join("")
+    : `
+        <article class="hero-result-card" data-hero-kind="empty">
+          <span class="hero-result-meta">検索結果</span>
+          <strong>該当なし</strong>
+          <small>武将名、技能名、画面名、または対物・前列のような条件で検索してください。</small>
+        </article>
+      `;
+}
+
+function renderHeroShortcutStrip() {
+  if (!elements.heroShortcutStrip) {
+    return;
+  }
+
+  elements.heroShortcutStrip.innerHTML = HERO_SHORTCUT_DEFS.map(
+    (entry) => `
+      <button class="hero-shortcut-chip" type="button" data-hero-shortcut="${escapeHtml(entry.key)}">
+        <strong>${escapeHtml(entry.label)}</strong>
+        <small>${escapeHtml(`${entry.hint} | ${entry.description}`)}</small>
+      </button>
+    `
+  ).join("");
+}
+
+function applyHeroShortcut(shortcutKey) {
+  switch (shortcutKey) {
+    case "power-attack-defense":
+      resetPowerSearch();
+      elements.primaryStat.value = "attack";
+      elements.secondaryStat.value = "defense";
+      setActiveView("power", { scrollToNav: true });
+      renderPowerResults();
+      break;
+    case "power-war-strategy":
+      resetPowerSearch();
+      elements.primaryStat.value = "war";
+      elements.secondaryStat.value = "strategy";
+      setActiveView("power", { scrollToNav: true });
+      renderPowerResults();
+      break;
+    case "character-siege":
+      resetCharacterDb();
+      setCheckedValuesByName("db-feature", ["対物"]);
+      setActiveView("character", { scrollToNav: true });
+      renderCharacterDb();
+      break;
+    case "skill-front":
+      resetSkillDb();
+      setCheckedValuesByName("skill-condition", ["front"]);
+      setActiveView("skill", { scrollToNav: true });
+      renderSkillDb();
+      break;
+    case "synergy-ouki":
+      elements.synergyCommander.value = "王騎";
+      setActiveView("synergy", { scrollToNav: true });
+      renderSynergy();
+      break;
+    case "army-siege":
+      if (elements.armyConcept) {
+        elements.armyConcept.value = "siege";
+      }
+      setActiveView("army", { scrollToNav: true });
+      if (typeof renderArmyPlanner === "function") {
+        renderArmyPlanner();
+      }
+      break;
+    default:
+      return;
+  }
+
+  const shortcut = HERO_SHORTCUT_DEFS.find((entry) => entry.key === shortcutKey);
+  if (shortcut) {
+    pushHeroRecentEntry({
+      type: "shortcut",
+      value: shortcut.key,
+      label: shortcut.label,
+      summary: `${shortcut.hint}を即時適用`
+    });
+  }
+}
+
+function focusHeroCommandInput() {
+  if (!elements.heroCommandInput) {
+    return;
+  }
+
+  elements.heroCommandInput.focus();
+  elements.heroCommandInput.select();
+}
+
+function bindHeroCommand() {
+  if (!elements.heroCommandInput) {
+    return;
+  }
+
+  renderHeroShortcutStrip();
+  renderHeroCommand();
+
+  elements.heroCommandInput.addEventListener("input", renderHeroCommand);
+  elements.heroCommandInput.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter") {
+      return;
+    }
+
+    const firstEntry = getHeroSearchEntries(elements.heroCommandInput.value.trim())[0];
+    if (!firstEntry) {
+      return;
+    }
+
+    event.preventDefault();
+    runHeroAction(firstEntry.type, firstEntry.value);
+  });
+  elements.heroCommandClear?.addEventListener("click", () => {
+    elements.heroCommandInput.value = "";
+    renderHeroCommand();
+    focusHeroCommandInput();
+  });
+
+  document.addEventListener("keydown", (event) => {
+    const activeTag = document.activeElement?.tagName;
+    const isTypingField = activeTag === "INPUT" || activeTag === "TEXTAREA" || document.activeElement?.isContentEditable;
+
+    if ((event.key === "/" && !isTypingField) || ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k")) {
+      event.preventDefault();
+      focusHeroCommandInput();
+      return;
+    }
+
+    if (event.key === "Escape" && document.activeElement === elements.heroCommandInput) {
+      elements.heroCommandInput.value = "";
+      renderHeroCommand();
+    }
+  });
+}
+
 function populateStatSelect(select, placeholder) {
   if (!select) {
     return;
@@ -1595,12 +2177,16 @@ function setActiveView(viewKey, options = {}) {
   const scrollToNav = options.scrollToNav === true;
 
   elements.viewButtons.forEach((button) => {
-    button.classList.toggle("is-active", button.dataset.viewTab === nextView);
+    const isActive = button.dataset.viewTab === nextView;
+    button.classList.toggle("is-active", isActive);
+    button.setAttribute("aria-current", isActive ? "page" : "false");
   });
 
   elements.viewPanels.forEach((panel) => {
     panel.hidden = panel.id !== `view-${nextView}`;
   });
+
+  saveUiState({ activeView: nextView });
 
   if (updateHash) {
     const nextHash = `#${nextView}`;
@@ -3438,6 +4024,12 @@ function openBuilderWithCommander(name) {
   elements.builderCommander.value = name;
   setActiveView("builder", { scrollToNav: true });
   renderBuilderView();
+  pushHeroRecentEntry({
+    type: "builder",
+    value: name,
+    label: `${name}で編成ツール`,
+    summary: "編成ツールβへ移動"
+  });
 }
 
 function setPowerValidation(message) {
@@ -4353,6 +4945,13 @@ function openSkillDialog(skillName) {
   } else {
     elements.skillDialog.setAttribute("open", "open");
   }
+
+  pushHeroRecentEntry({
+    type: "skill",
+    value: skillName,
+    label: skillName,
+    summary: `${conditionText} / 技能詳細`
+  });
 }
 
 function closeSkillDialog() {
@@ -4367,12 +4966,59 @@ function openCharacterDb(name) {
   elements.characterKeyword.value = name;
   setActiveView("character", { scrollToNav: true });
   renderCharacterDb();
+  pushHeroRecentEntry({
+    type: "character",
+    value: name,
+    label: name,
+    summary: "武将DBで表示"
+  });
 }
 
 function openSynergyWithReference(name) {
   elements.synergyCommander.value = name;
   setActiveView("synergy", { scrollToNav: true });
   renderSynergy();
+  pushHeroRecentEntry({
+    type: "synergy",
+    value: name,
+    label: `${name}相性`,
+    summary: "相性検索で表示"
+  });
+}
+
+function runHeroAction(actionType, value) {
+  if (!value) {
+    return;
+  }
+
+  switch (actionType) {
+    case "view":
+      setActiveView(value, { scrollToNav: true });
+      pushHeroRecentEntry({
+        type: "view",
+        value,
+        label: VIEW_META[value]?.label ?? value,
+        summary: VIEW_META[value]?.summary ?? "画面へ移動"
+      });
+      return;
+    case "character":
+      openCharacterDb(value);
+      return;
+    case "skill":
+      openSkillDialog(value);
+      return;
+    case "synergy":
+      openSynergyWithReference(value);
+      return;
+    case "builder":
+      openBuilderWithCommander(value.replace(/で編成ツール$/u, ""));
+      return;
+    case "shortcut":
+      applyHeroShortcut(value);
+      return;
+    default:
+      return;
+  }
 }
 
 function bindGlobalActions() {
@@ -4385,7 +5031,14 @@ function bindGlobalActions() {
 
     const viewButton = event.target.closest("[data-switch-view]");
     if (viewButton) {
-      setActiveView(viewButton.dataset.switchView, { scrollToNav: true });
+      const targetView = viewButton.dataset.switchView;
+      setActiveView(targetView, { scrollToNav: true });
+      pushHeroRecentEntry({
+        type: "view",
+        value: targetView,
+        label: VIEW_META[targetView]?.label ?? targetView,
+        summary: VIEW_META[targetView]?.summary ?? "画面へ移動"
+      });
       return;
     }
 
@@ -4404,6 +5057,24 @@ function bindGlobalActions() {
     const builderButton = event.target.closest("[data-use-builder-commander]");
     if (builderButton) {
       openBuilderWithCommander(builderButton.dataset.useBuilderCommander);
+      return;
+    }
+
+    const heroActionButton = event.target.closest("[data-hero-action]");
+    if (heroActionButton) {
+      runHeroAction(heroActionButton.dataset.heroAction, heroActionButton.dataset.heroValue);
+      return;
+    }
+
+    const heroShortcutButton = event.target.closest("[data-hero-shortcut]");
+    if (heroShortcutButton) {
+      applyHeroShortcut(heroShortcutButton.dataset.heroShortcut);
+      return;
+    }
+
+    const scrollTopButton = event.target.closest("[data-scroll-top]");
+    if (scrollTopButton) {
+      window.scrollTo({ top: 0, behavior: "smooth" });
     }
   });
 
@@ -4485,6 +5156,7 @@ function boot() {
   renderFeatureBoard();
   bindViewTabs();
   bindGlobalActions();
+  bindHeroCommand();
 
   elements.powerForm.addEventListener("submit", (event) => {
     event.preventDefault();
@@ -4539,7 +5211,7 @@ function boot() {
   renderBuilderView();
   renderFeatureBoard();
 
-  const initialView = window.location.hash.replace(/^#/, "") || "power";
+  const initialView = window.location.hash.replace(/^#/, "") || getUiState().activeView || "power";
   setActiveView(initialView, { updateHash: false });
 }
 
