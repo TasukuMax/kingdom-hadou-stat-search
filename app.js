@@ -28,6 +28,8 @@ const SEASON3 =
 const VIEW_KEYS = ["power", "character", "skill", "synergy", "builder", "army", "board"];
 const UI_STATE_STORAGE_KEY = "kh-site-ui-v1";
 const HERO_RECENT_STORAGE_KEY = "kh-hero-recent-v1";
+const FAVORITE_CHARACTERS_STORAGE_KEY = "kh-favorite-characters-v1";
+const FAVORITE_SKILLS_STORAGE_KEY = "kh-favorite-skills-v1";
 
 const VIEW_META = {
   power: { label: "戦力検索", shortLabel: "検索", summary: "上位2ステータス・技能条件・連鎖率から探す" },
@@ -55,6 +57,18 @@ const HERO_RESULT_TYPE_PRIORITY = {
   builder: 3,
   shortcut: 2,
   view: 1
+};
+
+const SLOT_LABEL_MAP = {
+  commander: "主将",
+  vice: "副将",
+  aide: "補佐"
+};
+
+const SLOT_SUMMARY_HINTS = {
+  commander: "戦法主導力と前線維持を重視",
+  vice: "連鎖率と差し込み性能を重視",
+  aide: "技能価値と支援量を重視"
 };
 
 const STAT_DEFS = [
@@ -212,6 +226,9 @@ const SKILL_EFFECT_DEFS = [
 
 const CHARACTER_SORT_DEFS = [
   { key: "rarityTenpu", label: "レアリティ / 天賦順" },
+  { key: "commanderFit", label: "主将適性順" },
+  { key: "viceFit", label: "副将適性順" },
+  { key: "aideFit", label: "補佐適性順" },
   { key: "topPair", label: "上位2値合計順" },
   { key: "attack", label: "攻撃順" },
   { key: "defense", label: "防御順" },
@@ -1177,6 +1194,175 @@ function deriveGuideFallbackSlot({ conditionKeys, featureTags, objectiveTags, to
   return "副将";
 }
 
+function clampScore(value) {
+  return Math.max(0, Math.min(99, Math.round(value)));
+}
+
+function deriveSlotFitProfile({
+  character,
+  season3,
+  rankedStats,
+  conditionIndex,
+  featureTags,
+  objectiveTags,
+  guideSlot
+}) {
+  const topPair = rankedStats[0].value + rankedStats[1].value;
+  const featureSet = new Set(featureTags);
+  const commanderReasons = [];
+  const viceReasons = [];
+  const aideReasons = [];
+  let commanderScore = 0;
+  let viceScore = 0;
+  let aideScore = 0;
+
+  const pushReason = (target, text) => {
+    if (text && !target.includes(text)) {
+      target.push(text);
+    }
+  };
+
+  if (season3) {
+    commanderScore = season3.commanderScore;
+    viceScore = season3.viceScore;
+    aideScore = season3.aideScore;
+    pushReason(commanderReasons, `S3主将評価 ${season3.commanderScore}点`);
+    pushReason(viceReasons, `S3副将評価 ${season3.viceScore}点`);
+    pushReason(aideReasons, `S3補佐評価 ${season3.aideScore}点`);
+  } else {
+    commanderScore =
+      rankedStats[0].value * 0.06 +
+      rankedStats[1].value * 0.032 +
+      character.tenpu * 0.018 +
+      character.chainBase * 36;
+    viceScore =
+      rankedStats[0].value * 0.031 +
+      rankedStats[1].value * 0.029 +
+      character.tenpu * 0.013 +
+      character.chainBase * 44;
+    aideScore =
+      rankedStats[0].value * 0.014 +
+      rankedStats[1].value * 0.018 +
+      character.tenpu * 0.01 +
+      character.chainBase * 32;
+  }
+
+  if (guideSlot === "主将" || (conditionIndex.main ?? []).length) {
+    commanderScore += 14;
+    pushReason(commanderReasons, "主将条件や編成例がある");
+  }
+  if (guideSlot === "副将" || (conditionIndex.vice ?? []).length) {
+    viceScore += 14;
+    pushReason(viceReasons, "副将条件や編成例がある");
+  }
+  if (guideSlot === "補佐" || (conditionIndex.aide ?? []).length) {
+    aideScore += 16;
+    pushReason(aideReasons, "補佐条件や編成例がある");
+  }
+
+  if (topPair >= 1580) {
+    commanderScore += 10;
+    pushReason(commanderReasons, "上位2値が高く主将で押しやすい");
+  } else if (topPair >= 1480) {
+    commanderScore += 6;
+    pushReason(commanderReasons, "上位2値が安定して高い");
+  }
+
+  if (character.chainBase >= 0.24) {
+    viceScore += 10;
+    aideScore += 6;
+    pushReason(viceReasons, "基礎連鎖率が高い");
+    pushReason(aideReasons, "連鎖率を盛りやすい");
+  } else if (character.chainBase >= 0.21) {
+    viceScore += 6;
+    pushReason(viceReasons, "連鎖率が平均より高い");
+  }
+
+  if (character.type === "闘") {
+    commanderScore += 8;
+    viceScore += 5;
+    pushReason(commanderReasons, "闘タイプで主導力を出しやすい");
+  }
+  if (character.type === "護") {
+    commanderScore += 7;
+    viceScore += 4;
+    pushReason(commanderReasons, "護タイプで前線維持に向く");
+  }
+  if (character.type === "妨") {
+    viceScore += 8;
+    commanderScore += 3;
+    pushReason(viceReasons, "妨タイプで差し込みや妨害が強い");
+  }
+  if (character.type === "援") {
+    aideScore += 12;
+    viceScore += 3;
+    pushReason(aideReasons, "援タイプで支援価値を出しやすい");
+  }
+
+  if (featureSet.has("回復") || featureSet.has("強化効果付与") || featureSet.has("弱化解除")) {
+    aideScore += 10;
+    pushReason(aideReasons, "支援技能の価値が高い");
+  }
+  if (featureSet.has("被ダメ軽減") || featureSet.has("反撃") || featureSet.has("堅固")) {
+    commanderScore += 8;
+    pushReason(commanderReasons, "前線維持に効く特徴がある");
+  }
+  if (
+    featureSet.has("弱化効果付与") ||
+    featureSet.has("強化解除") ||
+    featureSet.has("攻速低下") ||
+    featureSet.has("対物")
+  ) {
+    viceScore += 8;
+    pushReason(viceReasons, "副将から効く差し込み性能がある");
+  }
+  if (featureSet.has("調達")) {
+    aideScore += 5;
+    pushReason(aideReasons, "任命や支援寄りの用途がある");
+  }
+
+  if (objectiveTags.includes("defense")) {
+    commanderScore += 3;
+    pushReason(commanderReasons, "防衛用途で主将価値を出しやすい");
+  }
+  if (objectiveTags.includes("siege")) {
+    viceScore += 3;
+    pushReason(viceReasons, "攻城用途で差し込み候補になりやすい");
+  }
+
+  const scores = {
+    commander: clampScore(commanderScore),
+    vice: clampScore(viceScore),
+    aide: clampScore(aideScore)
+  };
+  const sorted = Object.entries(scores)
+    .map(([key, score]) => ({
+      key,
+      score,
+      label: SLOT_LABEL_MAP[key]
+    }))
+    .sort((left, right) => right.score - left.score || left.label.localeCompare(right.label, "ja"));
+
+  const reasons = {
+    commander: commanderReasons.slice(0, 3),
+    vice: viceReasons.slice(0, 3),
+    aide: aideReasons.slice(0, 3)
+  };
+
+  if (!reasons[sorted[0].key].length) {
+    pushReason(reasons[sorted[0].key], `${sorted[0].label}寄りの配分`);
+  }
+
+  return {
+    scores,
+    sorted,
+    bestKey: sorted[0].key,
+    secondaryKey: sorted[1].key,
+    reasons,
+    headline: `${sorted[0].label} → ${sorted[1].label}`
+  };
+}
+
 function compareCharactersBase(left, right) {
   return (
     RARITY_RANK[left.rarity] - RARITY_RANK[right.rarity] ||
@@ -1252,6 +1438,15 @@ const preparedCharacters = RAW_CHARACTERS.map((character) => {
       top1: rankedStats[0],
       guide
     });
+  const slotFit = deriveSlotFitProfile({
+    character,
+    season3,
+    rankedStats,
+    conditionIndex,
+    featureTags,
+    objectiveTags,
+    guideSlot
+  });
 
   const displayTags = uniqueValues([
     character.rarity,
@@ -1260,6 +1455,7 @@ const preparedCharacters = RAW_CHARACTERS.map((character) => {
     `${rankedStats[1].label}2位`,
     character.type ? `${character.type}タイプ` : "",
     guideSlot ? `${guideSlot}向き` : "",
+    `${slotFit.sorted[0].label}適性高`,
     ...objectiveTags.map(objectiveLabelFor),
     season3 ? "S3注目" : "",
     ...conditionLabels,
@@ -1295,6 +1491,8 @@ const preparedCharacters = RAW_CHARACTERS.map((character) => {
       ...(season3?.bestUseCases ?? []),
       ...(season3?.tags ?? []).map(seasonTagLabel),
       guideSlot,
+      slotFit.headline,
+      ...Object.values(slotFit.reasons).flat(),
       ...guide.evaluationPoints,
       ...guide.latestFormation.placements.map((row) => `${row.slot} ${row.name}`),
       ...guide.latestFormation.focusTitles,
@@ -1323,6 +1521,7 @@ const preparedCharacters = RAW_CHARACTERS.map((character) => {
     personalitySet: new Set(character.personalities),
     guide,
     guideSlot,
+    slotFit,
     season3
   };
 }).sort(compareCharactersBase);
@@ -1438,7 +1637,9 @@ const elements = {
   characterTagFilters: document.querySelector("#characterTagFilters"),
   characterFeatureFilters: document.querySelector("#characterFeatureFilters"),
   characterResetButton: document.querySelector("#characterResetButton"),
+  characterFavoriteToggle: document.querySelector("#characterFavoriteToggle"),
   characterSummary: document.querySelector("#characterSummary"),
+  characterQuickGrid: document.querySelector("#characterQuickGrid"),
   characterCount: document.querySelector("#characterCount"),
   characterList: document.querySelector("#characterList"),
 
@@ -1448,6 +1649,7 @@ const elements = {
   skillConditionFilters: document.querySelector("#skillConditionFilters"),
   skillEffectFilters: document.querySelector("#skillEffectFilters"),
   skillResetButton: document.querySelector("#skillResetButton"),
+  skillFavoriteToggle: document.querySelector("#skillFavoriteToggle"),
   skillSummary: document.querySelector("#skillSummary"),
   skillDbCount: document.querySelector("#skillDbCount"),
   skillList: document.querySelector("#skillList"),
@@ -1592,6 +1794,52 @@ function pushHeroRecentEntry(entry) {
   ].slice(0, 6);
   writeStoredJson(HERO_RECENT_STORAGE_KEY, next);
   renderHeroCommand();
+}
+
+function getFavoriteCharacterNames() {
+  return readStoredJson(FAVORITE_CHARACTERS_STORAGE_KEY, []).filter(Boolean);
+}
+
+function getFavoriteSkillNames() {
+  return readStoredJson(FAVORITE_SKILLS_STORAGE_KEY, []).filter(Boolean);
+}
+
+function isFavoriteCharacter(name) {
+  return getFavoriteCharacterNames().includes(name);
+}
+
+function isFavoriteSkill(name) {
+  return getFavoriteSkillNames().includes(name);
+}
+
+function toggleFavoriteCharacter(name) {
+  const current = new Set(getFavoriteCharacterNames());
+  if (current.has(name)) {
+    current.delete(name);
+  } else {
+    current.add(name);
+  }
+  writeStoredJson(FAVORITE_CHARACTERS_STORAGE_KEY, [...current].sort((left, right) => left.localeCompare(right, "ja")));
+}
+
+function toggleFavoriteSkill(name) {
+  const current = new Set(getFavoriteSkillNames());
+  if (current.has(name)) {
+    current.delete(name);
+  } else {
+    current.add(name);
+  }
+  writeStoredJson(FAVORITE_SKILLS_STORAGE_KEY, [...current].sort((left, right) => left.localeCompare(right, "ja")));
+}
+
+function setToggleButtonState(button, active) {
+  if (!button) {
+    return;
+  }
+
+  button.dataset.active = active ? "true" : "false";
+  button.classList.toggle("is-active", active);
+  button.setAttribute("aria-pressed", active ? "true" : "false");
 }
 
 function setCheckedValuesByName(name, values) {
@@ -2351,6 +2599,12 @@ function sortCharactersForDb(list, sortKey) {
       return left.name.localeCompare(right.name, "ja") || compareCharactersBase(left, right);
     }
 
+    if (sortKey === "commanderFit" || sortKey === "viceFit" || sortKey === "aideFit") {
+      const slotKey = sortKey.replace(/Fit$/u, "");
+      const slotDiff = right.slotFit.scores[slotKey] - left.slotFit.scores[slotKey];
+      return slotDiff || compareCharactersBase(left, right);
+    }
+
     if (sortKey === "topPair") {
       const topPairDiff = right.top1.value + right.top2.value - (left.top1.value + left.top2.value);
       return topPairDiff || compareCharactersBase(left, right);
@@ -2774,9 +3028,53 @@ function renderStatsGrid(character, selectedStats) {
   }).join("");
 }
 
+function renderFavoriteButton(kind, name) {
+  const active = kind === "character" ? isFavoriteCharacter(name) : isFavoriteSkill(name);
+  const label = active ? "保存中" : "保存";
+  return `
+    <button
+      type="button"
+      class="favorite-button ${active ? "is-active" : ""}"
+      data-toggle-favorite-kind="${escapeHtml(kind)}"
+      data-toggle-favorite-value="${escapeHtml(name)}"
+      aria-pressed="${active ? "true" : "false"}"
+      title="${escapeHtml(name)}をお気に入り${active ? "解除" : "保存"}"
+    >
+      <span aria-hidden="true">${active ? "★" : "☆"}</span>
+      <span>${label}</span>
+    </button>
+  `;
+}
+
+function renderSlotFitSummary(character) {
+  const scoreMarkup = character.slotFit.sorted
+    .map(
+      (entry, index) => `
+        <span class="meta-chip ${index === 0 ? "is-highlight" : ""}">
+          ${escapeHtml(entry.label)} ${entry.score}
+        </span>
+      `
+    )
+    .join("");
+  const reasonText =
+    character.slotFit.reasons[character.slotFit.bestKey].join(" / ") || SLOT_SUMMARY_HINTS[character.slotFit.bestKey];
+
+  return `
+    <div class="inline-summary slot-fit-summary">
+      <div class="inline-summary-head">
+        <p class="skill-group-title">スロット適性</p>
+        <h4>${escapeHtml(character.slotFit.headline)}</h4>
+      </div>
+      <div class="meta-chip-list">${scoreMarkup}</div>
+      <p>${escapeHtml(reasonText)}</p>
+    </div>
+  `;
+}
+
 function renderCardActions(character) {
   return `
     <div class="card-actions">
+      ${renderFavoriteButton("character", character.name)}
       <button
         type="button"
         class="mini-button"
@@ -2845,6 +3143,7 @@ function renderCharacterCard(character, options = {}) {
             <span class="pair-badge rank-1">1位: ${escapeHtml(character.top1.label)} ${character.top1.value}</span>
             <span class="pair-badge rank-2">2位: ${escapeHtml(character.top2.label)} ${character.top2.value}</span>
           </div>
+          ${renderSlotFitSummary(character)}
           ${showBattleArt ? renderBattleArtPreview(character) : ""}
           ${renderFeatureTags(character, highlightedTags)}
           ${renderChainInfo(chainStats)}
@@ -2908,7 +3207,10 @@ function renderSkillCard(skill) {
           </button>
           <p class="subline">所持武将 ${skill.holderCount}体 / 技能Lv ${skill.level || 0}</p>
         </div>
-        <div class="meta-chip-list">${conditionMarkup}${featureMarkup}</div>
+        <div>
+          ${renderFavoriteButton("skill", skill.name)}
+          <div class="meta-chip-list">${conditionMarkup}${featureMarkup}</div>
+        </div>
       </div>
       <p class="skill-summary">${escapeHtml(skill.summary || "概要データはありません。")}</p>
       ${renderDisclosure(
@@ -4296,6 +4598,7 @@ function renderCharacterDb() {
   const objectives = readCheckedValuesIn(elements.characterView, "db-objective");
   const tags = readCheckedValuesIn(elements.characterView, "db-tag");
   const features = readCheckedValuesIn(elements.characterView, "db-feature");
+  const favoritesOnly = elements.characterFavoriteToggle?.dataset.active === "true";
   const selectedConditionKeys = getConditionKeysFromLabels(tags);
 
   const filtered = preparedCharacters.filter(
@@ -4305,10 +4608,16 @@ function renderCharacterDb() {
       objectives.every((objective) => character.objectiveTags.includes(objective)) &&
       tags.every((tag) => character.displayTags.includes(tag)) &&
       features.every((feature) => character.featureTags.includes(feature)) &&
+      (!favoritesOnly || isFavoriteCharacter(character.name)) &&
       keywordMatches(character.searchText, keyword)
   );
 
   const sorted = sortCharactersForDb(filtered, sortKey);
+  const quickCards = [
+    renderSlotQuickCard("主将候補", "commander", sorted),
+    renderSlotQuickCard("副将候補", "vice", sorted),
+    renderSlotQuickCard("補佐候補", "aide", sorted)
+  ];
 
   elements.characterSummary.textContent = formatSummaryText(
     [
@@ -4317,12 +4626,17 @@ function renderCharacterDb() {
       objectives.length ? `目的: ${objectives.map(objectiveLabelFor).join(" / ")}` : "",
       tags.length ? `タグ: ${tags.join(" / ")}` : "",
       features.length ? `特徴: ${features.join(" / ")}` : "",
+      favoritesOnly ? "お気に入りのみ" : "",
       rarities.length !== RARITY_DEFS.length ? `レアリティ: ${rarities.join(" / ")}` : "",
       `並び順: ${CHARACTER_SORT_MAP[sortKey]}`
     ].filter(Boolean),
     "武将DBでは、武将名、技能名、技能説明、個性、タグ、特徴を横断して検索できます。"
   );
 
+  updateFavoriteToggleLabels();
+  if (elements.characterQuickGrid) {
+    elements.characterQuickGrid.innerHTML = quickCards.join("");
+  }
   elements.characterCount.textContent = `${sorted.length}体`;
   elements.characterList.innerHTML = renderCharacterCards(sorted, {
     showTags: true,
@@ -4338,6 +4652,8 @@ function renderCharacterDb() {
 function resetCharacterDb() {
   elements.characterKeyword.value = "";
   elements.characterSort.value = "rarityTenpu";
+  setToggleButtonState(elements.characterFavoriteToggle, false);
+  saveUiState({ characterFavoritesOnly: false });
   document
     .querySelectorAll('input[name="db-rarity"]')
     .forEach((input) => (input.checked = defaultRarities.includes(input.value)));
@@ -4355,11 +4671,13 @@ function renderSkillDb() {
   const sortKey = elements.skillSort.value;
   const conditions = readCheckedValuesIn(elements.skillView, "skill-condition");
   const effects = readCheckedValuesIn(elements.skillView, "skill-effect");
+  const favoritesOnly = elements.skillFavoriteToggle?.dataset.active === "true";
 
   const filtered = preparedSkills.filter(
     (skill) =>
       conditions.every((condition) => skill.conditions.includes(condition)) &&
       effects.every((effect) => skill.featureTags.includes(effect)) &&
+      (!favoritesOnly || isFavoriteSkill(skill.name)) &&
       keywordMatches(skill.searchText, keyword)
   );
 
@@ -4370,11 +4688,13 @@ function renderSkillDb() {
       keyword ? `全文: ${keyword}` : "",
       conditions.length ? `条件: ${conditions.map(conditionLabelFor).join(" / ")}` : "",
       effects.length ? `効果種別: ${effects.map((effect) => SKILL_EFFECT_MAP[effect] ?? effect).join(" / ")}` : "",
+      favoritesOnly ? "お気に入りのみ" : "",
       `並び順: ${SKILL_SORT_MAP[sortKey]}`
     ].filter(Boolean),
     "技能DBでは、技能名、効果文、所持武将までまとめて検索できます。"
   );
 
+  updateFavoriteToggleLabels();
   elements.skillDbCount.textContent = `${sorted.length}件`;
   elements.skillList.innerHTML = renderSkillCards(sorted, "条件に一致する技能はありません。");
 }
@@ -4382,6 +4702,8 @@ function renderSkillDb() {
 function resetSkillDb() {
   elements.skillKeyword.value = "";
   elements.skillSort.value = "order";
+  setToggleButtonState(elements.skillFavoriteToggle, false);
+  saveUiState({ skillFavoritesOnly: false });
   document.querySelectorAll('input[name="skill-condition"]').forEach((input) => (input.checked = false));
   document.querySelectorAll('input[name="skill-effect"]').forEach((input) => (input.checked = false));
   renderSkillDb();
@@ -4427,6 +4749,60 @@ function renderQuickCard(title, candidates, reference) {
       </ul>
     </article>
   `;
+}
+
+function renderSlotQuickCard(title, slotKey, candidates) {
+  const list = [...candidates]
+    .sort((left, right) => right.slotFit.scores[slotKey] - left.slotFit.scores[slotKey] || compareCharactersBase(left, right))
+    .slice(0, 3);
+
+  if (!list.length) {
+    return `
+      <article class="quick-card">
+        <h3>${escapeHtml(title)}</h3>
+        <p>今の条件では候補がいません。</p>
+      </article>
+    `;
+  }
+
+  return `
+    <article class="quick-card">
+      <h3>${escapeHtml(title)}</h3>
+      <p>${escapeHtml(SLOT_SUMMARY_HINTS[slotKey])}</p>
+      <ul>
+        ${list
+          .map(
+            (character) => `
+              <li>
+                <button type="button" class="holder-button" data-open-character="${escapeHtml(character.name)}">
+                  ${escapeHtml(character.name)}
+                </button>
+                <strong>${character.slotFit.scores[slotKey]}</strong>
+              </li>
+            `
+          )
+          .join("")}
+      </ul>
+    </article>
+  `;
+}
+
+function updateFavoriteToggleLabels() {
+  if (elements.characterFavoriteToggle) {
+    const active = elements.characterFavoriteToggle.dataset.active === "true";
+    const count = getFavoriteCharacterNames().length;
+    elements.characterFavoriteToggle.textContent = active
+      ? `お気に入りのみ ${count}`
+      : `お気に入りを見る ${count}`;
+  }
+
+  if (elements.skillFavoriteToggle) {
+    const active = elements.skillFavoriteToggle.dataset.active === "true";
+    const count = getFavoriteSkillNames().length;
+    elements.skillFavoriteToggle.textContent = active
+      ? `お気に入りのみ ${count}`
+      : `お気に入りを見る ${count}`;
+  }
 }
 
 function renderSynergy() {
@@ -5060,6 +5436,20 @@ function bindGlobalActions() {
       return;
     }
 
+    const favoriteToggleButton = event.target.closest("[data-toggle-favorite-kind]");
+    if (favoriteToggleButton) {
+      const kind = favoriteToggleButton.dataset.toggleFavoriteKind;
+      const value = favoriteToggleButton.dataset.toggleFavoriteValue;
+      if (kind === "character") {
+        toggleFavoriteCharacter(value);
+      } else if (kind === "skill") {
+        toggleFavoriteSkill(value);
+      }
+      renderCharacterDb();
+      renderSkillDb();
+      return;
+    }
+
     const heroActionButton = event.target.closest("[data-hero-action]");
     if (heroActionButton) {
       runHeroAction(heroActionButton.dataset.heroAction, heroActionButton.dataset.heroValue);
@@ -5075,6 +5465,22 @@ function bindGlobalActions() {
     const scrollTopButton = event.target.closest("[data-scroll-top]");
     if (scrollTopButton) {
       window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+
+    if (event.target.closest("#characterFavoriteToggle")) {
+      const active = elements.characterFavoriteToggle?.dataset.active === "true";
+      setToggleButtonState(elements.characterFavoriteToggle, !active);
+      saveUiState({ characterFavoritesOnly: !active });
+      renderCharacterDb();
+      return;
+    }
+
+    if (event.target.closest("#skillFavoriteToggle")) {
+      const active = elements.skillFavoriteToggle?.dataset.active === "true";
+      setToggleButtonState(elements.skillFavoriteToggle, !active);
+      saveUiState({ skillFavoritesOnly: !active });
+      renderSkillDb();
     }
   });
 
@@ -5157,6 +5563,9 @@ function boot() {
   bindViewTabs();
   bindGlobalActions();
   bindHeroCommand();
+  setToggleButtonState(elements.characterFavoriteToggle, Boolean(getUiState().characterFavoritesOnly));
+  setToggleButtonState(elements.skillFavoriteToggle, Boolean(getUiState().skillFavoritesOnly));
+  updateFavoriteToggleLabels();
 
   elements.powerForm.addEventListener("submit", (event) => {
     event.preventDefault();
