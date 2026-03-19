@@ -1083,6 +1083,111 @@
         align-self: flex-start;
       }
 
+      .army-roster-shell,
+      .army-owned-settings,
+      .army-roster-grid,
+      .army-profile-grid {
+        display: grid;
+        gap: 14px;
+      }
+
+      .army-roster-grid {
+        grid-template-columns: repeat(auto-fit, minmax(172px, 1fr));
+      }
+
+      .army-roster-card,
+      .army-owned-card {
+        width: 100%;
+        padding: 14px;
+        border-radius: 20px;
+        border: 1px solid rgba(109, 57, 17, 0.14);
+        background: rgba(255, 255, 255, 0.76);
+        display: grid;
+        gap: 12px;
+        text-align: left;
+      }
+
+      .army-roster-card {
+        cursor: pointer;
+      }
+
+      .army-roster-card.is-owned,
+      .army-owned-card {
+        background: rgba(244, 232, 208, 0.78);
+        border-color: rgba(156, 95, 34, 0.32);
+        box-shadow: 0 12px 28px rgba(109, 57, 17, 0.1);
+      }
+
+      .army-roster-head,
+      .army-owned-head,
+      .army-roster-foot,
+      .army-power-line {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        align-items: flex-start;
+      }
+
+      .army-roster-head img,
+      .army-owned-head img {
+        width: 56px;
+        height: 56px;
+        border-radius: 16px;
+        object-fit: cover;
+        border: 1px solid rgba(109, 57, 17, 0.16);
+        background: rgba(255, 255, 255, 0.92);
+      }
+
+      .army-roster-main,
+      .army-owned-main {
+        min-width: 0;
+        display: grid;
+        gap: 6px;
+      }
+
+      .army-roster-main h3,
+      .army-owned-main h3 {
+        font-size: 1rem;
+      }
+
+      .army-roster-main p,
+      .army-owned-main p,
+      .army-roster-foot span:last-child,
+      .army-power-line span:last-child {
+        color: var(--muted);
+      }
+
+      .army-roster-chip-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .army-roster-chip {
+        display: inline-flex;
+        align-items: center;
+        min-height: 28px;
+        padding: 0 10px;
+        border-radius: 999px;
+        background: rgba(54, 90, 116, 0.08);
+        color: var(--partial);
+        font-size: 0.76rem;
+        font-weight: 700;
+      }
+
+      .army-roster-card.is-owned .army-roster-chip {
+        background: rgba(156, 95, 34, 0.12);
+        color: var(--gold-deep);
+      }
+
+      .army-profile-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .army-inline-note {
+        margin-top: -4px;
+      }
+
       .builder-slot-card,
       .timeline-row-card {
         padding: 18px;
@@ -1434,7 +1539,8 @@
         .info-grid,
         .toolbar-grid,
         .effect-grid,
-        .builder-select-grid {
+        .builder-select-grid,
+        .army-profile-grid {
           grid-template-columns: 1fr;
         }
 
@@ -1460,7 +1566,11 @@
         .army-unit-head,
         .army-role-line,
         .army-list-row,
-        .army-score-line {
+        .army-score-line,
+        .army-roster-head,
+        .army-owned-head,
+        .army-roster-foot,
+        .army-power-line {
           flex-direction: column;
         }
 
@@ -2085,6 +2195,55 @@
               <p class="field-note">対軍勢バランス、対物特化、反撃特化、弱化妨害、防衛耐久を切り替えられます。</p>
             </div>
           </div>
+
+          <details class="section-details" open>
+            <summary>手持ち武将と育成状況</summary>
+            <div class="details-body army-roster-shell">
+              <div class="builder-overview-grid" id="armyRosterSummaryGrid"></div>
+
+              <div class="builder-select-grid">
+                <div class="field">
+                  <label for="armyRosterSearch">手持ち検索</label>
+                  <input
+                    id="armyRosterSearch"
+                    type="search"
+                    inputmode="search"
+                    placeholder="名前、技能、特徴で検索"
+                    aria-label="手持ち武将を検索"
+                  />
+                  <p class="field-note">武将カードをタップすると、手持ちに追加 / 解除します。</p>
+                </div>
+
+                <div class="field">
+                  <label for="armyDefaultInvestment">新規選択時の育成段階</label>
+                  <select id="armyDefaultInvestment" aria-label="新規選択時の育成段階"></select>
+                  <p class="field-note">新しく手持ちに入れた武将へ、ここで選んだ育成段階を初期値として入れます。</p>
+                </div>
+
+                <div class="field">
+                  <label for="armyDefaultEquipment">新規選択時の装備状態</label>
+                  <select id="armyDefaultEquipment" aria-label="新規選択時の装備状態"></select>
+                  <p class="field-note">装備なし / 適正装備あり / 装備はあるが噛み合いにくい、の簡易入力です。</p>
+                </div>
+              </div>
+
+              <div class="button-row">
+                <button class="secondary-button" id="armySelectAllSsrButton" type="button">SSRを全選択</button>
+                <button class="secondary-button" id="armySelectAllSrButton" type="button">SRを全選択</button>
+                <button class="secondary-button" id="armyClearRosterButton" type="button">手持ちを全解除</button>
+              </div>
+
+              <div class="army-roster-grid" id="armyRosterGrid"></div>
+
+              <div class="result-header">
+                <div>
+                  <h2>選択済み武将の現在値</h2>
+                  <p>ここで育成段階と装備状態を入れると、提案編成と推定戦力に反映します。</p>
+                </div>
+              </div>
+              <div class="army-owned-settings" id="armyOwnedSettings"></div>
+            </div>
+          </details>
 
           <details class="section-details">
             <summary>レアリティと実行</summary>
