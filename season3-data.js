@@ -631,6 +631,677 @@ const SEASON3_DATA = {
       }
     }
   ],
+  "toolCatalog": [
+    {
+      "key": "slot-suitability-finder",
+      "name": "スロット適性検索",
+      "category": "search",
+      "priority": "P0",
+      "summary": "主将、副将、補佐に向く武将を探す。",
+      "inputs": [
+        "slot",
+        "objective"
+      ],
+      "outputs": [
+        "rankedHeroes"
+      ]
+    },
+    {
+      "key": "formation-diff-viewer",
+      "name": "陣形差分ビューア",
+      "category": "search",
+      "priority": "P0",
+      "summary": "陣形のバフとデバフ差を比較する。",
+      "inputs": [
+        "formationA",
+        "formationB",
+        "army"
+      ],
+      "outputs": [
+        "statDiff",
+        "powerDiff"
+      ]
+    },
+    {
+      "key": "missing-role-checker",
+      "name": "役割不足チェッカー",
+      "category": "builder",
+      "priority": "P0",
+      "summary": "軍勢編成に足りない役割を出す。",
+      "inputs": [
+        "army"
+      ],
+      "outputs": [
+        "missingRoles",
+        "overloadedRoles",
+        "suggestions"
+      ]
+    },
+    {
+      "key": "swap-suggester",
+      "name": "差し替え候補提案",
+      "category": "builder",
+      "priority": "P0",
+      "summary": "1枠差し替えで改善する候補を出す。",
+      "inputs": [
+        "army",
+        "roster",
+        "objective"
+      ],
+      "outputs": [
+        "swaps",
+        "scoreDelta"
+      ]
+    },
+    {
+      "key": "locked-commander-builder",
+      "name": "主将固定ビルダー",
+      "category": "builder",
+      "priority": "P0",
+      "summary": "指定した主将を固定して残りを自動編成する。",
+      "inputs": [
+        "lockedCommanders",
+        "roster",
+        "objective"
+      ],
+      "outputs": [
+        "armies"
+      ]
+    },
+    {
+      "key": "best-vice-for-commander",
+      "name": "最適副将検索",
+      "category": "builder",
+      "priority": "P0",
+      "summary": "主将に最も合う副将ペアを返す。",
+      "inputs": [
+        "commander",
+        "roster",
+        "objective"
+      ],
+      "outputs": [
+        "vicePairs"
+      ]
+    },
+    {
+      "key": "best-aides-for-unit",
+      "name": "最適補佐検索",
+      "category": "builder",
+      "priority": "P0",
+      "summary": "既存部隊に合う補佐2人を返す。",
+      "inputs": [
+        "unit",
+        "roster"
+      ],
+      "outputs": [
+        "aidePairs"
+      ]
+    },
+    {
+      "key": "commander-shortlist",
+      "name": "主将候補ランキング",
+      "category": "builder",
+      "priority": "P0",
+      "summary": "手持ちの中で強い主将候補を並べる。",
+      "inputs": [
+        "roster",
+        "objective"
+      ],
+      "outputs": [
+        "commanders"
+      ]
+    },
+    {
+      "key": "formation-auto-picker",
+      "name": "陣形自動選定",
+      "category": "builder",
+      "priority": "P0",
+      "summary": "現在の編成に最も合う陣形を選ぶ。",
+      "inputs": [
+        "army",
+        "objective"
+      ],
+      "outputs": [
+        "bestFormation",
+        "alternatives"
+      ]
+    },
+    {
+      "key": "upgrade-impact-preview",
+      "name": "育成後プレビュー",
+      "category": "growth",
+      "priority": "P0",
+      "summary": "武将を育てた後の編成変化を見せる。",
+      "inputs": [
+        "roster",
+        "targetHero",
+        "objective"
+      ],
+      "outputs": [
+        "beforeAfterArmies",
+        "delta"
+      ]
+    },
+    {
+      "key": "gear-allocation-advisor",
+      "name": "装備割り当てアドバイザー",
+      "category": "growth",
+      "priority": "P0",
+      "summary": "装備を誰に渡すと最も得かを出す。",
+      "inputs": [
+        "roster",
+        "equipments",
+        "objective"
+      ],
+      "outputs": [
+        "assignments",
+        "scoreDelta"
+      ]
+    },
+    {
+      "key": "preset-share-link",
+      "name": "編成共有リンク",
+      "category": "share",
+      "priority": "P0",
+      "summary": "編成をURLとして保存共有する。",
+      "inputs": [
+        "armyPreset"
+      ],
+      "outputs": [
+        "shareUrl"
+      ]
+    },
+    {
+      "key": "why-not-selected",
+      "name": "不採用理由表示",
+      "category": "analysis",
+      "priority": "P0",
+      "summary": "採用されなかった理由を説明する。",
+      "inputs": [
+        "hero",
+        "result"
+      ],
+      "outputs": [
+        "reason"
+      ]
+    },
+    {
+      "key": "army-score-explainer",
+      "name": "編成スコア説明",
+      "category": "analysis",
+      "priority": "P0",
+      "summary": "編成スコアの根拠を文章で説明する。",
+      "inputs": [
+        "armyResult"
+      ],
+      "outputs": [
+        "explanation"
+      ]
+    },
+    {
+      "key": "hero-quick-compare",
+      "name": "武将クイック比較",
+      "category": "search",
+      "priority": "P1",
+      "summary": "複数武将を横並びで比較する。",
+      "inputs": [
+        "heroes",
+        "objective"
+      ],
+      "outputs": [
+        "comparisonTable"
+      ]
+    },
+    {
+      "key": "skill-trigger-finder",
+      "name": "技能条件検索",
+      "category": "search",
+      "priority": "P1",
+      "summary": "発動条件から技能を探す。",
+      "inputs": [
+        "trigger"
+      ],
+      "outputs": [
+        "skills",
+        "holders"
+      ]
+    },
+    {
+      "key": "named-mechanic-explorer",
+      "name": "固有ギミック検索",
+      "category": "search",
+      "priority": "P1",
+      "summary": "戦慄などのS3固有ギミックを横断検索する。",
+      "inputs": [
+        "mechanic"
+      ],
+      "outputs": [
+        "heroes",
+        "skills"
+      ]
+    },
+    {
+      "key": "hero-best-use-finder",
+      "name": "武将の最適用途検索",
+      "category": "search",
+      "priority": "P1",
+      "summary": "武将の最適な使い道を返す。",
+      "inputs": [
+        "hero"
+      ],
+      "outputs": [
+        "bestSlots",
+        "bestObjectives"
+      ]
+    },
+    {
+      "key": "timeline-compare",
+      "name": "戦法タイムライン比較",
+      "category": "builder",
+      "priority": "P1",
+      "summary": "編成A/Bのタイムラインを比較する。",
+      "inputs": [
+        "armyA",
+        "armyB"
+      ],
+      "outputs": [
+        "timelineDiff"
+      ]
+    },
+    {
+      "key": "opening-window-analyzer",
+      "name": "開幕解析",
+      "category": "builder",
+      "priority": "P1",
+      "summary": "開幕のバフと妨害の重なりを可視化する。",
+      "inputs": [
+        "army",
+        "formation"
+      ],
+      "outputs": [
+        "openingSummary"
+      ]
+    },
+    {
+      "key": "unit-balance-audit",
+      "name": "部隊バランス監査",
+      "category": "builder",
+      "priority": "P1",
+      "summary": "5部隊の役割と強さの偏りを出す。",
+      "inputs": [
+        "army"
+      ],
+      "outputs": [
+        "unitBreakdown",
+        "balanceIssues"
+      ]
+    },
+    {
+      "key": "bench-upgrade-preview",
+      "name": "ベンチ昇格プレビュー",
+      "category": "builder",
+      "priority": "P1",
+      "summary": "控え武将を入れた場合の変化を見る。",
+      "inputs": [
+        "roster",
+        "hero"
+      ],
+      "outputs": [
+        "newArmies",
+        "delta"
+      ]
+    },
+    {
+      "key": "next-five-upgrades",
+      "name": "次の5育成提案",
+      "category": "growth",
+      "priority": "P1",
+      "summary": "次に育てるべき5件を返す。",
+      "inputs": [
+        "roster",
+        "resources",
+        "objective"
+      ],
+      "outputs": [
+        "priorities"
+      ]
+    },
+    {
+      "key": "one-hero-roi-checker",
+      "name": "単体育成ROI",
+      "category": "growth",
+      "priority": "P1",
+      "summary": "1武将投資の費用対効果を見る。",
+      "inputs": [
+        "hero",
+        "currentState",
+        "targetState"
+      ],
+      "outputs": [
+        "roi",
+        "delta"
+      ]
+    },
+    {
+      "key": "resource-gap-calculator",
+      "name": "資源不足計算",
+      "category": "growth",
+      "priority": "P1",
+      "summary": "目標育成までの不足資源を出す。",
+      "inputs": [
+        "resources",
+        "targets"
+      ],
+      "outputs": [
+        "gaps"
+      ]
+    },
+    {
+      "key": "untrained-gem-finder",
+      "name": "未育成有望株検索",
+      "category": "growth",
+      "priority": "P1",
+      "summary": "未育成だが将来価値の高い武将を探す。",
+      "inputs": [
+        "roster"
+      ],
+      "outputs": [
+        "heroes"
+      ]
+    },
+    {
+      "key": "season-revision-diff",
+      "name": "S3差分ビューア",
+      "category": "season",
+      "priority": "P1",
+      "summary": "S3内revision差分を表示する。",
+      "inputs": [
+        "revisionA",
+        "revisionB"
+      ],
+      "outputs": [
+        "changedHeroes",
+        "changedSkills",
+        "changedFormulas"
+      ]
+    },
+    {
+      "key": "siege-lineup-checker",
+      "name": "攻城監査",
+      "category": "season",
+      "priority": "P1",
+      "summary": "攻城向けに対物不足を確認する。",
+      "inputs": [
+        "army"
+      ],
+      "outputs": [
+        "siegeScore",
+        "warnings"
+      ]
+    },
+    {
+      "key": "defense-lineup-checker",
+      "name": "防衛監査",
+      "category": "season",
+      "priority": "P1",
+      "summary": "防衛向けに耐久と妨害の不足を確認する。",
+      "inputs": [
+        "army"
+      ],
+      "outputs": [
+        "defenseAudit"
+      ]
+    },
+    {
+      "key": "preset-diff-viewer",
+      "name": "プリセット差分表示",
+      "category": "share",
+      "priority": "P1",
+      "summary": "保存編成同士の差分を表示する。",
+      "inputs": [
+        "presetA",
+        "presetB"
+      ],
+      "outputs": [
+        "diff"
+      ]
+    },
+    {
+      "key": "favorite-library",
+      "name": "お気に入り編成ライブラリ",
+      "category": "share",
+      "priority": "P1",
+      "summary": "編成を分類して保存する。",
+      "inputs": [
+        "preset",
+        "labels"
+      ],
+      "outputs": [
+        "library"
+      ]
+    },
+    {
+      "key": "roster-import-helper",
+      "name": "手持ち入力補助",
+      "category": "share",
+      "priority": "P1",
+      "summary": "手持ちの一括入力を楽にする。",
+      "inputs": [
+        "bulkInput"
+      ],
+      "outputs": [
+        "roster"
+      ]
+    },
+    {
+      "key": "share-safe-checker",
+      "name": "共有互換チェック",
+      "category": "share",
+      "priority": "P1",
+      "summary": "共有URLのrevision互換性を確認する。",
+      "inputs": [
+        "shareUrl"
+      ],
+      "outputs": [
+        "compatibility",
+        "warnings"
+      ]
+    },
+    {
+      "key": "confidence-meter",
+      "name": "信頼度メーター",
+      "category": "analysis",
+      "priority": "P1",
+      "summary": "結果の信頼度を表示する。",
+      "inputs": [
+        "result",
+        "inputDensity"
+      ],
+      "outputs": [
+        "confidence"
+      ]
+    },
+    {
+      "key": "power-vs-winrate-split",
+      "name": "戦力対実戦比較",
+      "category": "growth",
+      "priority": "P2",
+      "summary": "戦力最大編成と実戦向き編成を比較する。",
+      "inputs": [
+        "roster"
+      ],
+      "outputs": [
+        "powerBuild",
+        "practicalBuild"
+      ]
+    },
+    {
+      "key": "duplicate-role-warning",
+      "name": "役割重複警告",
+      "category": "growth",
+      "priority": "P2",
+      "summary": "同じ役割への投資偏重を警告する。",
+      "inputs": [
+        "roster",
+        "upgradeStates"
+      ],
+      "outputs": [
+        "warnings"
+      ]
+    },
+    {
+      "key": "patch-impact-analyzer",
+      "name": "更新影響分析",
+      "category": "season",
+      "priority": "P2",
+      "summary": "更新で強くなった編成と弱くなった編成を出す。",
+      "inputs": [
+        "roster",
+        "revisionA",
+        "revisionB"
+      ],
+      "outputs": [
+        "risers",
+        "fallers"
+      ]
+    },
+    {
+      "key": "event-exchange-planner",
+      "name": "イベント交換計画",
+      "category": "season",
+      "priority": "P2",
+      "summary": "交換所の優先順位を出す。",
+      "inputs": [
+        "currency",
+        "roster",
+        "objective"
+      ],
+      "outputs": [
+        "exchangePlan"
+      ]
+    },
+    {
+      "key": "boss-damage-benchmark",
+      "name": "ボスダメ比較",
+      "category": "season",
+      "priority": "P2",
+      "summary": "ボス向け候補編成のダメージを比較する。",
+      "inputs": [
+        "roster",
+        "candidateArmies"
+      ],
+      "outputs": [
+        "damageRanking"
+      ]
+    },
+    {
+      "key": "screenshot-ocr-import",
+      "name": "スクショOCR取込",
+      "category": "share",
+      "priority": "P2",
+      "summary": "画像から所持武将を推定する。",
+      "inputs": [
+        "image"
+      ],
+      "outputs": [
+        "rosterGuess"
+      ]
+    },
+    {
+      "key": "data-freshness-dashboard",
+      "name": "データ鮮度ダッシュボード",
+      "category": "analysis",
+      "priority": "P2",
+      "summary": "どのデータが古いかを管理する。",
+      "inputs": [
+        "revisions",
+        "updatedAt"
+      ],
+      "outputs": [
+        "freshnessStatus"
+      ]
+    },
+    {
+      "key": "battle-log-capture-form",
+      "name": "実戦ログ入力フォーム",
+      "category": "analysis",
+      "priority": "P2",
+      "summary": "実戦ログを収集する。",
+      "inputs": [
+        "battleResult",
+        "screenshots"
+      ],
+      "outputs": [
+        "battleLog"
+      ]
+    },
+    {
+      "key": "formula-calibration-board",
+      "name": "式補正ボード",
+      "category": "analysis",
+      "priority": "P3",
+      "summary": "推定式と実戦値の差を補正する。",
+      "inputs": [
+        "predictions",
+        "actuals"
+      ],
+      "outputs": [
+        "coefficientSuggestions"
+      ]
+    }
+  ],
+  "powerBuilderConfig": {
+    "seasonKey": "s3",
+    "masterRevision": "S3-R1",
+    "gates": {
+      "minOwnedHeroes": 30,
+      "minAvailableHeroes": 25,
+      "minCommanderCandidates": 5
+    },
+    "investmentTierMultipliers": {
+      "trained": 1.0,
+      "usable": 0.8,
+      "untrained": 0.5
+    },
+    "slotReflectionRates": {
+      "commander": 0.4,
+      "vice": 0.2,
+      "aide": 0.1
+    },
+    "basePowerWeights": {
+      "attack": 1.0,
+      "defense": 0.92,
+      "warfare": 1.08,
+      "strategy": 0.88
+    },
+    "slotSuitabilityFloors": {
+      "commander": 0.7,
+      "vice": 0.65,
+      "aide": 0.55
+    },
+    "skillValueWeights": {
+      "attackUp": 1.0,
+      "defenseUp": 0.9,
+      "warfareUp": 1.05,
+      "structureUp": 0.85,
+      "counterUp": 0.7,
+      "critRateUp": 0.7,
+      "critDamageUp": 0.65,
+      "attackSpeedUp": 0.8
+    },
+    "penalties": {
+      "lowCommanderFit": 14,
+      "lowAideFit": 8,
+      "tooManyUntrainedCommanders": 16,
+      "forcedBadSlotUsage": 6
+    },
+    "search": {
+      "commanderSeeds": 12,
+      "unitBeamWidth": 50,
+      "armyBeamWidth": 120,
+      "finalCandidates": 20
+    }
+  },
   "builderWeights": {
     "seasonKey": "s3",
     "masterRevision": "S3-R1",
