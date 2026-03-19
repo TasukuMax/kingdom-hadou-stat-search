@@ -3,14 +3,27 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta
+      name="description"
+      content="キングダム覇道の戦力検索、武将DB、技能DB、相性検索、編成ツール、軍勢自動編成をまとめた非公式のブラウザ完結ツールです。"
+    >
+    <meta name="theme-color" content="#1a130f">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="覇道DB">
+    <meta property="og:title" content="キングダム覇道 戦力・武将DB・相性検索ツール">
+    <meta
+      property="og:description"
+      content="戦力検索、武将DB、技能DB、相性検索、編成ツール、軍勢自動編成を1つにまとめた非公式ツール。"
+    >
     <link rel="icon" href="data:,">
+    <link rel="manifest" href="./manifest.webmanifest">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
       href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=Noto+Serif+JP:wght@500;700;800&display=swap"
       rel="stylesheet"
     >
-    <title>キングダム覇道 戦力・DB・相性検索</title>
+    <title>キングダム覇道 戦力・武将DB・相性検索ツール</title>
     <style>
       :root {
         --bg: #100d0b;
@@ -373,6 +386,136 @@
         padding: 22px;
       }
 
+      .skip-link {
+        position: fixed;
+        top: 12px;
+        left: 50%;
+        z-index: 80;
+        min-height: 44px;
+        padding: 0 16px;
+        border-radius: 999px;
+        transform: translate(-50%, -120%);
+        display: inline-flex;
+        align-items: center;
+        background: rgba(255, 248, 234, 0.96);
+        color: var(--ink);
+        box-shadow: 0 16px 30px rgba(18, 10, 6, 0.26);
+        transition: transform 180ms ease;
+      }
+
+      .skip-link:focus {
+        transform: translate(-50%, 0);
+      }
+
+      .status-toast {
+        position: fixed;
+        right: 18px;
+        bottom: 92px;
+        z-index: 70;
+        min-width: min(420px, calc(100vw - 24px));
+        max-width: min(420px, calc(100vw - 24px));
+        padding: 14px 16px;
+        border-radius: 18px;
+        border: 1px solid rgba(243, 212, 160, 0.24);
+        background:
+          linear-gradient(180deg, rgba(31, 22, 16, 0.96), rgba(22, 16, 12, 0.98));
+        color: #fff4dc;
+        box-shadow:
+          0 20px 44px rgba(0, 0, 0, 0.34),
+          inset 0 1px 0 rgba(255, 238, 209, 0.08);
+        opacity: 0;
+        pointer-events: none;
+        transform: translateY(12px);
+        transition:
+          opacity 180ms ease,
+          transform 180ms ease;
+      }
+
+      .status-toast.is-visible {
+        opacity: 1;
+        transform: translateY(0);
+      }
+
+      .panel-header,
+      .result-header-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+        align-items: flex-start;
+      }
+
+      .panel-header > div:first-child,
+      .result-header-head > div:first-child,
+      .result-header > div:first-child {
+        min-width: 0;
+        flex: 1 1 auto;
+      }
+
+      .panel-header-actions,
+      .result-header-actions {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .inline-tip {
+        position: relative;
+      }
+
+      .inline-tip summary {
+        list-style: none;
+        width: 34px;
+        height: 34px;
+        border-radius: 999px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        border: 1px solid rgba(109, 57, 17, 0.14);
+        background: rgba(255, 255, 255, 0.78);
+        color: var(--gold-deep);
+        font-weight: 900;
+        box-shadow: var(--shadow-soft);
+      }
+
+      .inline-tip summary::-webkit-details-marker {
+        display: none;
+      }
+
+      .inline-tip[open] summary {
+        background: rgba(156, 95, 34, 0.12);
+        border-color: rgba(156, 95, 34, 0.26);
+      }
+
+      .inline-tip-popover {
+        position: absolute;
+        top: calc(100% + 8px);
+        right: 0;
+        z-index: 12;
+        width: min(340px, calc(100vw - 44px));
+        padding: 14px 16px;
+        border-radius: 18px;
+        border: 1px solid rgba(109, 57, 17, 0.14);
+        background:
+          linear-gradient(180deg, rgba(255, 252, 246, 0.98), rgba(243, 233, 220, 0.94));
+        box-shadow: var(--shadow-soft);
+      }
+
+      .inline-tip-popover strong {
+        display: block;
+        font-size: 0.9rem;
+        color: #261b14;
+      }
+
+      .inline-tip-popover p {
+        margin-top: 6px;
+        color: var(--muted);
+        line-height: 1.7;
+        font-size: 0.82rem;
+      }
+
       .panel-header p {
         margin-top: 8px;
         color: var(--muted);
@@ -424,6 +567,7 @@
 
       input,
       select,
+      textarea,
       button {
         font: inherit;
         transition:
@@ -435,10 +579,10 @@
       }
 
       input[type="text"],
-      select {
+      input[type="search"],
+      select,
+      textarea {
         width: 100%;
-        min-height: 56px;
-        padding: 0 14px;
         border-radius: 16px;
         border: 1px solid rgba(110, 82, 43, 0.22);
         background:
@@ -447,6 +591,20 @@
         box-shadow:
           inset 0 1px 0 rgba(255, 255, 255, 0.72),
           0 8px 22px rgba(38, 25, 16, 0.06);
+      }
+
+      input[type="text"],
+      input[type="search"],
+      select {
+        min-height: 56px;
+        padding: 0 14px;
+      }
+
+      textarea {
+        min-height: 176px;
+        padding: 14px;
+        resize: vertical;
+        line-height: 1.6;
       }
 
       input[type="text"]:focus,
@@ -509,6 +667,12 @@
         color: var(--ink);
         border: 1px solid rgba(125, 89, 47, 0.22);
         box-shadow: var(--shadow-soft);
+      }
+
+      button:disabled {
+        opacity: 0.52;
+        cursor: not-allowed;
+        transform: none;
       }
 
       .utility-toggle.is-active {
@@ -720,6 +884,41 @@
 
       .info-card a {
         color: var(--gold-deep);
+      }
+
+      .service-kicker {
+        margin-bottom: 8px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        font-size: 0.72rem;
+        color: var(--gold-deep);
+      }
+
+      .service-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 14px;
+      }
+
+      .trust-list {
+        margin: 0;
+        padding-left: 18px;
+        display: grid;
+        gap: 8px;
+        color: var(--muted);
+        line-height: 1.7;
+      }
+
+      .service-meta {
+        margin-top: 12px;
+        color: var(--muted);
+        font-size: 0.88rem;
+        line-height: 1.7;
+      }
+
+      .backup-input {
+        display: none;
       }
 
       .results {
@@ -1074,6 +1273,119 @@
         font-weight: 700;
       }
 
+      .visual-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        min-height: 30px;
+        padding: 5px 10px 5px 6px;
+        border-radius: 999px;
+        border: 1px solid rgba(109, 57, 17, 0.12);
+        background: rgba(255, 255, 255, 0.78);
+        color: #2a1e16;
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.76);
+      }
+
+      .visual-badge.is-compact {
+        min-height: 26px;
+        padding: 4px 8px 4px 5px;
+        gap: 6px;
+      }
+
+      .visual-badge.is-icon-only {
+        padding-right: 6px;
+      }
+
+      .visual-badge-icon {
+        width: 18px;
+        height: 18px;
+        border-radius: 999px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(255, 255, 255, 0.82);
+        color: currentColor;
+        font-size: 0.68rem;
+        font-weight: 900;
+        line-height: 1;
+      }
+
+      .visual-badge-label {
+        font-size: 0.79rem;
+        font-weight: 700;
+        line-height: 1.2;
+      }
+
+      .visual-badge.is-highlight,
+      .compare-stat-row.is-best,
+      .compare-metric-grid .is-best {
+        border-color: rgba(156, 95, 34, 0.26);
+        background: rgba(156, 95, 34, 0.12);
+      }
+
+      .visual-badge.tone-default {
+        color: #574a3f;
+      }
+
+      .visual-badge.tone-attack,
+      .visual-badge.tone-feature-crit {
+        color: #8f3d20;
+        background: rgba(190, 74, 55, 0.1);
+      }
+
+      .visual-badge.tone-defense,
+      .visual-badge.tone-feature-guard {
+        color: #365a74;
+        background: rgba(86, 122, 157, 0.12);
+      }
+
+      .visual-badge.tone-war,
+      .visual-badge.tone-objective-siege,
+      .visual-badge.tone-feature-siege,
+      .visual-badge.tone-feature-counter {
+        color: var(--gold-deep);
+        background: rgba(201, 151, 70, 0.14);
+      }
+
+      .visual-badge.tone-strategy,
+      .visual-badge.tone-feature-cleanse,
+      .visual-badge.tone-feature-strip,
+      .visual-badge.tone-feature-debuff,
+      .visual-badge.tone-feature-slow {
+        color: #2e596d;
+        background: rgba(54, 90, 116, 0.12);
+      }
+
+      .visual-badge.tone-type-fight,
+      .visual-badge.tone-objective-pvp,
+      .visual-badge.tone-feature-buff,
+      .visual-badge.tone-feature-speed,
+      .visual-badge.tone-feature-chain {
+        color: #1f4b30;
+        background: rgba(81, 155, 101, 0.14);
+      }
+
+      .visual-badge.tone-type-support,
+      .visual-badge.tone-feature-heal,
+      .visual-badge.tone-feature-utility,
+      .visual-badge.tone-feature-gather,
+      .visual-badge.tone-objective-gathering {
+        color: #245650;
+        background: rgba(62, 141, 123, 0.14);
+      }
+
+      .visual-badge.tone-type-guard,
+      .visual-badge.tone-objective-defense {
+        color: #37516a;
+        background: rgba(93, 116, 148, 0.14);
+      }
+
+      .visual-badge.tone-type-disrupt,
+      .visual-badge.tone-feature-dot {
+        color: #7a4320;
+        background: rgba(201, 151, 70, 0.12);
+      }
+
       .stat-item.is-top-two {
         border-color: rgba(109, 57, 17, 0.18);
       }
@@ -1396,6 +1708,70 @@
         display: flex;
         flex-wrap: wrap;
         gap: 10px;
+      }
+
+      .compare-radar-wrap {
+        margin-top: 14px;
+        padding: 12px;
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.68);
+        border: 1px solid rgba(125, 89, 47, 0.1);
+      }
+
+      .compare-radar {
+        width: 100%;
+        height: auto;
+        display: block;
+      }
+
+      .compare-radar-grid,
+      .compare-radar-spoke {
+        fill: none;
+        stroke: rgba(109, 57, 17, 0.12);
+        stroke-width: 1;
+      }
+
+      .compare-radar-shape {
+        fill: rgba(156, 95, 34, 0.2);
+        stroke: rgba(143, 61, 32, 0.72);
+        stroke-width: 2;
+      }
+
+      .compare-radar-core {
+        fill: rgba(143, 61, 32, 0.72);
+      }
+
+      .compare-radar-label {
+        fill: var(--muted);
+        font-size: 10px;
+        font-weight: 700;
+      }
+
+      .compare-metric-grid .is-best dd,
+      .compare-stat-row.is-best strong {
+        color: var(--gold-deep);
+      }
+
+      .compare-stat-list {
+        margin-top: 14px;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      .compare-stat-row {
+        padding: 10px 12px;
+        border-radius: 16px;
+        border: 1px solid rgba(125, 89, 47, 0.1);
+        background: rgba(255, 255, 255, 0.7);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+      }
+
+      .compare-stat-row strong {
+        font-size: 1rem;
       }
 
       .section-details {
@@ -1794,6 +2170,46 @@
         margin-top: -4px;
       }
 
+      .field-span-2,
+      .field-span-3 {
+        align-self: stretch;
+      }
+
+      .field-span-2 {
+        grid-column: span 2;
+      }
+
+      .field-span-3 {
+        grid-column: 1 / -1;
+      }
+
+      .army-import-reference {
+        display: grid;
+        gap: 10px;
+        padding: 16px 18px;
+        border-radius: 20px;
+        border: 1px solid rgba(109, 57, 17, 0.14);
+        background:
+          linear-gradient(180deg, rgba(255, 251, 244, 0.88), rgba(243, 232, 214, 0.72));
+        box-shadow: var(--shadow-soft);
+      }
+
+      .army-import-reference strong {
+        font-size: 0.96rem;
+      }
+
+      .army-import-reference ul {
+        margin: 0;
+      }
+
+      .army-import-reference a {
+        color: var(--partial);
+      }
+
+      .army-import-summary-grid {
+        margin-top: 16px;
+      }
+
       .builder-slot-card,
       .timeline-row-card {
         padding: 18px;
@@ -2103,6 +2519,357 @@
         background: rgba(84, 46, 15, 0.45);
       }
 
+      .builder-timeline-shell {
+        display: grid;
+        gap: 14px;
+      }
+
+      .builder-timeline-axis {
+        display: grid;
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      .builder-timeline-axis span {
+        padding: 7px 0;
+        border-radius: 999px;
+        text-align: center;
+        font-size: 0.78rem;
+        color: var(--muted);
+        background: rgba(255, 255, 255, 0.78);
+        border: 1px solid rgba(109, 57, 17, 0.12);
+      }
+
+      .builder-timeline-rows {
+        display: grid;
+        gap: 12px;
+      }
+
+      .builder-timeline-row {
+        padding: 18px;
+        border-radius: 24px;
+        border: 1px solid rgba(109, 57, 17, 0.12);
+        background:
+          linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(244, 235, 220, 0.82));
+        box-shadow: var(--shadow-soft);
+        text-align: left;
+        color: inherit;
+      }
+
+      .builder-timeline-row.is-active {
+        border-color: rgba(156, 95, 34, 0.34);
+        background:
+          linear-gradient(180deg, rgba(251, 241, 220, 0.98), rgba(241, 228, 205, 0.9));
+      }
+
+      .builder-timeline-row-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 14px;
+        align-items: flex-start;
+        margin-bottom: 12px;
+      }
+
+      .builder-timeline-source {
+        font-size: 0.74rem;
+        letter-spacing: 0.06em;
+        color: var(--muted);
+      }
+
+      .builder-timeline-title {
+        display: block;
+        margin-top: 4px;
+        font-size: 1.02rem;
+      }
+
+      .builder-timeline-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        justify-content: flex-end;
+      }
+
+      .builder-timeline-meta span {
+        min-height: 28px;
+        padding: 0 10px;
+        border-radius: 999px;
+        display: inline-flex;
+        align-items: center;
+        background: rgba(255, 255, 255, 0.72);
+        border: 1px solid rgba(109, 57, 17, 0.1);
+        color: var(--muted);
+        font-size: 0.76rem;
+      }
+
+      .builder-timeline-track {
+        position: relative;
+        min-height: calc(var(--lanes) * 28px + 18px);
+        border-radius: 20px;
+        border: 1px solid rgba(109, 57, 17, 0.12);
+        overflow: hidden;
+        background:
+          linear-gradient(to right, rgba(109, 57, 17, 0.08) 1px, transparent 1px) 0 0 / calc(100% / 5) 100%,
+          rgba(243, 234, 217, 0.74);
+      }
+
+      .builder-timeline-bar {
+        position: absolute;
+        top: calc(8px + var(--lane) * 28px);
+        left: calc((var(--start) / 50) * 100% + 5px);
+        width: max(calc(((var(--end) - var(--start)) / 50) * 100% - 10px), 54px);
+        height: 22px;
+        border-radius: 999px;
+        display: inline-flex;
+        align-items: center;
+        padding: 0 10px;
+        font-size: 0.74rem;
+        font-weight: 700;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        border: 1px solid rgba(255, 255, 255, 0.22);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
+      }
+
+      .builder-timeline-bar.is-estimated {
+        border-style: dashed;
+      }
+
+      .builder-timeline-bar.tone-support,
+      .builder-board-cell.tone-support,
+      .builder-effect-item.tone-support {
+        background: rgba(81, 155, 101, 0.22);
+        color: #1f4b30;
+      }
+
+      .builder-timeline-bar.tone-damage,
+      .builder-board-cell.tone-damage,
+      .builder-effect-item.tone-damage {
+        background: rgba(190, 74, 55, 0.24);
+        color: #6b2217;
+      }
+
+      .builder-timeline-bar.tone-debuff,
+      .builder-board-cell.tone-debuff,
+      .builder-effect-item.tone-debuff {
+        background: rgba(86, 122, 157, 0.2);
+        color: #284d69;
+      }
+
+      .builder-timeline-bar.tone-heal,
+      .builder-board-cell.tone-heal,
+      .builder-effect-item.tone-heal {
+        background: rgba(62, 141, 123, 0.2);
+        color: #20524a;
+      }
+
+      .builder-timeline-bar.tone-utility,
+      .builder-board-cell.tone-utility,
+      .builder-effect-item.tone-utility {
+        background: rgba(156, 95, 34, 0.18);
+        color: var(--gold-deep);
+      }
+
+      .builder-timeline-now {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 3px;
+        left: calc((var(--at) / 50) * 100%);
+        background: rgba(54, 90, 116, 0.72);
+        box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.84);
+      }
+
+      .builder-timeline-row-foot {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 12px;
+      }
+
+      .builder-board-stage {
+        display: grid;
+        gap: 14px;
+      }
+
+      .builder-board-stage-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        align-items: center;
+        padding: 14px 16px;
+        border-radius: 20px;
+        background:
+          linear-gradient(180deg, rgba(255, 255, 255, 0.86), rgba(244, 235, 220, 0.8));
+        border: 1px solid rgba(109, 57, 17, 0.12);
+      }
+
+      .builder-board-stage-head strong {
+        font-size: 0.98rem;
+      }
+
+      .builder-board-stage-head span {
+        color: var(--muted);
+        font-size: 0.8rem;
+      }
+
+      .builder-board-stage-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+      }
+
+      .builder-board-faction {
+        padding: 16px;
+        border-radius: 24px;
+        color: #f4efe7;
+        box-shadow: 0 18px 30px rgba(20, 16, 12, 0.16);
+      }
+
+      .builder-board-faction.is-friendly {
+        background:
+          linear-gradient(180deg, rgba(38, 72, 114, 0.98), rgba(21, 46, 76, 0.98));
+      }
+
+      .builder-board-faction.is-enemy {
+        background:
+          linear-gradient(180deg, rgba(112, 40, 34, 0.98), rgba(68, 22, 18, 0.98));
+      }
+
+      .builder-board-faction-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        align-items: center;
+        margin-bottom: 12px;
+      }
+
+      .builder-board-faction-head span {
+        color: rgba(244, 239, 231, 0.72);
+        font-size: 0.78rem;
+      }
+
+      .builder-board-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px;
+      }
+
+      .builder-board-cell {
+        position: relative;
+        aspect-ratio: 1;
+        border-radius: 14px;
+        padding: 8px;
+        display: grid;
+        align-content: space-between;
+        gap: 4px;
+        overflow: hidden;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+      }
+
+      .builder-board-cell.is-occupied {
+        background: rgba(255, 255, 255, 0.08);
+      }
+
+      .builder-board-cell.is-empty {
+        place-items: center;
+        background: rgba(0, 0, 0, 0.12);
+        color: rgba(244, 239, 231, 0.48);
+      }
+
+      .builder-board-cell.is-self {
+        outline: 3px solid rgba(157, 210, 140, 0.72);
+      }
+
+      .builder-board-cell.is-target {
+        outline: 3px solid rgba(255, 225, 155, 0.72);
+      }
+
+      .builder-board-cell button {
+        position: absolute;
+        inset: 0;
+        border: 0;
+        background: transparent;
+      }
+
+      .builder-board-slot {
+        font-size: 0.68rem;
+        color: rgba(244, 239, 231, 0.62);
+      }
+
+      .builder-board-name {
+        font-size: 0.92rem;
+        font-weight: 700;
+        line-height: 1.15;
+      }
+
+      .builder-board-note {
+        font-size: 0.7rem;
+        line-height: 1.35;
+        color: rgba(244, 239, 231, 0.78);
+      }
+
+      .builder-board-effect {
+        min-height: 20px;
+        padding: 0 8px;
+        border-radius: 999px;
+        display: inline-flex;
+        align-items: center;
+        width: fit-content;
+        max-width: 100%;
+        background: rgba(255, 255, 255, 0.14);
+        color: rgba(244, 239, 231, 0.94);
+        font-size: 0.68rem;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .builder-effect-stream {
+        display: grid;
+        gap: 10px;
+      }
+
+      .builder-effect-stream-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        align-items: center;
+        padding: 12px 14px;
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.72);
+        border: 1px solid rgba(109, 57, 17, 0.1);
+      }
+
+      .builder-effect-stream-head span {
+        color: var(--muted);
+        font-size: 0.8rem;
+      }
+
+      .builder-effect-item {
+        padding: 14px 16px;
+        border-radius: 20px;
+        border: 1px solid rgba(109, 57, 17, 0.1);
+        background: rgba(255, 255, 255, 0.84);
+      }
+
+      .builder-effect-item-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        align-items: center;
+        margin-bottom: 10px;
+      }
+
+      .builder-effect-item-head span {
+        color: var(--muted);
+        font-size: 0.78rem;
+      }
+
+      .builder-effect-item .army-list-row + .army-list-row {
+        margin-top: 8px;
+      }
+
       .card-actions {
         margin-top: 14px;
         display: flex;
@@ -2187,6 +2954,51 @@
         color: var(--gold-deep);
         border-color: rgba(156, 95, 34, 0.3);
         background: rgba(156, 95, 34, 0.12);
+      }
+
+      .card-meta-strip {
+        margin-top: 10px;
+      }
+
+      .search-evidence-box {
+        margin-top: 14px;
+        padding: 12px 14px;
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.62);
+        border: 1px solid rgba(125, 89, 47, 0.1);
+      }
+
+      .search-evidence-list {
+        display: grid;
+        gap: 8px;
+      }
+
+      .search-evidence-row {
+        display: grid;
+        grid-template-columns: 84px minmax(0, 1fr);
+        gap: 8px;
+        align-items: start;
+      }
+
+      .search-evidence-label {
+        color: var(--muted);
+        font-size: 0.76rem;
+        font-weight: 700;
+      }
+
+      .search-evidence-text {
+        min-width: 0;
+        color: #3a2a1f;
+        font-size: 0.82rem;
+        line-height: 1.65;
+      }
+
+      .match-highlight {
+        padding: 0 3px;
+        border-radius: 6px;
+        background: rgba(241, 206, 118, 0.42);
+        color: #7a4320;
+        font-weight: 700;
       }
 
       .personality-chip {
@@ -2467,6 +3279,11 @@
           grid-template-columns: 1fr;
         }
 
+        .field-span-2,
+        .field-span-3 {
+          grid-column: auto;
+        }
+
         .button-row button {
           flex: 1 1 0;
         }
@@ -2475,8 +3292,22 @@
           grid-template-columns: repeat(2, minmax(0, 1fr));
         }
 
+        .builder-timeline-row-head,
+        .builder-board-stage-head,
+        .builder-board-faction-head,
+        .builder-effect-stream-head,
+        .builder-effect-item-head,
         .timeline-row-head {
           flex-direction: column;
+          align-items: flex-start;
+        }
+
+        .builder-board-stage-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .builder-timeline-meta {
+          justify-content: flex-start;
         }
       }
 
@@ -2499,6 +3330,15 @@
 
         .character-thumb-wrap {
           justify-content: flex-start;
+        }
+
+        .compare-stat-list,
+        .search-evidence-row {
+          grid-template-columns: 1fr;
+        }
+
+        .builder-timeline-axis {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
         }
       }
 
@@ -2524,6 +3364,13 @@
         .result-header,
         .card-header {
           flex-direction: column;
+        }
+
+        .panel-header,
+        .panel-header-actions,
+        .result-header-actions {
+          flex-direction: column;
+          align-items: stretch;
         }
 
         .chip-label {
@@ -2623,11 +3470,23 @@
 
         .journey-actions .mini-button,
         .button-row .secondary-button,
+        .service-actions .mini-button,
+        .service-actions .secondary-button,
         .favorite-button,
         .card-actions .mini-button,
         .compare-actions .mini-button {
           width: 100%;
           justify-content: center;
+        }
+
+        .inline-tip summary {
+          align-self: flex-start;
+        }
+
+        .inline-tip-popover {
+          left: 0;
+          right: auto;
+          width: min(100vw - 44px, 320px);
         }
 
         .timeline-axis {
@@ -2649,9 +3508,11 @@
     </style>
   </head>
   <body>
+    <a class="skip-link" href="#viewNavAnchor">機能ナビへ移動</a>
+    <div class="status-toast" id="statusToast" role="status" aria-live="polite" aria-atomic="true"></div>
     <main class="page">
       <section class="hero">
-        <p class="eyebrow">Kingdom Hadou / Battle Power + DB + Synergy</p>
+        <p class="eyebrow">キングダム覇道 / 戦力・DB・相性検索</p>
         <h1>キングダム覇道 戦力・DB・相性検索</h1>
         <p>
           まず使いたい機能にすぐ入れて、必要な説明だけ後から開ける形に整理したモバイル優先版です。
@@ -2689,9 +3550,64 @@
           <span>SR <strong id="srCount"></strong></span>
           <span>技能 <strong id="skillCount"></strong></span>
           <span>データソース <strong id="sourceCount"></strong></span>
-          <span>Season <strong id="seasonLabel"></strong></span>
-          <span>Revision <strong id="seasonRevision"></strong></span>
+          <span>シーズン <strong id="seasonLabel"></strong></span>
+          <span>データ版 <strong id="seasonRevision"></strong></span>
           <span>更新基準 <strong id="seasonUpdatedAt"></strong></span>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <div>
+            <h2>目的・共有・安心ガイド</h2>
+            <p>初見で迷わない入口、同じ条件を再現しやすい共有、非公式ツールとしての前提をまとめました。</p>
+          </div>
+        </div>
+        <div class="info-grid">
+          <article class="info-card">
+            <p class="service-kicker">目的から選ぶ</p>
+            <h2>いまやりたいことに合わせる</h2>
+            <ul class="bullet-list">
+              <li>調べる: 戦力検索 / 武将DB / 技能DB</li>
+              <li>組む: 相性検索 / 編成ツールβ</li>
+              <li>軍勢: 軍勢自動編成β / S3ハブ</li>
+            </ul>
+            <div class="service-actions">
+              <button class="mini-button" type="button" data-switch-view="power">戦力検索</button>
+              <button class="mini-button" type="button" data-switch-view="synergy">相性検索</button>
+              <button class="mini-button" type="button" data-switch-view="army">軍勢自動編成</button>
+              <button class="mini-button" type="button" data-switch-view="board">S3ハブ</button>
+            </div>
+          </article>
+          <article class="info-card">
+            <p class="service-kicker">安心して使う</p>
+            <h2>非公式 / ローカル保存 / 推定値の扱い</h2>
+            <ul class="trust-list">
+              <li>本サイトは非公式ツールです。ゲーム・画像・名称などの権利は各権利者に帰属します。</li>
+              <li>お気に入り、比較、手持ち入力はブラウザ内に保存し、共有ボタンを押さない限り外部へ送りません。</li>
+              <li>編成ツールの秒数には確定値と推定値が混在するため、画面内の前提と根拠表示を確認して使ってください。</li>
+              <li>シーズン / データ版 / 更新基準は上部メタと S3ハブで追えるようにしています。</li>
+            </ul>
+            <p class="service-meta" id="trustSnapshot"></p>
+            <div class="service-actions">
+              <button class="mini-button" type="button" data-switch-view="board">更新履歴とソースを見る</button>
+            </div>
+          </article>
+          <article class="info-card">
+            <p class="service-kicker">共有・再現性</p>
+            <h2>今の条件をそのまま渡す</h2>
+            <p class="field-note" id="shareScopeNote"></p>
+            <div class="service-actions">
+              <button class="mini-button" id="copyStateLinkButton" type="button">現在のタブを共有</button>
+              <button class="mini-button" id="downloadBackupButton" type="button">JSONを書き出す</button>
+              <button class="mini-button" id="importBackupButton" type="button">JSONを読み込む</button>
+            </div>
+            <input class="backup-input" id="backupImportInput" type="file" accept="application/json,.json">
+            <p class="service-meta" id="backupMeta"></p>
+            <div class="service-actions">
+              <button class="secondary-button" id="clearBrowserDataButton" type="button">ブラウザ保存を初期化</button>
+            </div>
+          </article>
         </div>
       </section>
 
@@ -2731,10 +3647,10 @@
           </article>
           <article class="journey-card">
             <span class="journey-eyebrow">上位層</span>
-            <h3>軍勢コンセプトで詰めたい</h3>
+            <h3>最適化方針で詰めたい</h3>
             <p>軍勢自動編成とS3ハブを往復して、役割不足や今週の強化先まで詰める流れです。</p>
             <ul class="bullet-list">
-              <li>対物 / 反撃 / 妨害などの軍勢コンセプトを切替</li>
+              <li>対人勝率 / 攻城DPS / 妨害先手などの最適化方針を切替</li>
               <li>S3ハブで目的別の注目候補を再確認</li>
             </ul>
             <div class="journey-actions">
@@ -2752,41 +3668,46 @@
             <p>公式ガイドと攻略記事で繰り返し重視される判断を、そのまま絞り込みプリセットにしています。</p>
           </div>
         </div>
-        <div class="preset-grid">
-          <article class="preset-card">
-            <span class="journey-eyebrow">編成の基本</span>
-            <h3>主将候補を先に見る</h3>
-            <p>主将は部隊の軸なので、まず主将適性順で有力候補を掴みます。</p>
-            <button class="mini-button" type="button" data-apply-research-preset="commander">主将候補を開く</button>
-          </article>
-          <article class="preset-card">
-            <span class="journey-eyebrow">連鎖重視</span>
-            <h3>副将向きから詰める</h3>
-            <p>連鎖率と差し込み価値を先に見て、副将候補を広く洗います。</p>
-            <button class="mini-button" type="button" data-apply-research-preset="vice">副将候補を開く</button>
-          </article>
-          <article class="preset-card">
-            <span class="journey-eyebrow">補助技能</span>
-            <h3>補佐向きから探す</h3>
-            <p>補佐は技能価値が重要なので、補佐適性順で支援役を先に見ます。</p>
-            <button class="mini-button" type="button" data-apply-research-preset="aide">補佐候補を開く</button>
-          </article>
-          <article class="preset-card">
-            <span class="journey-eyebrow">攻城戦</span>
-            <h3>対物特化を洗う</h3>
-            <p>攻城戦・砦戦向けに、対物タグと攻城用途を持つ候補へ絞ります。</p>
-            <button class="mini-button" type="button" data-apply-research-preset="siege">攻城候補を開く</button>
-          </article>
-          <article class="preset-card">
-            <span class="journey-eyebrow">低レア活用</span>
-            <h3>SR補助候補を探す</h3>
-            <p>低レアでも使いやすい補助役を、SRかつ補佐向きでまとめて見ます。</p>
-            <button class="mini-button" type="button" data-apply-research-preset="srAide">SR候補を開く</button>
-          </article>
-        </div>
+        <details class="section-details">
+          <summary>研究ベースのプリセットを開く</summary>
+          <div class="details-body">
+            <div class="preset-grid">
+              <article class="preset-card">
+                <span class="journey-eyebrow">編成の基本</span>
+                <h3>主将候補を先に見る</h3>
+                <p>主将は部隊の軸なので、まず主将適性順で有力候補を掴みます。</p>
+                <button class="mini-button" type="button" data-apply-research-preset="commander">主将候補を開く</button>
+              </article>
+              <article class="preset-card">
+                <span class="journey-eyebrow">連鎖重視</span>
+                <h3>副将向きから詰める</h3>
+                <p>連鎖率と差し込み価値を先に見て、副将候補を広く洗います。</p>
+                <button class="mini-button" type="button" data-apply-research-preset="vice">副将候補を開く</button>
+              </article>
+              <article class="preset-card">
+                <span class="journey-eyebrow">補助技能</span>
+                <h3>補佐向きから探す</h3>
+                <p>補佐は技能価値が重要なので、補佐適性順で支援役を先に見ます。</p>
+                <button class="mini-button" type="button" data-apply-research-preset="aide">補佐候補を開く</button>
+              </article>
+              <article class="preset-card">
+                <span class="journey-eyebrow">攻城戦</span>
+                <h3>対物特化を洗う</h3>
+                <p>攻城戦・砦戦向けに、対物タグと攻城用途を持つ候補へ絞ります。</p>
+                <button class="mini-button" type="button" data-apply-research-preset="siege">攻城候補を開く</button>
+              </article>
+              <article class="preset-card">
+                <span class="journey-eyebrow">低レア活用</span>
+                <h3>SR補助候補を探す</h3>
+                <p>低レアでも使いやすい補助役を、SRかつ補佐向きでまとめて見ます。</p>
+                <button class="mini-button" type="button" data-apply-research-preset="srAide">SR候補を開く</button>
+              </article>
+            </div>
+          </div>
+        </details>
       </section>
 
-      <section class="panel view-nav">
+      <section class="panel view-nav" id="viewNavAnchor">
         <div class="tab-list">
           <button class="tab-button" type="button" data-view-tab="power"><span class="tab-label-full">戦力検索</span><span class="tab-label-short">検索</span></button>
           <button class="tab-button" type="button" data-view-tab="character"><span class="tab-label-full">武将DB</span><span class="tab-label-short">武将</span></button>
@@ -2891,7 +3812,7 @@
           <div class="details-body">
             <ul class="bullet-list">
               <li>1項目検索は 1位一致 / 2位一致、2項目検索は 完全一致 / 逆順一致 で分かれます。</li>
-              <li>技能条件を入れた場合は、同じ技能を持つ武将どうしがまとまる並びになります。</li>
+                <li>技能条件を入れた場合は、同じ技能を持つ武将同士がまとまる並びになります。</li>
               <li>特徴タグは 対物 / 弱化 / 回復 / 反撃 などを AND 条件で絞ります。</li>
               <li>連鎖率順は、指定主将に対する副将連鎖率が最優先です。</li>
             </ul>
@@ -3192,6 +4113,16 @@
                 連鎖順、連鎖率、技能条件、重複技能、列依存をまとめて確認できます。
               </p>
             </div>
+            <div class="panel-header-actions">
+              <details class="inline-tip">
+                <summary aria-label="編成ツールの前提を表示">?</summary>
+                <div class="inline-tip-popover">
+                  <strong>表示の見方</strong>
+                  <p>タイムラインは前半20秒の噛み合いを重視しています。横列・縦列支援、恐怖や解除が誰に間に合うかを見比べる用途です。</p>
+                  <p>注釈はここにまとめ、本文側は操作に必要な情報だけ残しています。スマホではまず候補を触り、必要な時だけ前提を開く想定です。</p>
+                </div>
+              </details>
+            </div>
           </div>
 
           <details class="section-details">
@@ -3209,7 +4140,7 @@
             <div class="field">
               <label for="builderFormation">陣形</label>
               <select id="builderFormation" aria-label="陣形"></select>
-              <p class="field-note">戦法の発動タイミングと、部隊の置き場所を決めます。</p>
+              <p class="field-note">戦法の発動タイミングと、部隊の置き場所を決めます。基本陣は十字形で表示します。</p>
             </div>
 
             <div class="field">
@@ -3282,14 +4213,14 @@
 
                 <div class="field">
                   <label for="builderPreviewSecond">表示秒数</label>
-                  <input id="builderPreviewSecond" type="range" min="0" max="40" step="1" value="20">
-                  <p class="field-note" id="builderPreviewSecondLabel">20秒時点の3×3盤面を表示します。</p>
+                  <input id="builderPreviewSecond" type="range" min="0" max="50" step="1" value="20">
+                  <p class="field-note" id="builderPreviewSecondLabel">20秒時点の盤面と継続効果を表示します。</p>
                 </div>
 
                 <div class="field">
                   <strong>盤面の見方</strong>
                   <div class="legend-row" id="builderBoardLegend"></div>
-                  <p class="field-note">時間帯カードを押すとその秒へ移動し、敵マスを押すと単体対象の基準も切り替えられます。</p>
+                  <p class="field-note">タイムライン行を押すとその秒へ移動し、敵マスを押すと単体対象の基準も切り替えられます。</p>
                 </div>
               </div>
             </div>
@@ -3344,7 +4275,7 @@
           <div class="result-header">
             <div>
               <h2>5枠の詳細</h2>
-              <p>各枠の戦法、範囲タグ、条件成立中の技能 / 条件未達の技能、連鎖率を slot ごとに確認します。</p>
+              <p>各枠の戦法、範囲タグ、条件成立中の技能 / 条件未達の技能、連鎖率を各スロットごとに確認できます。</p>
             </div>
           </div>
           <div class="builder-slot-grid" id="builderSlotGrid"></div>
@@ -3358,8 +4289,18 @@
               <h2>軍勢自動編成β</h2>
               <p>
                 1人の武将を軸に、5部隊 × 5人の25体を自動で提案します。主将適性、副将連鎖率、補佐補完、
-                列条件、役割カバー、軍勢コンセプトをまとめて見て、今のデータで最も噛み合う軍勢を返します。
+                列条件、役割カバー、最適化方針をまとめて見て、今のデータで最も噛み合う軍勢を返します。
               </p>
+            </div>
+            <div class="panel-header-actions">
+              <details class="inline-tip">
+                <summary aria-label="軍勢自動編成の前提を表示">?</summary>
+                <div class="inline-tip-popover">
+                  <strong>自動編成の前提</strong>
+                  <p>現在戦力、最大見込み、20秒火力、40秒継戦、攻城DPS、耐久、妨害維持、解除厚み、陣形適合、世間採用寄りを別軸で持ち、最後に方針ごとの重みで統合しています。</p>
+                  <p>実測CSVがある時は現在戦力を優先し、ない時は育成段階と装備状態を使った推定です。共有や画像出力は今見ている案をそのまま使います。</p>
+                </div>
+              </details>
             </div>
           </div>
 
@@ -3369,8 +4310,51 @@
               <ul class="bullet-list">
                 <li>公式指南書の「部隊編成のポイント / 軍勢編成のポイント」、GameWith の編成・補佐・陣形記事を土台にしています。</li>
                 <li>note の編成ツール記事やプレイヤー記事で共通していた「連鎖率」「技能補完」「列適性」「5部隊の役割分担」を重視しています。</li>
-                <li>結果は固定解ではなく、公開ソースを横断して作ったヒューリスティックです。手持ちや装備入力はまだ未反映なので β 扱いにしています。</li>
+                <li>現在は powerCurrent / powerPotential / burst20s / sustain40s / siegeDps / ehp / controlUptime / cleanseCoverage / formationFit / metaPrior を別軸で持ち、最後だけ最適化方針ごとの重みで合成します。</li>
+                <li>結果は固定解ではなく、公開ソースを横断して作ったヒューリスティックです。手持ち・簡易育成入力は反映しますが、厳密な戦力式は公開されていないため推定を含みます。</li>
               </ul>
+            </div>
+          </details>
+
+          <details class="section-details" open>
+            <summary>実測戦力CSVと公開根拠</summary>
+            <div class="details-body army-roster-shell">
+              <div class="builder-select-grid">
+                <div class="field">
+                  <label for="armyPowerMode">戦力集計モード</label>
+                  <select id="armyPowerMode" aria-label="戦力集計モード"></select>
+                  <p class="field-note">標準推定は公開データ中心、CSV実測優先は貼り付けた現在値の戦力をそのまま使って高戦力編成を組みます。</p>
+                </div>
+
+                <div class="field field-span-2">
+                  <label for="armyPowerImportInput">CSV / TSV を貼り付け</label>
+                  <textarea
+                    id="armyPowerImportInput"
+                    rows="8"
+                    spellcheck="false"
+                    placeholder="武将名,戦力,攻撃,防御,戦威,策略,魅力,レベル,天賦,秘伝"
+                    aria-label="軍勢自動編成の実測戦力CSV"
+                  ></textarea>
+                  <p class="field-note">見出しは「武将名, 戦力, 攻撃, 防御, 戦威, 策略, 魅力, レベル, 天賦, 秘伝」を認識します。戦力列が欠けていても、4ステータス + Lv + 秘伝から推定補完します。1体でも反映すると自動編成は手持ち限定で組みます。</p>
+                </div>
+              </div>
+
+              <div class="button-row">
+                <button class="primary-button" id="armyPowerImportButton" type="button">CSVを反映して手持ち登録</button>
+                <button class="secondary-button" id="armyPowerClearButton" type="button">CSV実測データを削除</button>
+              </div>
+
+              <div class="builder-overview-grid army-import-summary-grid" id="armyPowerImportSummaryGrid"></div>
+
+              <div class="army-import-reference">
+                <strong>このモードで根拠にした公開情報</strong>
+                <ul class="bullet-list">
+                  <li><a href="https://kingdom-hadou.bn-ent.net/special/newbie/" target="_blank" rel="noreferrer noopener">公式指南書③</a> の「部隊と軍勢をより強くするポイント」で、部隊/軍勢の違いと編成の考え方を確認しています。</li>
+                  <li><a href="https://gamewith.jp/kingdom-hadou/517732" target="_blank" rel="noreferrer noopener">GameWith 戦闘力記事</a> の「戦力は最大兵力と各ステータスから算出」を前提にしています。</li>
+                  <li><a href="https://gamewith.jp/kingdom-hadou/545445" target="_blank" rel="noreferrer noopener">GameWith 補佐記事</a> の検証値「主将40% / 副将20% / 補佐10%」を部隊内の反映率として使います。</li>
+                  <li>共有リンクにはCSV本文を入れません。別端末へ実測データごと渡す時は JSON バックアップを使ってください。</li>
+                </ul>
+              </div>
             </div>
           </details>
 
@@ -3388,9 +4372,9 @@
             </div>
 
             <div class="field">
-              <label for="armyConcept">軍勢コンセプト</label>
-              <select id="armyConcept" aria-label="軍勢コンセプト"></select>
-              <p class="field-note">対軍勢バランス、対物特化、反撃特化、弱化妨害、防衛耐久を切り替えられます。</p>
+              <label for="armyConcept">最適化方針</label>
+              <select id="armyConcept" aria-label="最適化方針"></select>
+              <p class="field-note">対人勝率、攻城DPS、防衛安定、妨害先手、現在戦力最大、最大見込み戦力、育成効率、世間採用寄りを切り替えます。</p>
             </div>
 
             <div class="field">
@@ -3485,7 +4469,11 @@
               <h2>軍勢の総評</h2>
               <p>総合スコア、役割充足、列配分、おすすめ陣形、固定武将の活かし方を先にまとめます。</p>
             </div>
-            <span class="count-pill" id="armyTopCount"></span>
+            <div class="result-header-actions">
+              <span class="count-pill" id="armyTopCount"></span>
+              <button class="secondary-button" id="armyExportImageButton" type="button">画像を書き出す</button>
+              <button class="secondary-button" id="armyShareImageButton" type="button">画像を共有</button>
+            </div>
           </div>
           <div class="builder-overview-grid army-summary-grid" id="armyOverviewGrid"></div>
         </section>
@@ -3494,7 +4482,7 @@
           <div class="result-header">
             <div>
               <h2>編成診断</h2>
-              <p>support-spec の採点基準に寄せて、役割不足、採用基準、陣形比較、信頼度をまとめて見ます。</p>
+              <p>評価仕様に寄せて、役割不足、採用基準、陣形比較、信頼度をまとめて見ます。</p>
             </div>
           </div>
           <div class="builder-overview-grid army-summary-grid" id="armyAuditGrid"></div>
@@ -3554,7 +4542,7 @@
           <div class="result-header">
             <div>
               <h2>差し替え候補</h2>
-              <p>今回落選した中で、役割不足やコンセプト純度を埋めやすい予備候補を出します。</p>
+              <p>今回落選した中で、役割不足や最適化方針の不足軸を埋めやすい予備候補を出します。</p>
             </div>
           </div>
           <div class="quick-grid" id="armyReserveGrid"></div>
@@ -3575,9 +4563,9 @@
         <section class="panel">
           <div class="panel-header">
             <div>
-              <h2>Season 3 ハブ</h2>
+              <h2>S3ハブ</h2>
               <p>
-                仕様書にあった `Season 3 Only` の入口をここにまとめます。
+                仕様書にあった `Season 3限定` の入口をまとめています。
                 注目武将、注目技能、目的別のおすすめ強化先を先に出し、その下に計算系とAI系の拡張計画を置きます。
               </p>
             </div>
@@ -3585,7 +4573,7 @@
 
           <div class="info-grid">
             <article class="info-card">
-              <h2>Season 3 基本情報</h2>
+              <h2>S3基本情報</h2>
               <p class="season-pill">
                 <span id="s3HeroSeasonLabel"></span>
                 <span id="s3ThemeLabel"></span>
@@ -3627,7 +4615,7 @@
           <div class="result-header">
             <div>
               <h2>S3採点ガイド</h2>
-              <p>support spec の目的別ウェイトと評価軸を、今選んでいる目的に合わせて見やすく要約します。</p>
+              <p>評価仕様の目的別ウェイトと評価軸を、今選んでいる目的に合わせて見やすく要約します。</p>
             </div>
           </div>
           <div class="module-grid" id="s3WeightGrid"></div>
@@ -3647,7 +4635,7 @@
           <div class="result-header">
             <div>
               <h2>注目武将</h2>
-              <p>仕様書の starter data をもとに、Season 3 の目的別スコアとスロット適性で並べています。</p>
+              <p>仕様書の初期データをもとに、S3の目的別スコアとスロット適性で並べています。</p>
             </div>
             <span class="count-pill" id="s3HeroCount"></span>
           </div>
@@ -3668,7 +4656,7 @@
           <div class="result-header">
             <div>
               <h2>注目技能</h2>
-              <p>Season 3 starter に入っている重要技能を、発動条件とスロット価値つきで並べます。</p>
+              <p>S3初期データに入っている重要技能を、発動条件とスロット価値つきで並べます。</p>
             </div>
             <span class="count-pill" id="s3SkillCount"></span>
           </div>
@@ -3699,7 +4687,7 @@
           <div class="result-header">
             <div>
               <h2>更新履歴</h2>
-              <p>masterRevision と変更点を公開して、S3 中の評価差分を追えるようにします。</p>
+              <p>データ版と変更点を公開して、S3中の評価差分を追えるようにします。</p>
             </div>
           </div>
           <div class="module-grid" id="s3UpdateList"></div>
