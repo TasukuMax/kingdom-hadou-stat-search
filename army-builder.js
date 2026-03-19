@@ -1,13 +1,25 @@
 const ARMY_BUILDER_DEFAULT_RARITIES = RARITY_DEFS.map((row) => row.key);
 const ARMY_BUILDER_ROW_KEYS = BUILDER_ROW_DEFS.map((row) => row.key);
+const ARMY_POWER_BUILDER_CONFIG = S3_POWER_BUILDER_CONFIG ?? SEASON3.powerBuilderConfig ?? {};
+const ARMY_SEARCH_CONFIG = ARMY_POWER_BUILDER_CONFIG.search ?? {};
+const ARMY_BUILDER_GATES = ARMY_POWER_BUILDER_CONFIG.gates ?? {};
+const ARMY_SLOT_SUITABILITY_FLOORS = ARMY_POWER_BUILDER_CONFIG.slotSuitabilityFloors ?? {
+  commander: 0.7,
+  vice: 0.65,
+  aide: 0.55
+};
+const ARMY_SUPPORT_TOOL_CATALOG = S3_TOOL_CATALOG ?? SEASON3.toolCatalog ?? [];
+const ARMY_SUPPORT_TOOL_NAME_MAP = Object.fromEntries(
+  ARMY_SUPPORT_TOOL_CATALOG.map((entry) => [entry.key, entry.name])
+);
 const ARMY_BUILDER_LIMITS = {
-  commanderSeeds: 14,
+  commanderSeeds: Math.max(ARMY_SEARCH_CONFIG.commanderSeeds ?? 12, 12),
   vicePool: 12,
   aidePool: 9,
   vicePairKeep: 24,
   keepUnitsPerCommander: 10,
-  genericUnitPool: 54,
-  armyBeamWidth: 80,
+  genericUnitPool: Math.max((ARMY_SEARCH_CONFIG.unitBeamWidth ?? 50) + 4, 54),
+  armyBeamWidth: Math.max(ARMY_SEARCH_CONFIG.armyBeamWidth ?? 120, 80),
   finalArmies: 3,
   reserveCount: 8
 };
@@ -50,10 +62,11 @@ const ARMY_UNIT_WEIGHT_MAP = SEASON3.builderWeights?.unitWeights ?? {};
 const ARMY_ARMY_WEIGHT_MAP = SEASON3.builderWeights?.armyWeights ?? {};
 const ARMY_PENALTY_MAP = SEASON3.builderWeights?.penalties ?? {};
 const ARMY_ROSTER_STORAGE_KEY = "kh-army-roster-v4";
+const ARMY_INVESTMENT_MULTIPLIER_OVERRIDES = ARMY_POWER_BUILDER_CONFIG.investmentTierMultipliers ?? {};
 const ARMY_INVESTMENT_TIER_DEFS = [
-  { key: "trained", label: "仕上がり", multiplier: 1 },
-  { key: "usable", label: "実戦投入", multiplier: 0.78 },
-  { key: "untrained", label: "未育成", multiplier: 0.45 }
+  { key: "trained", label: "仕上がり", multiplier: ARMY_INVESTMENT_MULTIPLIER_OVERRIDES.trained ?? 1 },
+  { key: "usable", label: "実戦投入", multiplier: ARMY_INVESTMENT_MULTIPLIER_OVERRIDES.usable ?? 0.78 },
+  { key: "untrained", label: "未育成", multiplier: ARMY_INVESTMENT_MULTIPLIER_OVERRIDES.untrained ?? 0.45 }
 ];
 const ARMY_EQUIPMENT_FIT_DEFS = [
   { key: "none", label: "装備なし", multiplier: 1 },
@@ -876,21 +889,23 @@ function getArmyFormationPowerMultiplier(army) {
 
 function getArmyPowerEstimate(army) {
   const formationMultiplier = getArmyFormationPowerMultiplier(army);
-  const units = army.units.map((unit, index) => ({
-    ...unit,
-    index,
-    powerEstimate: {
-      ...getArmyUnitPowerEstimate(unit),
-      current: Math.round(getArmyUnitPowerEstimate(unit).current * formationMultiplier),
-      potential: Math.round(getArmyUnitPowerEstimate(unit).potential * formationMultiplier),
-      growth: Math.max(
-        0,
-        Math.round(getArmyUnitPowerEstimate(unit).potential * formationMultiplier) -
-          Math.round(getArmyUnitPowerEstimate(unit).current * formationMultiplier)
-      ),
-      formationMultiplier
-    }
-  }));
+  const units = army.units.map((unit, index) => {
+    const baseEstimate = getArmyUnitPowerEstimate(unit);
+    const current = Math.round(baseEstimate.current * formationMultiplier);
+    const potential = Math.round(baseEstimate.potential * formationMultiplier);
+
+    return {
+      ...unit,
+      index,
+      powerEstimate: {
+        ...baseEstimate,
+        current,
+        potential,
+        growth: Math.max(0, potential - current),
+        formationMultiplier
+      }
+    };
+  });
   const current = Math.round(sumArmyValues(units.map((unit) => unit.powerEstimate.current)));
   const potential = Math.round(sumArmyValues(units.map((unit) => unit.powerEstimate.potential)));
   const growthTargets = keepTopArmyEntries(
@@ -2387,6 +2402,441 @@ function buildArmyReserveSuggestions(bestArmy, allowedMetas, concept) {
   );
 }
 
+function getArmySlotSuitabilityFloorScore(slotKey) {
+  return (ARMY_SLOT_SUITABILITY_FLOORS[slotKey] ?? 0.6) * 100;
+}
+
+function getArmySlotSuitabilityEntries(meta, concept) {
+  return [
+    { key: "commander", label: "主将", score: getArmySlotBaseScore(meta, "commander", concept) },
+    {
+      key: "vice",
+      label: "副将",
+      score: Math.max(getArmySlotBaseScore(meta, "vice1", concept), getArmySlotBaseScore(meta, "vice2", concept))
+    },
+    {
+      key: "aide",
+      label: "補佐",
+      score: Math.max(getArmySlotBaseScore(meta, "aide1", concept), getArmySlotBaseScore(meta, "aide2", concept))
+    }
+  ]
+    .map((entry) => ({ ...entry, floor: getArmySlotSuitabilityFloorScore(entry.key) }))
+    .sort((left, right) => right.score - left.score);
+}
+
+function getArmyBestSlotMatch(meta, concept) {
+  return getArmySlotSuitabilityEntries(meta, concept)[0];
+}
+
+function formatArmyScoreDelta(value) {
+  const numeric = Number(value ?? 0);
+  return `${numeric > 0 ? "+" : ""}${numeric.toFixed(1)}`;
+}
+
+function buildArmyFormationAlternatives(bestArmy, concept, seedMeta) {
+  const basePower = getArmyPowerEstimate(bestArmy);
+
+  return FORMATION_DEFS.map((formation) => {
+    const candidate =
+      bestArmy.formation?.key === formation.key
+        ? bestArmy
+        : evaluateArmyCompositionForFormation(bestArmy.units, concept, seedMeta, formation);
+    const powerEstimate = bestArmy.formation?.key === formation.key ? basePower : getArmyPowerEstimate(candidate);
+
+    return {
+      key: formation.key,
+      label: formation.label,
+      total: candidate.total,
+      delta: candidate.total - bestArmy.total,
+      currentPower: powerEstimate.current,
+      powerDelta: powerEstimate.current - basePower.current,
+      rowText: `前${candidate.rowCounts.front} / 中${candidate.rowCounts.middle} / 後${candidate.rowCounts.back}`,
+      activeBonusText: formatArmyFormationBonusSummary(candidate.formation?.activeBonus),
+      timingText: formatFormationTiming(formation),
+      isCurrent: bestArmy.formation?.key === formation.key
+    };
+  }).sort((left, right) => right.total - left.total);
+}
+
+function getArmyCandidateCountBySlot(allowedMetas, concept, slotKey) {
+  return allowedMetas.filter((meta) => {
+    return getArmyBestSlotMatch(meta, concept)?.key === slotKey || getArmyBestSlotMatch(meta, concept)?.score >= getArmySlotSuitabilityFloorScore(slotKey);
+  }).length;
+}
+
+function getArmyResultConfidence(bestArmy, allowedMetas, usingRoster, ownedCount, concept) {
+  const minOwnedHeroes = ARMY_BUILDER_GATES.minOwnedHeroes ?? 30;
+  const minAvailableHeroes = ARMY_BUILDER_GATES.minAvailableHeroes ?? 25;
+  const minCommanderCandidates = ARMY_BUILDER_GATES.minCommanderCandidates ?? 5;
+  const commanderCandidates = allowedMetas.filter(
+    (meta) => getArmySlotBaseScore(meta, "commander", concept) >= getArmySlotSuitabilityFloorScore("commander")
+  ).length;
+  const checks = [
+    {
+      ok: !usingRoster || ownedCount >= minOwnedHeroes,
+      text: usingRoster ? `手持ち ${ownedCount}/${minOwnedHeroes}` : "全武将モード"
+    },
+    {
+      ok: allowedMetas.length >= minAvailableHeroes,
+      text: `候補 ${allowedMetas.length}/${minAvailableHeroes}`
+    },
+    {
+      ok: commanderCandidates >= minCommanderCandidates,
+      text: `主将候補 ${commanderCandidates}/${minCommanderCandidates}`
+    }
+  ];
+
+  let score = 82;
+  score -= bestArmy.missingRules.length * 12;
+  score -= Object.keys(bestArmy.penalties ?? {}).length * 6;
+  score -= checks.filter((entry) => !entry.ok).length * 10;
+  score += Math.max(0, bestArmy.total - 72) * 0.6;
+  score = clampArmyScore(score);
+
+  return {
+    score,
+    level: score >= 75 ? "高" : score >= 55 ? "中" : "低",
+    reasons: [
+      checks.map((entry) => `${entry.ok ? "通過" : "注意"}: ${entry.text}`).join(" / "),
+      bestArmy.missingRules.length
+        ? `不足役割: ${bestArmy.missingRules.map((rule) => armyRoleTagLabel(rule.tag)).join(" / ")}`
+        : "不足役割は小さい",
+      Object.keys(bestArmy.penalties ?? {}).length
+        ? `減点: ${Object.keys(bestArmy.penalties).join(" / ")}`
+        : "大きな減点なし"
+    ]
+  };
+}
+
+function buildArmyRoleAudit(bestArmy, allowedMetas, concept, usingRoster, ownedCount, formationAlternatives) {
+  const missingText = bestArmy.missingRules.length
+    ? bestArmy.missingRules.map((rule) => `${armyRoleTagLabel(rule.tag)} ${rule.count}/${rule.minUnits}`).join(" / ")
+    : "不足役割は大きくありません";
+  const satisfiedText = bestArmy.satisfiedRules.length
+    ? bestArmy.satisfiedRules.map((rule) => `${armyRoleTagLabel(rule.tag)} ${rule.count}/${rule.minUnits}`).join(" / ")
+    : "主要役割を採点中";
+  const crowdedRoles = Object.entries(
+    bestArmy.units.reduce((result, unit) => {
+      unit.roleTags
+        .filter((tag) => tag.startsWith("role.") || tag.startsWith("support.") || tag.startsWith("def.") || tag.startsWith("control."))
+        .forEach((tag) => {
+          result[tag] = (result[tag] ?? 0) + 1;
+        });
+      return result;
+    }, {})
+  )
+    .filter(([, count]) => count >= 3)
+    .sort((left, right) => right[1] - left[1])
+    .slice(0, 3)
+    .map(([tag, count]) => `${armyRoleTagLabel(tag)} ${count}部隊`)
+    .join(" / ");
+  const commanderCandidates = allowedMetas.filter(
+    (meta) => getArmySlotBaseScore(meta, "commander", concept) >= getArmySlotSuitabilityFloorScore("commander")
+  ).length;
+  const viceCandidates = getArmyCandidateCountBySlot(allowedMetas, concept, "vice");
+  const aideCandidates = getArmyCandidateCountBySlot(allowedMetas, concept, "aide");
+  const secondFormation = formationAlternatives.find((entry) => !entry.isCurrent);
+  const confidence = getArmyResultConfidence(bestArmy, allowedMetas, usingRoster, ownedCount, concept);
+  const toolNames = [
+    "missing-role-checker",
+    "formation-auto-picker",
+    "slot-suitability-finder",
+    "army-score-explainer"
+  ].map((key) => ARMY_SUPPORT_TOOL_NAME_MAP[key] ?? key);
+
+  return {
+    confidence,
+    cards: [
+      {
+        title: "役割不足",
+        body: bestArmy.missingRules.length ? "不足役割があります。" : "必須役割は概ね充足しています。",
+        detail: missingText,
+        extra: crowdedRoles ? `重なり: ${crowdedRoles}` : `充足: ${satisfiedText}`
+      },
+      {
+        title: "採用基準",
+        body: "support-spec の手持ち数とスロット適性基準を確認しています。",
+        detail: `主将候補 ${commanderCandidates} / 副将候補 ${viceCandidates} / 補佐候補 ${aideCandidates}`,
+        extra: [
+          usingRoster ? `手持ち ${ownedCount}/${ARMY_BUILDER_GATES.minOwnedHeroes ?? 30}` : "全武将モード",
+          `候補 ${allowedMetas.length}/${ARMY_BUILDER_GATES.minAvailableHeroes ?? 25}`,
+          `下限 主将${Math.round(getArmySlotSuitabilityFloorScore("commander"))} / 副将${Math.round(
+            getArmySlotSuitabilityFloorScore("vice")
+          )} / 補佐${Math.round(getArmySlotSuitabilityFloorScore("aide"))}`
+        ].join(" | ")
+      },
+      {
+        title: "陣形比較",
+        body: `${formationAlternatives[0]?.label ?? bestArmy.formation?.name ?? "現陣形"} を最上位と判定しています。`,
+        detail: secondFormation
+          ? `次点 ${secondFormation.label} ${formatArmyScoreDelta(secondFormation.delta)} / 戦力差 ${formatArmyEstimateNumber(
+              Math.abs(secondFormation.powerDelta)
+            )}`
+          : "比較できる別陣形はありません。",
+        extra: `${formationAlternatives[0]?.activeBonusText ?? bestArmy.formation?.reason ?? "-"} / ${
+          formationAlternatives[0]?.rowText ?? "-"
+        }`
+      },
+      {
+        title: "提案信頼度",
+        body: `信頼度 ${confidence.level} (${confidence.score.toFixed(0)} / 100)`,
+        detail: confidence.reasons.join(" / "),
+        extra: `参照ロジック: ${toolNames.join(" / ")}`
+      }
+    ]
+  };
+}
+
+function buildArmyCommanderShortlist(allowedMetas, concept, bestArmy, seedMeta) {
+  const activeCommanderMap = new Map(bestArmy.units.map((unit, index) => [unit.commander.id, index]));
+  const topCandidates = keepTopArmyEntries(
+    allowedMetas.map((meta) => ({
+      meta,
+      score: clampArmyScore(
+        getArmySlotBaseScore(meta, "commander", concept) * 0.56 +
+          getArmyConceptAffinity(meta, concept) * 0.18 +
+          (meta.objectiveScores?.[concept.primaryObjective] ?? 0) * 0.16 +
+          meta.chainPotential * 0.1 +
+          (activeCommanderMap.has(meta.character.id) ? 4 : 0) +
+          (seedMeta?.character.id === meta.character.id ? 12 : 0)
+      )
+    })),
+    6,
+    "score"
+  );
+
+  return topCandidates.map((entry, index) => {
+    const slotEntries = getArmySlotSuitabilityEntries(entry.meta, concept);
+    const bestVicePair = buildVicePairs(entry.meta, allowedMetas, concept, null)[0] ?? [];
+    const vicePairText = bestVicePair.length ? bestVicePair.map((meta) => meta.character.name).join(" / ") : "候補不足";
+    const viceChainText = bestVicePair.length
+      ? bestVicePair
+          .map((meta) => `${meta.character.name} ${formatPercent(getChainStats(entry.meta.character, meta.character).rate)}`)
+          .join(" / ")
+      : "連鎖候補不足";
+
+    return {
+      rank: index + 1,
+      meta: entry.meta,
+      score: entry.score,
+      commanderScore: getArmySlotBaseScore(entry.meta, "commander", concept),
+      bestSlot: slotEntries[0],
+      vicePairText,
+      viceChainText,
+      usageText: activeCommanderMap.has(entry.meta.character.id)
+        ? `現編成: 第${activeCommanderMap.get(entry.meta.character.id) + 1}部隊 主将`
+        : "現編成外",
+      featureText:
+        entry.meta.character.featureTags
+          .filter((featureKey) => concept.featureWeights?.[featureKey] >= 10)
+          .slice(0, 3)
+          .join(" / ") || "主要一致タグなし"
+    };
+  });
+}
+
+function buildArmyViceShortlist(bestArmy, allowedMetas, concept, seedMeta) {
+  const focusUnit =
+    (seedMeta && bestArmy.units.find((unit) => unit.commander.id === seedMeta.character.id)) ?? bestArmy.units[0] ?? null;
+  if (!focusUnit) {
+    return {
+      commanderMeta: null,
+      entries: []
+    };
+  }
+
+  const commanderMeta = getArmyMeta(focusUnit.commander);
+  const usedIds = new Set(bestArmy.units.flatMap((unit) => [...unit.memberIds]));
+  const pairs = buildVicePairs(commanderMeta, allowedMetas, concept, null).slice(0, 6);
+
+  return {
+    commanderMeta,
+    entries: pairs.map((pair, index) => {
+      const vice1Fitness = getArmyViceFitness(commanderMeta, pair[0], concept, "vice1");
+      const vice2Fitness = getArmyViceFitness(commanderMeta, pair[1], concept, "vice2");
+      const chainAverage = averageArmyValues([vice1Fitness.chainStats?.rate ?? 0, vice2Fitness.chainStats?.rate ?? 0]);
+      const usedCount = pair.filter((meta) => usedIds.has(meta.character.id)).length;
+
+      return {
+        rank: index + 1,
+        pair,
+        score: clampArmyScore(
+          vice1Fitness.score * 0.36 +
+            vice2Fitness.score * 0.32 +
+            normalizeChainRate(chainAverage) * 0.18 +
+            getArmyGuidePairScore(pair[0].character, pair[1].character) * 14 +
+            averageArmyValues([
+              getArmyConceptAffinity(pair[0], concept),
+              getArmyConceptAffinity(pair[1], concept)
+            ]) *
+              0.14
+        ),
+        chainAverage,
+        supportText: uniqueValues(
+          pair.flatMap((meta) =>
+            meta.roleTags
+              .filter(
+                (tag) =>
+                  tag.startsWith("role.") ||
+                  tag.startsWith("support.") ||
+                  tag.startsWith("control.") ||
+                  tag.startsWith("tempo.")
+              )
+              .map((tag) => armyRoleTagLabel(tag))
+          )
+        )
+          .slice(0, 4)
+          .join(" / "),
+        usageText: usedCount === 2 ? "両方採用中" : usedCount === 1 ? "片方採用中" : "ベンチ候補",
+        viceChainText: [vice1Fitness, vice2Fitness]
+          .map((fitness, pairIndex) => `${pair[pairIndex].character.name} ${formatPercent(fitness.chainStats?.rate ?? 0)}`)
+          .join(" / ")
+      };
+    })
+  };
+}
+
+function buildArmySwapSuggestions(bestArmy, allowedMetas, concept) {
+  const usedIds = new Set(bestArmy.units.flatMap((unit) => [...unit.memberIds]));
+  const benchMetas = allowedMetas.filter((meta) => !usedIds.has(meta.character.id));
+  const suggestions = [];
+
+  for (const [unitIndex, unit] of bestArmy.units.entries()) {
+    const commanderMeta = getArmyMeta(unit.commander);
+    const unitMemberIds = new Set(unit.unitMembers.map((member) => member.meta.character.id));
+
+    for (const member of unit.unitMembers.filter((entry) => entry.slotKey !== "commander")) {
+      const candidatePool = keepTopArmyEntries(
+        benchMetas
+          .filter((meta) => !unitMemberIds.has(meta.character.id))
+          .map((meta) => {
+            if (member.slotKey.startsWith("vice")) {
+              const fitness = getArmyViceFitness(commanderMeta, meta, concept, member.slotKey);
+              const scoreDelta = fitness.score - member.slotBaseScore;
+              const chainDelta = (fitness.chainStats?.rate ?? 0) - (member.chainStats?.rate ?? 0);
+              const roleGain = getArmyNewRoleCount(new Set(unit.roleTags), meta.roleTags);
+
+              return {
+                unitIndex,
+                slotLabel: member.label,
+                outgoing: member.meta,
+                incoming: meta,
+                score: scoreDelta + roleGain * 3.6 + Math.max(0, chainDelta) * 0.16,
+                scoreDelta,
+                chainDelta,
+                roleGain,
+                detailText: chainDelta
+                  ? `連鎖 ${formatPercent(member.chainStats?.rate ?? 0)} → ${formatPercent(fitness.chainStats?.rate ?? 0)}`
+                  : "連鎖率の変化は小さい"
+              };
+            }
+
+            const remainingCore = unit.unitMembers
+              .filter((entry) => entry.slotKey !== member.slotKey && !entry.slotKey.startsWith("aide"))
+              .map((entry) => entry.meta);
+            const fitness = getArmyAideFitness(remainingCore, meta, concept, member.slotKey);
+            const scoreDelta = fitness.score - member.slotBaseScore;
+            const roleGain = getArmyNewRoleCount(new Set(remainingCore.flatMap((entry) => entry.roleTags)), meta.roleTags);
+
+            return {
+              unitIndex,
+              slotLabel: member.label,
+              outgoing: member.meta,
+              incoming: meta,
+              score: scoreDelta + roleGain * 4.2 + Math.max(0, getArmyConceptAffinity(meta, concept) - getArmyConceptAffinity(member.meta, concept)) * 0.1,
+              scoreDelta,
+              chainDelta: 0,
+              roleGain,
+              detailText: `支援補完 ${fitness.supportMatch.toFixed(1)} / 役割増 ${roleGain}`
+            };
+          }),
+        2,
+        "score"
+      );
+
+      candidatePool
+        .filter((entry) => entry.score > 1.4 || entry.roleGain > 0)
+        .forEach((entry) => suggestions.push(entry));
+    }
+  }
+
+  return keepTopArmyEntries(suggestions, 8, "score");
+}
+
+function buildArmyExclusionReasons(bestArmy, allowedMetas, concept, commanderShortlist) {
+  const usedIds = new Set(bestArmy.units.flatMap((unit) => [...unit.memberIds]));
+  const commanderRankMap = new Map(commanderShortlist.map((entry) => [entry.meta.character.id, entry.rank]));
+  const excludedMetas = keepTopArmyEntries(
+    allowedMetas
+      .filter((meta) => !usedIds.has(meta.character.id))
+      .map((meta) => ({
+        meta,
+        score:
+          getArmyBestSlotMatch(meta, concept)?.score * 0.54 +
+          getArmyConceptAffinity(meta, concept) * 0.26 +
+          (meta.objectiveScores?.[concept.primaryObjective] ?? 0) * 0.2
+      })),
+    8,
+    "score"
+  ).map((entry) => entry.meta);
+
+  return excludedMetas.map((meta) => {
+    const bestSlot = getArmyBestSlotMatch(meta, concept);
+    const overlapLabels = uniqueValues(
+      bestArmy.units.flatMap((unit) =>
+        unit.roleTags
+          .filter((tag) => meta.roleTagSet.has(tag) && tag.startsWith("role."))
+          .map((tag) => armyRoleTagLabel(tag))
+      )
+    ).slice(0, 3);
+    const reasons = [];
+
+    if (bestSlot.score < bestSlot.floor) {
+      reasons.push(`${bestSlot.label}適性 ${bestSlot.score.toFixed(1)} が基準 ${bestSlot.floor.toFixed(0)} に届かない`);
+    }
+    if (overlapLabels.length >= 2) {
+      reasons.push(`役割が現軍勢と重複 (${overlapLabels.join(" / ")})`);
+    }
+    if (bestSlot.key === "commander" && commanderRankMap.has(meta.character.id)) {
+      reasons.push(`主将候補順位 ${commanderRankMap.get(meta.character.id)} 位止まり`);
+    }
+    if (bestSlot.key === "vice") {
+      const bestViceFit = Math.max(
+        ...bestArmy.units.map((unit) => getArmyViceFitness(getArmyMeta(unit.commander), meta, concept, "vice1").score),
+        0
+      );
+      if (bestViceFit < getArmySlotSuitabilityFloorScore("vice")) {
+        reasons.push("副将候補としての連鎖・支援が薄い");
+      }
+    }
+    if (bestSlot.key === "aide") {
+      const bestAideFit = Math.max(
+        ...bestArmy.units.map((unit) => {
+          const core = unit.unitMembers.filter((member) => !member.slotKey.startsWith("aide")).map((member) => member.meta);
+          return getArmyAideFitness(core, meta, concept, "aide1").score;
+        }),
+        0
+      );
+      if (bestAideFit < getArmySlotSuitabilityFloorScore("aide")) {
+        reasons.push("補佐候補でも支援補完が薄い");
+      }
+    }
+    if (!reasons.length && bestArmy.missingRules.length && !bestArmy.missingRules.some((rule) => meta.roleTagSet.has(rule.tag))) {
+      reasons.push("不足役割を直接埋めないため優先度が下がった");
+    }
+    if (!reasons.length) {
+      reasons.push("25体重複なし条件で上位候補に一歩届かなかった");
+    }
+
+    return {
+      meta,
+      bestSlot,
+      overlapLabels,
+      reasons: reasons.slice(0, 3)
+    };
+  });
+}
+
 function getFallbackCommanderScore(meta, concept, variantIndex) {
   const variantBias =
     variantIndex === 1
@@ -2731,6 +3181,12 @@ function buildArmyPlannerResult() {
   }
 
   const bestArmy = armies[0];
+  const formationAlternatives = buildArmyFormationAlternatives(bestArmy, concept, seedMeta);
+  const roleAudit = buildArmyRoleAudit(bestArmy, allowedMetas, concept, usingRoster, ownedCount, formationAlternatives);
+  const commanderShortlist = buildArmyCommanderShortlist(allowedMetas, concept, bestArmy, seedMeta);
+  const viceShortlist = buildArmyViceShortlist(bestArmy, allowedMetas, concept, seedMeta);
+  const swapSuggestions = buildArmySwapSuggestions(bestArmy, allowedMetas, concept);
+  const exclusionReasons = buildArmyExclusionReasons(bestArmy, allowedMetas, concept, commanderShortlist);
 
   return {
     validation: "",
@@ -2752,7 +3208,14 @@ function buildArmyPlannerResult() {
       "軍勢自動編成"
     ),
     armies,
+    auditCards: roleAudit.cards,
+    confidence: roleAudit.confidence,
+    formationAlternatives,
+    commanderShortlist,
+    viceShortlist,
+    swapSuggestions,
     reserveSuggestions: buildArmyReserveSuggestions(bestArmy, allowedMetas, concept),
+    exclusionReasons,
     usingRoster,
     ownedCount,
     allowedCount: allowedMetas.length
@@ -2890,6 +3353,101 @@ function renderArmyOverviewCards(army, result, powerEstimate) {
       `
     )
     .join("");
+}
+
+function renderArmyAuditCards(cards = []) {
+  if (!cards.length) {
+    return renderEmptyState("軍勢を生成すると、ここに support-spec ベースの診断を表示します。");
+  }
+
+  return cards
+    .map(
+      (card) => `
+        <article class="army-summary-card">
+          <h3>${escapeHtml(card.title)}</h3>
+          <p class="field-note">${escapeHtml(card.body)}</p>
+          <p class="toolbar-summary">${escapeHtml(card.detail)}</p>
+          <p class="field-note">${escapeHtml(card.extra)}</p>
+        </article>
+      `
+    )
+    .join("");
+}
+
+function renderArmyCommanderShortlistCard(entry) {
+  return `
+    <article class="quick-card">
+      <span class="status-pill ${entry.rank <= 3 ? "is-live" : "is-next"}">主将候補 ${entry.rank}</span>
+      <h3>${escapeHtml(entry.meta.character.name)}</h3>
+      <p>${escapeHtml(entry.meta.character.rarity)} / ${escapeHtml(entry.meta.character.type || "-")} / 天賦 ${entry.meta.character.tenpu}</p>
+      <ul>
+        <li><span>主将適性</span><span>${entry.commanderScore.toFixed(1)} / 100</span></li>
+        <li><span>最適役割</span><span>${escapeHtml(`${entry.bestSlot.label} ${entry.bestSlot.score.toFixed(1)}`)}</span></li>
+        <li><span>推奨副将</span><span>${escapeHtml(entry.vicePairText)}</span></li>
+        <li><span>副将連鎖</span><span>${escapeHtml(entry.viceChainText)}</span></li>
+        <li><span>一致タグ</span><span>${escapeHtml(entry.featureText)}</span></li>
+        <li><span>状況</span><span>${escapeHtml(entry.usageText)}</span></li>
+      </ul>
+      <div class="card-actions">
+        <button class="mini-button" type="button" data-army-use-seed="${escapeHtml(entry.meta.character.name)}">この武将を軸に再編成</button>
+      </div>
+    </article>
+  `;
+}
+
+function renderArmyViceShortlistCard(commanderMeta, entry) {
+  return `
+    <article class="quick-card">
+      <span class="status-pill ${entry.rank <= 2 ? "is-live" : "is-plan"}">副将候補 ${entry.rank}</span>
+      <h3>${escapeHtml(entry.pair.map((meta) => meta.character.name).join(" + "))}</h3>
+      <p>${escapeHtml(commanderMeta.character.name)} の副将ペア候補です。</p>
+      <ul>
+        <li><span>平均連鎖</span><span>${escapeHtml(formatPercent(entry.chainAverage))}</span></li>
+        <li><span>連鎖内訳</span><span>${escapeHtml(entry.viceChainText)}</span></li>
+        <li><span>役割補完</span><span>${escapeHtml(entry.supportText || "汎用")}</span></li>
+        <li><span>総合評価</span><span>${entry.score.toFixed(1)} / 100</span></li>
+        <li><span>状況</span><span>${escapeHtml(entry.usageText)}</span></li>
+      </ul>
+    </article>
+  `;
+}
+
+function renderArmySwapSuggestionCard(entry) {
+  return `
+    <article class="quick-card">
+      <span class="status-pill ${entry.score >= 4 ? "is-live" : "is-next"}">改善 ${escapeHtml(formatArmyScoreDelta(entry.score))}</span>
+      <h3>第${entry.unitIndex + 1}部隊 ${escapeHtml(entry.slotLabel)}</h3>
+      <p>${escapeHtml(`${entry.outgoing.character.name} → ${entry.incoming.character.name}`)}</p>
+      <ul>
+        <li><span>枠評価差</span><span>${escapeHtml(formatArmyScoreDelta(entry.scoreDelta))}</span></li>
+        <li><span>役割増分</span><span>${escapeHtml(String(entry.roleGain))}</span></li>
+        <li><span>補足</span><span>${escapeHtml(entry.detailText)}</span></li>
+        <li><span>特徴</span><span>${escapeHtml(entry.incoming.character.featureTags.slice(0, 4).join(" / ") || "主要タグなし")}</span></li>
+      </ul>
+      <div class="card-actions">
+        <button class="mini-button" type="button" data-army-use-seed="${escapeHtml(entry.incoming.character.name)}">この武将を軸に再編成</button>
+      </div>
+    </article>
+  `;
+}
+
+function renderArmyExcludedReasonCard(entry) {
+  return `
+    <article class="quick-card">
+      <span class="status-pill is-plan">落選理由</span>
+      <h3>${escapeHtml(entry.meta.character.name)}</h3>
+      <p>${escapeHtml(entry.meta.character.rarity)} / ${escapeHtml(entry.meta.character.type || "-")} / 天賦 ${entry.meta.character.tenpu}</p>
+      <ul>
+        <li><span>最適役割</span><span>${escapeHtml(`${entry.bestSlot.label} ${entry.bestSlot.score.toFixed(1)}`)}</span></li>
+        <li><span>基準</span><span>${escapeHtml(`${entry.bestSlot.floor.toFixed(0)} 以上`)}</span></li>
+        <li><span>重複役割</span><span>${escapeHtml(entry.overlapLabels.join(" / ") || "大きな重複なし")}</span></li>
+        <li><span>理由</span><span>${escapeHtml(entry.reasons.join(" / "))}</span></li>
+      </ul>
+      <div class="card-actions">
+        <button class="mini-button" type="button" data-army-use-seed="${escapeHtml(entry.meta.character.name)}">この武将を軸に再編成</button>
+      </div>
+    </article>
+  `;
 }
 
 function renderArmyUnitCard(unit, unitIndex, armyIndex, unitPowerEstimate) {
@@ -3119,9 +3677,24 @@ function renderArmyPlanner(result = null) {
     elements.armyOverviewGrid.innerHTML = renderEmptyState(
       plannerResult.validation || "条件に合う軍勢がありません。"
     );
+    if (elements.armyAuditGrid) {
+      elements.armyAuditGrid.innerHTML = renderEmptyState("軍勢が生成されると、ここに診断を表示します。");
+    }
     elements.armyUnitGrid.innerHTML = "";
+    if (elements.armyCommanderGrid) {
+      elements.armyCommanderGrid.innerHTML = "";
+    }
+    if (elements.armyViceGrid) {
+      elements.armyViceGrid.innerHTML = "";
+    }
     elements.armyAlternativeGrid.innerHTML = "";
+    if (elements.armySwapGrid) {
+      elements.armySwapGrid.innerHTML = "";
+    }
     elements.armyReserveGrid.innerHTML = "";
+    if (elements.armyExcludedGrid) {
+      elements.armyExcludedGrid.innerHTML = "";
+    }
     return;
   }
 
@@ -3129,15 +3702,40 @@ function renderArmyPlanner(result = null) {
   const powerEstimate = getArmyPowerEstimate(activeArmy);
   renderArmyFormationInfoCards(plannerResult, activeArmy);
   elements.armyOverviewGrid.innerHTML = renderArmyOverviewCards(activeArmy, plannerResult, powerEstimate);
+  if (elements.armyAuditGrid) {
+    elements.armyAuditGrid.innerHTML = renderArmyAuditCards(plannerResult.auditCards ?? []);
+  }
   elements.armyUnitGrid.innerHTML = powerEstimate.units
     .map((unit, unitIndex) => renderArmyUnitCard(unit, unitIndex, activeArmyAlternativeIndex, unit.powerEstimate))
     .join("");
+  if (elements.armyCommanderGrid) {
+    elements.armyCommanderGrid.innerHTML = (plannerResult.commanderShortlist ?? []).length
+      ? plannerResult.commanderShortlist.map((entry) => renderArmyCommanderShortlistCard(entry)).join("")
+      : renderEmptyState("主将候補はまだ出せません。");
+  }
+  if (elements.armyViceGrid) {
+    elements.armyViceGrid.innerHTML = (plannerResult.viceShortlist?.entries ?? []).length
+      ? plannerResult.viceShortlist.entries
+          .map((entry) => renderArmyViceShortlistCard(plannerResult.viceShortlist.commanderMeta, entry))
+          .join("")
+      : renderEmptyState("副将候補はまだ出せません。");
+  }
   elements.armyAlternativeGrid.innerHTML = plannerResult.armies
     .map((army, index) => renderArmyAlternativeCard(army, index))
     .join("");
+  if (elements.armySwapGrid) {
+    elements.armySwapGrid.innerHTML = (plannerResult.swapSuggestions ?? []).length
+      ? plannerResult.swapSuggestions.map((entry) => renderArmySwapSuggestionCard(entry)).join("")
+      : renderEmptyState("1枠差し替えで大きく伸びる候補はありません。");
+  }
   elements.armyReserveGrid.innerHTML = plannerResult.reserveSuggestions.length
     ? plannerResult.reserveSuggestions.map((entry) => renderArmyReserveCard(entry)).join("")
     : renderEmptyState("差し替え候補はありません。");
+  if (elements.armyExcludedGrid) {
+    elements.armyExcludedGrid.innerHTML = (plannerResult.exclusionReasons ?? []).length
+      ? plannerResult.exclusionReasons.map((entry) => renderArmyExcludedReasonCard(entry)).join("")
+      : renderEmptyState("非採用理由を出せる候補はありません。");
+  }
 }
 
 function resetArmyPlanner() {
@@ -3289,9 +3887,24 @@ function renderArmyPlannerIdleState() {
   elements.armyOverviewGrid.innerHTML = renderEmptyState(
     "軍勢自動編成を実行すると、ここに総評とおすすめ陣形を表示します。"
   );
+  if (elements.armyAuditGrid) {
+    elements.armyAuditGrid.innerHTML = renderEmptyState("ここに役割不足、採用基準、陣形比較、信頼度を表示します。");
+  }
   elements.armyUnitGrid.innerHTML = "";
+  if (elements.armyCommanderGrid) {
+    elements.armyCommanderGrid.innerHTML = "";
+  }
+  if (elements.armyViceGrid) {
+    elements.armyViceGrid.innerHTML = "";
+  }
   elements.armyAlternativeGrid.innerHTML = "";
+  if (elements.armySwapGrid) {
+    elements.armySwapGrid.innerHTML = "";
+  }
   elements.armyReserveGrid.innerHTML = "";
+  if (elements.armyExcludedGrid) {
+    elements.armyExcludedGrid.innerHTML = "";
+  }
 }
 
 function ensureArmyPlannerRendered() {
