@@ -1456,7 +1456,8 @@
       .builder-slot-grid,
       .timeline-list,
       .formation-card-grid,
-      .board-grid,
+      .board-grid-duo,
+      .board-grid-mini,
       .builder-active-effects {
         display: grid;
         gap: 14px;
@@ -1607,23 +1608,36 @@
       }
 
       .army-roster-grid {
-        grid-template-columns: repeat(auto-fit, minmax(172px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(84px, 1fr));
       }
 
       .army-roster-card,
       .army-owned-card {
         width: 100%;
-        padding: 14px;
         border-radius: 20px;
         border: 1px solid rgba(109, 57, 17, 0.14);
         background: rgba(255, 255, 255, 0.76);
-        display: grid;
-        gap: 12px;
         text-align: left;
       }
 
       .army-roster-card {
+        position: relative;
+        padding: 0;
+        aspect-ratio: 1;
+        overflow: hidden;
+        display: block;
         cursor: pointer;
+        background: rgba(23, 18, 14, 0.92);
+        opacity: 0.7;
+        box-shadow: inset 0 0 0 1px rgba(255, 232, 193, 0.05);
+      }
+
+      .army-roster-card::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(180deg, rgba(15, 11, 8, 0.04), rgba(15, 11, 8, 0.78));
+        pointer-events: none;
       }
 
       .army-roster-card.is-owned,
@@ -1631,6 +1645,83 @@
         background: rgba(244, 232, 208, 0.78);
         border-color: rgba(156, 95, 34, 0.32);
         box-shadow: 0 12px 28px rgba(109, 57, 17, 0.1);
+      }
+
+      .army-owned-card {
+        padding: 14px;
+        display: grid;
+        gap: 12px;
+      }
+
+      .army-roster-card.is-owned {
+        opacity: 1;
+      }
+
+      .army-roster-card.is-tier-trained {
+        border-color: rgba(227, 187, 109, 0.72);
+        box-shadow:
+          0 14px 28px rgba(109, 57, 17, 0.22),
+          inset 0 0 0 1px rgba(255, 231, 183, 0.32);
+      }
+
+      .army-roster-card.is-tier-usable {
+        border-color: rgba(156, 95, 34, 0.54);
+        box-shadow:
+          0 10px 24px rgba(109, 57, 17, 0.16),
+          inset 0 0 0 1px rgba(255, 237, 205, 0.18);
+      }
+
+      .army-roster-card.is-tier-untrained {
+        border-color: rgba(188, 165, 128, 0.34);
+      }
+
+      .army-roster-card img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+        filter: saturate(0.98) contrast(1.04);
+      }
+
+      .army-roster-state-badge,
+      .army-roster-rarity-badge {
+        position: absolute;
+        z-index: 1;
+        display: inline-flex;
+        align-items: center;
+        min-height: 26px;
+        padding: 0 10px;
+        border-radius: 999px;
+        font-size: 0.72rem;
+        font-weight: 700;
+        backdrop-filter: blur(10px);
+      }
+
+      .army-roster-rarity-badge {
+        top: 8px;
+        left: 8px;
+        background: rgba(22, 16, 12, 0.66);
+        color: rgba(255, 232, 193, 0.86);
+        border: 1px solid rgba(255, 226, 175, 0.12);
+      }
+
+      .army-roster-state-badge {
+        left: 8px;
+        right: 8px;
+        bottom: 8px;
+        justify-content: center;
+        background: rgba(22, 16, 12, 0.74);
+        color: rgba(255, 241, 215, 0.92);
+        border: 1px solid rgba(255, 226, 175, 0.14);
+      }
+
+      .army-roster-card.is-tier-trained .army-roster-state-badge {
+        background: linear-gradient(135deg, rgba(227, 187, 109, 0.96), rgba(156, 95, 34, 0.94));
+        color: #fff8ef;
+      }
+
+      .army-roster-card.is-tier-usable .army-roster-state-badge {
+        background: rgba(122, 45, 24, 0.86);
       }
 
       .army-roster-head,
@@ -1737,7 +1828,7 @@
 
       .timeline-axis {
         display: grid;
-        grid-template-columns: repeat(7, minmax(0, 1fr));
+        grid-template-columns: repeat(5, minmax(0, 1fr));
         gap: 8px;
       }
 
@@ -1751,62 +1842,92 @@
         border: 1px solid rgba(109, 57, 17, 0.12);
       }
 
-      .timeline-row-head {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-        gap: 12px;
-        margin-bottom: 12px;
+      .timeline-segment-card {
+        border: 1px solid rgba(109, 57, 17, 0.12);
+        border-radius: 22px;
+        padding: 16px;
+        background: rgba(255, 255, 255, 0.82);
+        text-align: left;
+        color: inherit;
+        box-shadow: var(--shadow-soft);
       }
 
-      .timeline-track {
+      .timeline-segment-card.is-active {
+        border-color: rgba(156, 95, 34, 0.34);
+        background: linear-gradient(180deg, rgba(251, 241, 220, 0.94), rgba(241, 228, 205, 0.86));
+      }
+
+      .timeline-segment-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        align-items: center;
+        margin-bottom: 10px;
+      }
+
+      .timeline-segment-head strong {
+        font-size: 1rem;
+      }
+
+      .timeline-segment-head span {
+        color: var(--muted);
+        font-size: 0.82rem;
+      }
+
+      .timeline-segment-track {
         position: relative;
-        min-height: 112px;
+        min-height: 16px;
         border-radius: 20px;
         border: 1px solid rgba(109, 57, 17, 0.12);
         overflow: hidden;
         background:
-          linear-gradient(to right, rgba(109, 57, 17, 0.08) 1px, transparent 1px) 0 0 / calc(100% / 6) 100%,
+          linear-gradient(to right, rgba(109, 57, 17, 0.08) 1px, transparent 1px) 0 0 / calc(100% / 4) 100%,
           rgba(243, 234, 217, 0.68);
       }
 
-      .timeline-event {
+      .timeline-segment-range {
         position: absolute;
-        top: 8px;
-        left: calc((var(--start) / 60) * 100% + 6px);
-        width: max(calc(((var(--end) - var(--start)) / 60) * 100% - 12px), 36px);
-        min-height: 34px;
-        border-radius: 18px;
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-        gap: 4px;
-        text-align: left;
-        padding: 7px 10px;
-        font-weight: 700;
-        box-shadow: inset 0 0 0 1px rgba(109, 57, 17, 0.08);
+        top: 2px;
+        bottom: 2px;
+        left: calc((var(--start) / 40) * 100% + 2px);
+        width: max(calc(((var(--end) - var(--start)) / 40) * 100% - 4px), 10px);
+        border-radius: 999px;
       }
 
-      .timeline-event strong {
-        font-size: 0.94rem;
+      .timeline-segment-range.tone-support,
+      .timeline-effect-chip.tone-support {
+        background: rgba(60, 123, 88, 0.18);
+        color: #214a36;
       }
 
-      .timeline-event span {
-        font-size: 0.74rem;
-        line-height: 1.35;
+      .timeline-segment-range.tone-damage,
+      .timeline-effect-chip.tone-damage {
+        background: rgba(156, 62, 34, 0.18);
+        color: #6d3911;
       }
 
-      .timeline-event.is-estimated {
-        border: 1px dashed rgba(109, 57, 17, 0.4);
+      .timeline-segment-range.tone-debuff,
+      .timeline-effect-chip.tone-debuff {
+        background: rgba(54, 90, 116, 0.16);
+        color: #365a74;
       }
 
-      .timeline-marker {
-        position: absolute;
-        top: 0;
-        bottom: 0;
-        width: 2px;
-        left: calc((var(--at) / 60) * 100%);
-        background: rgba(84, 46, 15, 0.42);
+      .timeline-segment-range.tone-heal,
+      .timeline-effect-chip.tone-heal {
+        background: rgba(58, 120, 111, 0.16);
+        color: #245650;
+      }
+
+      .timeline-segment-range.tone-utility,
+      .timeline-effect-chip.tone-utility {
+        background: rgba(156, 95, 34, 0.16);
+        color: var(--gold-deep);
+      }
+
+      .timeline-segment-range.is-empty,
+      .timeline-effect-chip.is-empty {
+        background: rgba(255, 255, 255, 0.56);
+        color: var(--muted);
       }
 
       .timeline-now {
@@ -1814,34 +1935,35 @@
         top: 0;
         bottom: 0;
         width: 3px;
-        left: calc((var(--at) / 60) * 100%);
+        left: calc((var(--at) / 40) * 100%);
         background: rgba(54, 90, 116, 0.7);
         box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.8);
       }
 
-      .timeline-track.tone-support .timeline-event {
-        background: rgba(60, 123, 88, 0.18);
-        color: #214a36;
+      .timeline-effect-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 12px;
       }
 
-      .timeline-track.tone-damage .timeline-event {
-        background: rgba(156, 62, 34, 0.18);
-        color: #6d3911;
+      .timeline-effect-chip {
+        display: inline-flex;
+        flex-direction: column;
+        gap: 2px;
+        padding: 8px 10px;
+        border-radius: 16px;
+        border: 1px solid rgba(109, 57, 17, 0.1);
       }
 
-      .timeline-track.tone-debuff .timeline-event {
-        background: rgba(54, 90, 116, 0.16);
-        color: #365a74;
+      .timeline-effect-chip strong {
+        font-size: 0.84rem;
       }
 
-      .timeline-track.tone-heal .timeline-event {
-        background: rgba(58, 120, 111, 0.16);
-        color: #245650;
-      }
-
-      .timeline-track.tone-utility .timeline-event {
-        background: rgba(156, 95, 34, 0.16);
-        color: var(--gold-deep);
+      .timeline-effect-chip small {
+        color: inherit;
+        opacity: 0.82;
+        font-size: 0.74rem;
       }
 
       .board-shell {
@@ -1849,14 +1971,39 @@
         gap: 14px;
       }
 
-      .board-grid {
-        grid-template-columns: repeat(9, minmax(0, 1fr));
-        gap: 4px;
+      .board-grid-duo {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .board-panel {
+        padding: 16px;
+        border-radius: 22px;
+        background: rgba(255, 255, 255, 0.78);
+        border: 1px solid rgba(109, 57, 17, 0.12);
+        box-shadow: var(--shadow-soft);
+      }
+
+      .board-panel-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        align-items: center;
+        margin-bottom: 12px;
+      }
+
+      .board-panel-head span {
+        color: var(--muted);
+        font-size: 0.8rem;
+      }
+
+      .board-grid-mini {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 6px;
       }
 
       .board-cell {
         aspect-ratio: 1;
-        border-radius: 12px;
+        border-radius: 16px;
         border: 1px solid rgba(109, 57, 17, 0.1);
         background: rgba(255, 255, 255, 0.72);
         position: relative;
@@ -1864,7 +2011,7 @@
         display: grid;
         place-items: center;
         text-align: center;
-        padding: 4px;
+        padding: 6px;
         font-size: 0.7rem;
       }
 
@@ -1892,6 +2039,10 @@
         box-shadow: inset 0 0 0 2px rgba(84, 46, 15, 0.28);
       }
 
+      .board-cell.is-self {
+        outline: 2px solid rgba(61, 123, 87, 0.35);
+      }
+
       .board-cell.is-target {
         outline: 3px solid rgba(54, 90, 116, 0.55);
       }
@@ -1910,6 +2061,7 @@
       .board-cell-note {
         color: var(--muted);
         font-size: 0.64rem;
+        line-height: 1.35;
       }
 
       .legend-row {
@@ -2482,8 +2634,12 @@
           gap: 4px;
         }
 
-        .timeline-event {
-          padding: 6px;
+        .board-grid-duo {
+          grid-template-columns: 1fr;
+        }
+
+        .timeline-segment-card {
+          padding: 14px;
         }
 
         .mobile-dock {
@@ -3126,14 +3282,14 @@
 
                 <div class="field">
                   <label for="builderPreviewSecond">表示秒数</label>
-                  <input id="builderPreviewSecond" type="range" min="0" max="60" step="1" value="20">
-                  <p class="field-note" id="builderPreviewSecondLabel">20秒時点の盤面を表示します。</p>
+                  <input id="builderPreviewSecond" type="range" min="0" max="40" step="1" value="20">
+                  <p class="field-note" id="builderPreviewSecondLabel">20秒時点の3×3盤面を表示します。</p>
                 </div>
 
                 <div class="field">
                   <strong>盤面の見方</strong>
                   <div class="legend-row" id="builderBoardLegend"></div>
-                  <p class="field-note">敵マスをタップすると、単体対象の基準を切り替えられます。</p>
+                  <p class="field-note">時間帯カードを押すとその秒へ移動し、敵マスを押すと単体対象の基準も切り替えられます。</p>
                 </div>
               </div>
             </div>
@@ -3146,8 +3302,8 @@
         <section class="result-section exact-section">
           <div class="result-header">
             <div>
-              <h2>連鎖順タイムライン</h2>
-              <p>GameWith の連鎖順 1〜9 と陣形ごとの発動間隔から、戦法が入る秒数と効果時間を見ます。</p>
+              <h2>0〜40秒の発動帯</h2>
+              <p>何秒から何秒まで、誰の何が有効かを時間帯ごとにまとめて見ます。カードを押すと盤面も連動します。</p>
             </div>
             <span class="count-pill" id="builderTimelineCount"></span>
           </div>
@@ -3157,18 +3313,18 @@
         <section class="result-section partial-section">
           <div class="result-header">
             <div>
-              <h2>9x9戦法盤面</h2>
-              <p>選択中の秒で、どのマスにバフ / デバフ / ダメージが残っているかを確認します。</p>
+              <h2>3x3効果盤面</h2>
+              <p>選択中の秒で、味方3×3と敵3×3のどこに効果が残っているかを確認します。</p>
             </div>
           </div>
           <div class="module-grid">
             <article class="module-card">
               <div class="board-shell">
-                <div class="board-grid" id="builderBoardGrid"></div>
+                <div id="builderBoardGrid"></div>
               </div>
             </article>
             <article class="module-card">
-              <h2>その秒で有効な効果</h2>
+              <h2>その秒の発動一覧</h2>
               <div class="builder-active-effects" id="builderActiveEffects"></div>
             </article>
           </div>
@@ -3261,7 +3417,7 @@
                     placeholder="名前、技能、特徴で検索"
                     aria-label="手持ち武将を検索"
                   />
-                  <p class="field-note">武将カードをタップすると、手持ちに追加 / 解除します。</p>
+                  <p class="field-note">画像を1回で仕上がり、2回で実戦投入、3回で未育成の初期状態へ戻します。</p>
                 </div>
 
                 <div class="field">
@@ -3288,7 +3444,7 @@
               <div class="result-header">
                 <div>
                   <h2>選択済み武将の現在値</h2>
-                  <p>ここで育成段階と装備状態を入れると、提案編成と推定戦力に反映します。</p>
+                  <p>画像タップの簡易入力に加えて、ここでは未育成や装備状態も個別調整できます。</p>
                 </div>
               </div>
               <div class="army-owned-settings" id="armyOwnedSettings"></div>
