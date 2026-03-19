@@ -748,6 +748,8 @@ const S3_TAG_MAP = Object.fromEntries(SEASON3.tags.map((tag) => [tag.key, tag]))
 const S3_OBJECTIVE_MAP = Object.fromEntries(SEASON3.objectives.map((objective) => [objective.key, objective]));
 const S3_HERO_RAW_BY_NAME = Object.fromEntries(SEASON3.heroes.map((hero) => [hero.name, hero]));
 const S3_SKILL_RAW_BY_NAME = Object.fromEntries(SEASON3.skills.map((skill) => [skill.name, skill]));
+const S3_TOOL_CATALOG = SEASON3.toolCatalog ?? [];
+const S3_POWER_BUILDER_CONFIG = SEASON3.powerBuilderConfig ?? {};
 const S3_ROLE_BUCKETS = SEASON3.roleBuckets?.objectives ?? {};
 const S3_UPDATES = SEASON3.updates ?? [];
 const ARMY_CONCEPT_MAP = Object.fromEntries(ARMY_CONCEPT_DEFS.map((concept) => [concept.key, concept]));
@@ -1469,9 +1471,14 @@ const elements = {
   armyValidation: document.querySelector("#armyValidation"),
   armyTopCount: document.querySelector("#armyTopCount"),
   armyOverviewGrid: document.querySelector("#armyOverviewGrid"),
+  armyAuditGrid: document.querySelector("#armyAuditGrid"),
   armyUnitGrid: document.querySelector("#armyUnitGrid"),
+  armyCommanderGrid: document.querySelector("#armyCommanderGrid"),
+  armyViceGrid: document.querySelector("#armyViceGrid"),
   armyAlternativeGrid: document.querySelector("#armyAlternativeGrid"),
+  armySwapGrid: document.querySelector("#armySwapGrid"),
   armyReserveGrid: document.querySelector("#armyReserveGrid"),
+  armyExcludedGrid: document.querySelector("#armyExcludedGrid"),
 
   s3HeroSeasonLabel: document.querySelector("#s3HeroSeasonLabel"),
   s3ThemeLabel: document.querySelector("#s3ThemeLabel"),
