@@ -10,7 +10,7 @@ const SEASON3 =
     ? SEASON3_DATA
     : {
         seasonKey: "s3",
-        seasonLabel: "Season 3 Only",
+        seasonLabel: "Season 3限定",
         theme: "",
         masterRevision: "",
         updatedAt: "",
@@ -30,6 +30,20 @@ const UI_STATE_STORAGE_KEY = "kh-site-ui-v1";
 const HERO_RECENT_STORAGE_KEY = "kh-hero-recent-v1";
 const FAVORITE_CHARACTERS_STORAGE_KEY = "kh-favorite-characters-v1";
 const FAVORITE_SKILLS_STORAGE_KEY = "kh-favorite-skills-v1";
+const SHARE_PARAM_KEY = "share";
+const SHARE_PAYLOAD_VERSION = 1;
+const BACKUP_VERSION = 1;
+const BACKUP_FILE_PREFIX = "kingdom-hadou-backup";
+
+const SHARE_VIEW_HINTS = {
+  power: "戦力検索のステータス条件、連鎖基準、絞り込みをURLに入れて共有します。",
+  character: "武将DBの全文検索、並び順、絞り込み、比較候補までURLに含めます。",
+  skill: "技能DBの全文検索、並び順、絞り込みをURLに含めます。",
+  synergy: "相性検索の基準武将、候補条件、特徴フィルタをURLに含めます。",
+  builder: "編成ツールの陣形、主将・副将・補佐、秒数プレビューをURLに含めます。",
+  army: "軍勢の軸武将、コンセプト、レア条件、手持ち情報までURLに含めます。長い場合は JSON 共有も使ってください。",
+  board: "S3ハブの目的と優先スロットをURLに含めます。"
+};
 
 const VIEW_META = {
   power: { label: "戦力検索", shortLabel: "検索", summary: "上位2ステータス・技能条件・連鎖率から探す" },
@@ -38,7 +52,7 @@ const VIEW_META = {
   synergy: { label: "相性検索", shortLabel: "相性", summary: "主将基準の連鎖率と共通個性で並べる" },
   builder: { label: "編成ツールβ", shortLabel: "編成", summary: "1部隊の主将・副将・補佐・9x9盤面を確認する" },
   army: { label: "軍勢自動編成β", shortLabel: "軍勢", summary: "25体軍勢を自動提案する" },
-  board: { label: "S3ハブ", shortLabel: "S3", summary: "Season 3 の採点軸と注目候補を見る" }
+  board: { label: "S3ハブ", shortLabel: "S3", summary: "S3の採点軸と注目候補を見る" }
 };
 
 const HERO_SHORTCUT_DEFS = [
@@ -221,7 +235,7 @@ const SKILL_EFFECT_DEFS = [
   { key: "guard", label: "堅固関連", hint: "堅固付与や堅固活用" },
   { key: "support", label: "強化付与", hint: "各種上昇や付与系" },
   { key: "logistics", label: "調達関連", hint: "調達や任命で価値がある" },
-  { key: "season3", label: "S3注目", hint: "Season 3 starter に含まれる技能" }
+  { key: "season3", label: "S3注目", hint: "S3初期データに含まれる技能" }
 ];
 
 const CHARACTER_SORT_DEFS = [
@@ -261,12 +275,12 @@ const ARMY_SEED_MODE_DEFS = [
 const ARMY_CONCEPT_DEFS = [
   {
     key: "balanced",
-    label: "対軍勢バランス",
-    description: "主将の質、連鎖率、妨害、耐久の4点を均等に取りにいく基準構成です。",
+    label: "対人勝率",
+    description: "前半20秒の噛み合い、継戦力、制圧力を均等に取りにいく対人の基準モードです。",
     primaryObjective: "pvp",
     objectiveMix: { pvp: 0.65, defense: 0.2, siege: 0.1, gathering: 0.05 },
     recommendedFormation: "基本陣参",
-    formationReason: "5部隊の役割を崩さず、横断バフと妨害を扱いやすい陣形です。",
+    formationReason: "5部隊の役割を崩さず、前半の支援と妨害を並べやすい陣形です。",
     rowTarget: { front: 2, middle: 2, back: 1 },
     commanderTypeBias: { 闘: 8, 護: 7, 妨: 7, 援: 4 },
     orderWeights: { 早い: 1, 普通: 0.82, 遅い: 0.64 },
@@ -300,9 +314,46 @@ const ARMY_CONCEPT_DEFS = [
     ]
   },
   {
+    key: "powermax",
+    label: "現在戦力最大",
+    description: "今の手持ちと実測戦力を優先し、現時点で最も高い総戦力を出しやすい軍勢を狙います。",
+    primaryObjective: "pvp",
+    objectiveMix: { pvp: 0.5, defense: 0.2, siege: 0.2, gathering: 0.1 },
+    recommendedFormation: "基本陣参",
+    formationReason: "列配分を大きく崩さず、高戦力主将を5部隊へ分散しやすい基準陣形です。",
+    rowTarget: { front: 2, middle: 2, back: 1 },
+    commanderTypeBias: { 闘: 9, 護: 8, 妨: 7, 援: 6 },
+    orderWeights: { 早い: 1, 普通: 0.9, 遅い: 0.72 },
+    featureWeights: {
+      強化効果付与: 10,
+      被ダメ軽減: 10,
+      反撃: 9,
+      弱化効果付与: 8,
+      強化解除: 8,
+      回復: 7,
+      対物: 6,
+      攻速上昇: 6
+    },
+    tagWeights: {
+      "role.burst-commander": 18,
+      "role.frontline-anchor": 14,
+      "role.flex-support": 10,
+      "role.disruptor": 8,
+      "role.counter-enabler": 8
+    },
+    required: [
+      { tag: "role.frontline-anchor", minUnits: 1, weight: 0.75 },
+      { tag: "role.burst-commander", minUnits: 2, weight: 1 }
+    ],
+    preferred: [
+      { tag: "role.flex-support", minUnits: 1, weight: 0.35 },
+      { tag: "support.cleanse", minUnits: 1, weight: 0.25 }
+    ]
+  },
+  {
     key: "siege",
-    label: "対物特化",
-    description: "対物、攻速、軍勢バフを重ね、城や砦を削る速度を優先する軍勢です。",
+    label: "攻城DPS",
+    description: "対物、攻速、前半の火力支援を重ね、城や砦を削る速度を優先する軍勢です。",
     primaryObjective: "siege",
     objectiveMix: { siege: 0.78, pvp: 0.12, defense: 0.1, gathering: 0 },
     recommendedFormation: "錐行陣参",
@@ -338,45 +389,45 @@ const ARMY_CONCEPT_DEFS = [
   },
   {
     key: "counter",
-    label: "反撃特化",
-    description: "反撃強化と被ダメ軽減を厚くして、殴られながら返す軍勢です。",
-    primaryObjective: "defense",
-    objectiveMix: { defense: 0.55, pvp: 0.35, siege: 0.1, gathering: 0 },
-    recommendedFormation: "鶴翼陣参",
-    formationReason: "耐久寄りの軍勢に噛み合いやすく、反撃支援と前列保持を両立しやすい陣形です。",
-    rowTarget: { front: 2, middle: 1, back: 2 },
-    commanderTypeBias: { 護: 10, 闘: 8, 妨: 5, 援: 4 },
-    orderWeights: { 早い: 0.86, 普通: 1, 遅い: 0.74 },
+    label: "最大見込み戦力",
+    description: "完成育成を前提に、潜在戦力が最も高くなる25体軍勢を優先するモードです。",
+    primaryObjective: "pvp",
+    objectiveMix: { pvp: 0.45, defense: 0.25, siege: 0.2, gathering: 0.1 },
+    recommendedFormation: "基本陣参",
+    formationReason: "育成完了後の主将性能と列適性を崩しにくく、潜在値を素直に積み上げやすい陣形です。",
+    rowTarget: { front: 2, middle: 2, back: 1 },
+    commanderTypeBias: { 闘: 9, 護: 8, 妨: 6, 援: 5 },
+    orderWeights: { 早い: 0.94, 普通: 0.9, 遅い: 0.72 },
     featureWeights: {
-      反撃: 22,
-      被ダメ軽減: 16,
-      堅固: 12,
-      回復: 11,
-      強化効果付与: 10,
-      弱化解除: 8,
-      デバフ無効: 8
+      強化効果付与: 14,
+      被ダメ軽減: 12,
+      反撃: 10,
+      回復: 9,
+      弱化効果付与: 9,
+      強化解除: 8,
+      攻速上昇: 7,
+      対物: 6
     },
     tagWeights: {
-      "role.counter-enabler": 22,
-      "def.damage-cut": 16,
-      "role.frontline-anchor": 14,
-      "support.heal": 10,
-      "def.debuff-immunity": 8
+      "role.burst-commander": 18,
+      "role.frontline-anchor": 16,
+      "role.flex-support": 10,
+      "role.disruptor": 8,
+      "role.counter-enabler": 8
     },
     required: [
-      { tag: "role.counter-enabler", minUnits: 2, weight: 1 },
-      { tag: "def.damage-cut", minUnits: 2, weight: 0.9 },
-      { tag: "role.frontline-anchor", minUnits: 2, weight: 0.9 }
+      { tag: "role.frontline-anchor", minUnits: 1, weight: 0.7 },
+      { tag: "role.burst-commander", minUnits: 2, weight: 1 }
     ],
     preferred: [
-      { tag: "support.heal", minUnits: 1, weight: 0.55 },
-      { tag: "support.cleanse", minUnits: 1, weight: 0.45 }
+      { tag: "role.flex-support", minUnits: 1, weight: 0.45 },
+      { tag: "support.cleanse", minUnits: 1, weight: 0.35 }
     ]
   },
   {
     key: "debuff",
-    label: "弱化妨害",
-    description: "恐怖、攻速低下、強化解除を重ねて相手のテンポを崩す軍勢です。",
+    label: "妨害先手",
+    description: "恐怖、攻速低下、強化解除を前半20秒へ寄せ、相手のテンポを先に崩す軍勢です。",
     primaryObjective: "pvp",
     objectiveMix: { pvp: 0.75, defense: 0.15, siege: 0.1, gathering: 0 },
     recommendedFormation: "策謀陣参",
@@ -411,8 +462,8 @@ const ARMY_CONCEPT_DEFS = [
   },
   {
     key: "defense",
-    label: "防衛耐久",
-    description: "前列維持、被ダメ軽減、回復、解除を積み、長期戦で崩れにくくします。",
+    label: "防衛安定",
+    description: "前列維持、被ダメ軽減、回復、解除を積み、40秒以降まで崩れにくくします。",
     primaryObjective: "defense",
     objectiveMix: { defense: 0.75, pvp: 0.15, siege: 0.1, gathering: 0 },
     recommendedFormation: "鶴翼陣参",
@@ -446,6 +497,79 @@ const ARMY_CONCEPT_DEFS = [
       { tag: "support.cleanse", minUnits: 1, weight: 0.55 },
       { tag: "def.debuff-immunity", minUnits: 1, weight: 0.45 }
     ]
+  },
+  {
+    key: "growth",
+    label: "育成効率",
+    description: "今の育成段階と将来値の差を見て、育てた時の伸びと実戦投入しやすさを両立します。",
+    primaryObjective: "pvp",
+    objectiveMix: { pvp: 0.45, defense: 0.3, siege: 0.2, gathering: 0.05 },
+    recommendedFormation: "基本陣参",
+    formationReason: "完成前でも列条件が崩れにくく、投資先の価値が見えやすい基準陣形です。",
+    rowTarget: { front: 2, middle: 2, back: 1 },
+    commanderTypeBias: { 闘: 8, 護: 8, 妨: 6, 援: 5 },
+    orderWeights: { 早い: 0.92, 普通: 0.88, 遅い: 0.74 },
+    featureWeights: {
+      強化効果付与: 12,
+      被ダメ軽減: 12,
+      回復: 10,
+      弱化解除: 10,
+      弱化効果付与: 8,
+      反撃: 8,
+      対物: 6
+    },
+    tagWeights: {
+      "role.frontline-anchor": 16,
+      "role.flex-support": 14,
+      "role.burst-commander": 12,
+      "support.cleanse": 10,
+      "support.heal": 10
+    },
+    required: [
+      { tag: "role.frontline-anchor", minUnits: 1, weight: 0.8 },
+      { tag: "role.flex-support", minUnits: 1, weight: 0.75 }
+    ],
+    preferred: [
+      { tag: "support.cleanse", minUnits: 1, weight: 0.55 },
+      { tag: "role.disruptor", minUnits: 1, weight: 0.45 }
+    ]
+  },
+  {
+    key: "meta",
+    label: "世間採用寄り",
+    description: "公開編成や推奨枠を弱い事前分布として使い、今の手持ちに寄せて無理なく採用形へ近づけます。",
+    primaryObjective: "pvp",
+    objectiveMix: { pvp: 0.6, defense: 0.25, siege: 0.15, gathering: 0 },
+    recommendedFormation: "基本陣参",
+    formationReason: "公開編成との整合を取りつつ、汎用的に外しにくい配置へ寄せやすい陣形です。",
+    rowTarget: { front: 2, middle: 2, back: 1 },
+    commanderTypeBias: { 闘: 8, 護: 7, 妨: 7, 援: 5 },
+    orderWeights: { 早い: 0.96, 普通: 0.84, 遅い: 0.68 },
+    featureWeights: {
+      弱化効果付与: 14,
+      強化解除: 12,
+      被ダメ軽減: 12,
+      強化効果付与: 10,
+      回復: 8,
+      弱化解除: 8,
+      会心: 6
+    },
+    tagWeights: {
+      "role.frontline-anchor": 16,
+      "role.burst-commander": 16,
+      "role.disruptor": 14,
+      "role.flex-support": 10,
+      "support.cleanse": 8
+    },
+    required: [
+      { tag: "role.frontline-anchor", minUnits: 2, weight: 0.95 },
+      { tag: "role.burst-commander", minUnits: 1, weight: 0.85 },
+      { tag: "role.disruptor", minUnits: 1, weight: 0.85 }
+    ],
+    preferred: [
+      { tag: "support.cleanse", minUnits: 1, weight: 0.55 },
+      { tag: "role.flex-support", minUnits: 1, weight: 0.45 }
+    ]
   }
 ];
 
@@ -474,11 +598,11 @@ const FORMATION_DEFS = [
     timings: [20, 8, 8, 8, 8, 8],
     bonuses: [{ type: "援", minUnits: 3, stats: { war: 20 } }],
     slots: [
-      { key: "first", label: "1st", rowKey: "middle", gridCol: 1, gridRow: 1 },
-      { key: "second", label: "2nd", rowKey: "front", gridCol: 2, gridRow: 0 },
-      { key: "third", label: "3rd", rowKey: "middle", gridCol: 0, gridRow: 1 },
+      { key: "first", label: "1st", rowKey: "front", gridCol: 1, gridRow: 0 },
+      { key: "second", label: "2nd", rowKey: "middle", gridCol: 0, gridRow: 1 },
+      { key: "third", label: "3rd", rowKey: "middle", gridCol: 1, gridRow: 1 },
       { key: "fourth", label: "4th", rowKey: "middle", gridCol: 2, gridRow: 1 },
-      { key: "fifth", label: "5th", rowKey: "back", gridCol: 0, gridRow: 2 }
+      { key: "fifth", label: "5th", rowKey: "back", gridCol: 1, gridRow: 2 }
     ]
   },
   {
@@ -870,6 +994,16 @@ function normalizeSearchText(value) {
     .replace(/\s+/g, "");
 }
 
+function tokenizeSearchText(value) {
+  return String(value ?? "")
+    .normalize("NFKC")
+    .toLowerCase()
+    .replace(/[\/・,、。．.=＝+＋()（）[\]【】]/gu, " ")
+    .split(/\s+/u)
+    .map((token) => normalizeSearchText(token))
+    .filter(Boolean);
+}
+
 function uniqueValues(values) {
   return [...new Set(values.filter(Boolean))];
 }
@@ -892,6 +1026,11 @@ function typeLabelFor(typeKey) {
 
 function objectiveLabelFor(objectiveKey) {
   return OBJECTIVE_FILTER_MAP[objectiveKey] ?? S3_OBJECTIVE_MAP[objectiveKey]?.label ?? objectiveKey;
+}
+
+function formatDataRevisionLabel(value) {
+  const revision = String(value ?? "").trim();
+  return revision ? `データ版 ${revision}` : "データ版 -";
 }
 
 function getConditionKeysFromLabels(labels) {
@@ -940,6 +1079,87 @@ function seasonTagLabel(tagKey) {
 
 function featureHintFor(featureKey) {
   return CHARACTER_FEATURE_MAP[featureKey]?.hint ?? "";
+}
+
+const VISUAL_BADGE_META = {
+  stat: {
+    attack: { short: "攻", tone: "attack" },
+    defense: { short: "防", tone: "defense" },
+    war: { short: "威", tone: "war" },
+    strategy: { short: "策", tone: "strategy" }
+  },
+  type: {
+    闘: { short: "闘", tone: "type-fight" },
+    援: { short: "援", tone: "type-support" },
+    護: { short: "護", tone: "type-guard" },
+    妨: { short: "妨", tone: "type-disrupt" }
+  },
+  objective: {
+    pvp: { short: "対", tone: "objective-pvp" },
+    siege: { short: "城", tone: "objective-siege" },
+    defense: { short: "守", tone: "objective-defense" },
+    gathering: { short: "採", tone: "objective-gathering" }
+  },
+  feature: {
+    対物: { short: "城", tone: "feature-siege" },
+    弱化効果付与: { short: "弱", tone: "feature-debuff" },
+    弱化解除: { short: "解", tone: "feature-cleanse" },
+    強化効果付与: { short: "強", tone: "feature-buff" },
+    強化解除: { short: "剥", tone: "feature-strip" },
+    回復: { short: "癒", tone: "feature-heal" },
+    被ダメ軽減: { short: "盾", tone: "feature-guard" },
+    反撃: { short: "反", tone: "feature-counter" },
+    攻速上昇: { short: "速", tone: "feature-speed" },
+    攻速低下: { short: "遅", tone: "feature-slow" },
+    継続削り: { short: "毒", tone: "feature-dot" },
+    会心: { short: "会", tone: "feature-crit" },
+    堅固: { short: "堅", tone: "feature-guard" },
+    回避: { short: "避", tone: "feature-utility" },
+    連鎖依存: { short: "鎖", tone: "feature-chain" },
+    兵力条件: { short: "兵", tone: "feature-utility" },
+    調達: { short: "採", tone: "feature-gather" },
+    デバフ無効: { short: "免", tone: "feature-cleanse" }
+  }
+};
+
+function getVisualBadgeMeta(kind, key, fallbackLabel = key) {
+  const label = fallbackLabel || key || "";
+  const defaults = {
+    short: label ? String(label).trim().slice(0, 1) : "?",
+    tone: "default"
+  };
+  return {
+    ...defaults,
+    ...(VISUAL_BADGE_META[kind]?.[key] ?? {})
+  };
+}
+
+function renderVisualBadge(kind, key, label = key, options = {}) {
+  const meta = getVisualBadgeMeta(kind, key, label);
+  const classes = ["visual-badge", `tone-${meta.tone}`];
+  if (options.compact) {
+    classes.push("is-compact");
+  }
+  if (options.iconOnly) {
+    classes.push("is-icon-only");
+  }
+
+  const title = options.title ?? label ?? key ?? "";
+  return `
+    <span class="${classes.join(" ")}" ${title ? `title="${escapeHtml(title)}"` : ""}>
+      <span class="visual-badge-icon" aria-hidden="true">${escapeHtml(meta.short)}</span>
+      ${options.iconOnly ? "" : `<span class="visual-badge-label">${escapeHtml(label ?? key ?? "")}</span>`}
+    </span>
+  `;
+}
+
+function tokenizeRawSearchTerms(query) {
+  return uniqueValues(
+    String(query ?? "")
+      .split(/[\s\u3000,、/／]+/u)
+      .map((token) => token.trim())
+      .filter(Boolean)
+  );
 }
 
 function hasSeason3Tags(season3, tagKeys) {
@@ -1579,6 +1799,7 @@ const elements = {
   viewButtons: Array.from(document.querySelectorAll("[data-view-tab]")),
   viewPanels: Array.from(document.querySelectorAll(".app-view")),
   viewNav: document.querySelector(".view-nav"),
+  statusToast: document.querySelector("#statusToast"),
   datasetCount: document.querySelector("#datasetCount"),
   ssrCount: document.querySelector("#ssrCount"),
   srCount: document.querySelector("#srCount"),
@@ -1587,6 +1808,14 @@ const elements = {
   seasonLabel: document.querySelector("#seasonLabel"),
   seasonRevision: document.querySelector("#seasonRevision"),
   seasonUpdatedAt: document.querySelector("#seasonUpdatedAt"),
+  trustSnapshot: document.querySelector("#trustSnapshot"),
+  shareScopeNote: document.querySelector("#shareScopeNote"),
+  copyStateLinkButton: document.querySelector("#copyStateLinkButton"),
+  downloadBackupButton: document.querySelector("#downloadBackupButton"),
+  importBackupButton: document.querySelector("#importBackupButton"),
+  backupImportInput: document.querySelector("#backupImportInput"),
+  backupMeta: document.querySelector("#backupMeta"),
+  clearBrowserDataButton: document.querySelector("#clearBrowserDataButton"),
   heroCommandInput: document.querySelector("#heroCommandInput"),
   heroCommandClear: document.querySelector("#heroCommandClear"),
   heroCommandSummary: document.querySelector("#heroCommandSummary"),
@@ -1701,6 +1930,11 @@ const elements = {
   armyConcept: document.querySelector("#armyConcept"),
   armyFormation: document.querySelector("#armyFormation"),
   armyFormationInfoGrid: document.querySelector("#armyFormationInfoGrid"),
+  armyPowerMode: document.querySelector("#armyPowerMode"),
+  armyPowerImportInput: document.querySelector("#armyPowerImportInput"),
+  armyPowerImportButton: document.querySelector("#armyPowerImportButton"),
+  armyPowerClearButton: document.querySelector("#armyPowerClearButton"),
+  armyPowerImportSummaryGrid: document.querySelector("#armyPowerImportSummaryGrid"),
   armyRosterSearch: document.querySelector("#armyRosterSearch"),
   armyDefaultInvestment: document.querySelector("#armyDefaultInvestment"),
   armyDefaultEquipment: document.querySelector("#armyDefaultEquipment"),
@@ -1716,6 +1950,8 @@ const elements = {
   armySummary: document.querySelector("#armySummary"),
   armyValidation: document.querySelector("#armyValidation"),
   armyTopCount: document.querySelector("#armyTopCount"),
+  armyExportImageButton: document.querySelector("#armyExportImageButton"),
+  armyShareImageButton: document.querySelector("#armyShareImageButton"),
   armyOverviewGrid: document.querySelector("#armyOverviewGrid"),
   armyAuditGrid: document.querySelector("#armyAuditGrid"),
   armyUnitGrid: document.querySelector("#armyUnitGrid"),
@@ -1798,6 +2034,7 @@ function pushHeroRecentEntry(entry) {
   ].slice(0, 6);
   writeStoredJson(HERO_RECENT_STORAGE_KEY, next);
   renderHeroCommand();
+  updateBackupMeta();
 }
 
 function getFavoriteCharacterNames() {
@@ -1824,6 +2061,7 @@ function toggleFavoriteCharacter(name) {
     current.add(name);
   }
   writeStoredJson(FAVORITE_CHARACTERS_STORAGE_KEY, [...current].sort((left, right) => left.localeCompare(right, "ja")));
+  updateBackupMeta();
 }
 
 function toggleFavoriteSkill(name) {
@@ -1834,6 +2072,7 @@ function toggleFavoriteSkill(name) {
     current.add(name);
   }
   writeStoredJson(FAVORITE_SKILLS_STORAGE_KEY, [...current].sort((left, right) => left.localeCompare(right, "ja")));
+  updateBackupMeta();
 }
 
 function setToggleButtonState(button, active) {
@@ -1854,6 +2093,7 @@ function saveComparedCharacterNames(names) {
   saveUiState({
     characterCompareNames: uniqueValues(names).filter((name) => characterByName[name]).slice(0, 3)
   });
+  updateBackupMeta();
 }
 
 function isComparedCharacter(name) {
@@ -2176,13 +2416,20 @@ function formatHeroResultSummary(query, entries) {
 
 function highlightHeroText(text, query) {
   const sourceText = String(text ?? "");
-  const trimmedQuery = String(query ?? "").trim();
+  const tokens = tokenizeRawSearchTerms(query);
 
-  if (!trimmedQuery) {
+  if (!tokens.length) {
     return escapeHtml(sourceText);
   }
 
-  const matcher = new RegExp(`(${escapeRegExp(trimmedQuery)})`, "ig");
+  const matcher = new RegExp(
+    `(${tokens
+      .slice()
+      .sort((left, right) => right.length - left.length)
+      .map((token) => escapeRegExp(token))
+      .join("|")})`,
+    "ig"
+  );
   const parts = sourceText.split(matcher).filter((part) => part.length > 0);
 
   if (parts.length <= 1) {
@@ -2191,7 +2438,7 @@ function highlightHeroText(text, query) {
 
   return parts
     .map((part) =>
-      part.toLowerCase() === trimmedQuery.toLowerCase()
+      tokens.some((token) => part.toLowerCase() === token.toLowerCase())
         ? `<mark class="hero-highlight">${escapeHtml(part)}</mark>`
         : escapeHtml(part)
     )
@@ -2437,7 +2684,8 @@ function readCheckedValuesIn(root, name) {
 }
 
 function keywordMatches(haystack, needle) {
-  return !normalizeSearchText(needle) || haystack.includes(normalizeSearchText(needle));
+  const tokens = tokenizeSearchText(needle);
+  return !tokens.length || tokens.every((token) => haystack.includes(token));
 }
 
 function syncSecondaryOptions() {
@@ -2468,6 +2716,7 @@ function setActiveView(viewKey, options = {}) {
   });
 
   saveUiState({ activeView: nextView });
+  updateShareScopeNote(nextView);
 
   if (updateHash) {
     const nextHash = `#${nextView}`;
@@ -2748,12 +2997,11 @@ function renderFeatureTags(character, highlightedFeatures = []) {
       <div class="meta-chip-list">
         ${character.featureTags
           .map((feature) => {
-            const classes = ["meta-chip", "is-feature"];
-            if (highlightedSet.has(feature)) {
-              classes.push("is-highlight");
-            }
             const hint = featureHintFor(feature);
-            return `<span class="${classes.join(" ")}" title="${escapeHtml(hint)}">${escapeHtml(feature)}</span>`;
+            return highlightedSet.has(feature)
+              ? renderVisualBadge("feature", feature, feature, { title: hint || feature })
+                  .replace('class="visual-badge ', 'class="visual-badge is-highlight ')
+              : renderVisualBadge("feature", feature, feature, { title: hint || feature });
           })
           .join("")}
       </div>
@@ -2887,7 +3135,7 @@ function renderSeason3HeroBlock(character) {
 
   return `
     <div class="season-banner">
-      <p class="season-pill">${escapeHtml(SEASON3.seasonLabel)} / ${escapeHtml(season3.masterRevision)} / ${escapeHtml(
+      <p class="season-pill">${escapeHtml(SEASON3.seasonLabel)} / ${escapeHtml(formatDataRevisionLabel(season3.masterRevision))} / ${escapeHtml(
         season3.type
       )}</p>
       <p>${escapeHtml(season3.roleSummary)}</p>
@@ -2928,7 +3176,7 @@ function renderSeason3SkillBlock(skill) {
 
   return `
     <div class="season-banner">
-      <p class="season-pill">${escapeHtml(SEASON3.seasonLabel)} / ${escapeHtml(season3.masterRevision)} / ${escapeHtml(
+      <p class="season-pill">${escapeHtml(SEASON3.seasonLabel)} / ${escapeHtml(formatDataRevisionLabel(season3.masterRevision))} / ${escapeHtml(
         season3.category
       )}</p>
       <p>${escapeHtml(`発動: ${triggerText} / 対象: ${targetText}`)}</p>
@@ -3054,11 +3302,79 @@ function renderStatsGrid(character, selectedStats) {
 
     return `
       <div class="${classes.join(" ")}">
-        <dt>${escapeHtml(stat.label)}</dt>
+        <dt>${renderVisualBadge("stat", stat.key, stat.label, { compact: true })}</dt>
         <dd>${character[stat.key]}</dd>
       </div>
     `;
   }).join("");
+}
+
+function buildHighlightedSearchEvidence(items, query) {
+  if (!String(query ?? "").trim()) {
+    return [];
+  }
+
+  return items
+    .map((item) => ({
+      label: item.label,
+      text: item.text,
+      markup: highlightHeroText(item.text, query)
+    }))
+    .filter((item) => item.markup && item.markup !== escapeHtml(String(item.text ?? "")))
+    .slice(0, 3);
+}
+
+function renderSearchEvidenceRows(rows = []) {
+  if (!rows.length) {
+    return "";
+  }
+
+  return `
+    <div class="search-evidence-box">
+      <p class="skill-group-title">検索ヒット箇所</p>
+      <div class="search-evidence-list">
+        ${rows
+          .map(
+            (row) => `
+              <div class="search-evidence-row">
+                <span class="search-evidence-label">${escapeHtml(row.label)}</span>
+                <span class="search-evidence-text">${row.markup}</span>
+              </div>
+            `
+          )
+          .join("")}
+      </div>
+    </div>
+  `;
+}
+
+function getCharacterSearchEvidence(character, query) {
+  return buildHighlightedSearchEvidence(
+    [
+      { label: "武将名", text: character.name },
+      { label: "戦法", text: [character.battleArtName, ...(character.battleArtEffects ?? [])].filter(Boolean).join(" / ") },
+      { label: "特徴", text: character.featureTags.join(" / ") },
+      { label: "個性", text: character.personalities.join(" / ") },
+      ...character.skillRecords.map((skill) => ({
+        label: `技能 ${skill.name}`,
+        text: [skill.name, skill.summary, skill.initialEffect, skill.maxEffect].filter(Boolean).join(" / ")
+      }))
+    ],
+    query
+  );
+}
+
+function getSkillSearchEvidence(skill, query) {
+  return buildHighlightedSearchEvidence(
+    [
+      { label: "技能名", text: skill.name },
+      { label: "概要", text: skill.summary || "" },
+      { label: "初期効果", text: skill.initialEffect || "" },
+      { label: "最大効果", text: skill.maxEffect || "" },
+      { label: "所持武将", text: skill.holders.map((holder) => holder.name).join(" / ") }
+    ],
+    query
+  );
 }
 
 function renderFavoriteButton(kind, name) {
@@ -3146,12 +3462,14 @@ function renderCharacterCard(character, options = {}) {
   const highlightedTags = options.highlightedTags ?? [];
   const selectedStats = options.selectedStats ?? [];
   const selectedConditionKeys = options.selectedConditionKeys ?? [];
+  const searchKeyword = options.searchKeyword ?? "";
   const showTags = options.showTags ?? false;
   const showPersonalities = options.showPersonalities ?? false;
   const showActions = options.showActions ?? true;
   const showSeason3Info = options.showSeason3Info ?? false;
   const showBattleArt = options.showBattleArt ?? true;
   const showGuideInsights = options.showGuideInsights ?? false;
+  const searchEvidenceMarkup = renderSearchEvidenceRows(getCharacterSearchEvidence(character, searchKeyword));
   const detailsMarkup = renderDisclosure(
     "詳細を開く",
     [
@@ -3179,11 +3497,16 @@ function renderCharacterCard(character, options = {}) {
         <div class="card-main">
           <div class="card-header">
             <div>
-              <h3>${escapeHtml(character.name)}</h3>
-              <p class="subline">
-                ${escapeHtml(character.rarity)} / ${escapeHtml(character.type || "-")}タイプ / 天賦 ${character.tenpu} /
-                基礎連鎖率 ${escapeHtml(formatPercent(character.chainBase * 100))}
-              </p>
+              <h3>${highlightHeroText(character.name, searchKeyword)}</h3>
+              <p class="subline">${escapeHtml(character.rarity)} / 天賦 ${character.tenpu} / 基礎連鎖率 ${escapeHtml(formatPercent(character.chainBase * 100))}</p>
+              <div class="meta-chip-list card-meta-strip">
+                ${renderVisualBadge("type", character.type || "-", `${character.type || "-"}タイプ`, {
+                  title: `${character.type || "-"}タイプ`
+                })}
+                <span class="meta-chip">主将 ${character.slotFit.scores.commander}</span>
+                <span class="meta-chip">副将 ${character.slotFit.scores.vice}</span>
+                <span class="meta-chip">補佐 ${character.slotFit.scores.aide}</span>
+              </div>
             </div>
             <a class="source-link" href="${escapeHtml(character.sourceUrl)}" target="_blank" rel="noreferrer">GameWith</a>
           </div>
@@ -3194,6 +3517,7 @@ function renderCharacterCard(character, options = {}) {
           ${renderSlotFitSummary(character)}
           ${showBattleArt ? renderBattleArtPreview(character) : ""}
           ${renderFeatureTags(character, highlightedTags)}
+          ${searchEvidenceMarkup}
           ${renderChainInfo(chainStats)}
           ${showActions ? renderCardActions(character) : ""}
           <dl class="stats-grid">
@@ -3220,13 +3544,14 @@ function renderCharacterCards(list, options = {}) {
   return list.map((character) => renderCharacterCard(character, options)).join("");
 }
 
-function renderSkillCard(skill) {
+function renderSkillCard(skill, options = {}) {
+  const searchKeyword = options.searchKeyword ?? "";
   const conditionMarkup = skill.conditionLabels.length
     ? skill.conditionLabels.map((label) => `<span class="meta-chip">${escapeHtml(label)}</span>`).join("")
     : `<span class="meta-chip">条件なし</span>`;
   const featureMarkup = skill.featureTags.length
     ? skill.featureTags
-        .map((feature) => `<span class="meta-chip is-feature">${escapeHtml(SKILL_EFFECT_MAP[feature] ?? feature)}</span>`)
+        .map((feature) => renderVisualBadge("feature", feature, SKILL_EFFECT_MAP[feature] ?? feature))
         .join("")
     : "";
 
@@ -3251,7 +3576,7 @@ function renderSkillCard(skill) {
       <div class="skill-card-head">
         <div>
           <button type="button" class="skill-title-button" data-skill-name="${escapeHtml(skill.name)}">
-            ${escapeHtml(skill.name)}
+            ${highlightHeroText(skill.name, searchKeyword)}
           </button>
           <p class="subline">所持武将 ${skill.holderCount}体 / 技能Lv ${skill.level || 0}</p>
         </div>
@@ -3260,7 +3585,8 @@ function renderSkillCard(skill) {
           <div class="meta-chip-list">${conditionMarkup}${featureMarkup}</div>
         </div>
       </div>
-      <p class="skill-summary">${escapeHtml(skill.summary || "概要データはありません。")}</p>
+      <p class="skill-summary">${highlightHeroText(skill.summary || "概要データはありません。", searchKeyword)}</p>
+      ${renderSearchEvidenceRows(getSkillSearchEvidence(skill, searchKeyword))}
       ${renderDisclosure(
         "効果と所持武将を開く",
         `
@@ -3286,7 +3612,7 @@ function renderSkillCard(skill) {
   `;
 }
 
-function renderSkillCards(list, emptyMessage) {
+function renderSkillCards(list, emptyMessage, options = {}) {
   if (!list.length) {
     return `
       <div class="empty-state">
@@ -3295,7 +3621,7 @@ function renderSkillCards(list, emptyMessage) {
     `;
   }
 
-  return list.map((skill) => renderSkillCard(skill)).join("");
+  return list.map((skill) => renderSkillCard(skill, options)).join("");
 }
 
 function renderEmptyState(message) {
@@ -3334,7 +3660,7 @@ const BUILDER_EFFECT_FALLBACK_SECONDS = {
   utility: 8
 };
 
-const BUILDER_TIMELINE_MAX_SECOND = 40;
+const BUILDER_TIMELINE_MAX_SECOND = 50;
 const BUILDER_EFFECT_SHORT_LABEL_RULES = [
   [/悠然/u, "悠然"],
   [/堅固/u, "堅固"],
@@ -3841,6 +4167,76 @@ function buildBuilderTimelineSegments(timelineEntries) {
   return segments;
 }
 
+function getBuilderTimelinePrimaryTone(effects = []) {
+  const tonePriority = {
+    damage: 5,
+    debuff: 4,
+    support: 3,
+    heal: 2,
+    utility: 1,
+    empty: 0
+  };
+  return effects.reduce((bestTone, effect) => {
+    const tone = effect?.tone || "utility";
+    return (tonePriority[tone] ?? 0) > (tonePriority[bestTone] ?? 0) ? tone : bestTone;
+  }, "empty");
+}
+
+function buildBuilderTimelineRows(timelineEntries) {
+  const rows = timelineEntries.flatMap((entry) => {
+    const grouped = new Map();
+    for (const effect of entry.windows) {
+      const clippedStart = Math.max(0, Math.min(BUILDER_TIMELINE_MAX_SECOND, effect.startSecond));
+      const clippedEnd = Math.max(0, Math.min(BUILDER_TIMELINE_MAX_SECOND, effect.endSecond));
+      if (clippedEnd <= clippedStart) {
+        continue;
+      }
+
+      const key = `${entry.key}-${effect.startSecond}`;
+      if (!grouped.has(key)) {
+        grouped.set(key, {
+          id: `timeline-row-${entry.key}-${effect.startSecond}`,
+          startSecond: clippedStart,
+          endSecond: clippedEnd,
+          previewSecond: clippedStart,
+          triggerSecond: effect.startSecond,
+          characterName: effect.characterName,
+          sourceLabel: effect.sourceLabel,
+          battleArtName: effect.battleArtName,
+          activationRate: effect.activationRate,
+          orderScore: entry.orderScore ?? 0,
+          effects: []
+        });
+      }
+
+      const row = grouped.get(key);
+      row.endSecond = Math.max(row.endSecond, clippedEnd);
+      row.effects.push({
+        ...effect,
+        clippedStart,
+        clippedEnd
+      });
+    }
+
+    return [...grouped.values()];
+  });
+
+  return rows
+    .map((row) => ({
+      ...row,
+      effects: row.effects.sort(compareBuilderEffects),
+      estimated: row.effects.some((effect) => effect.estimated),
+      tone: getBuilderTimelinePrimaryTone(row.effects)
+    }))
+    .sort(
+      (left, right) =>
+        left.startSecond - right.startSecond ||
+        left.orderScore - right.orderScore ||
+        right.activationRate - left.activationRate ||
+        left.characterName.localeCompare(right.characterName, "ja")
+    );
+}
+
 function summarizeBuilderCellEffects(effects) {
   const labels = uniqueValues(effects.map((effect) => effect.shortLabel));
   if (!labels.length) {
@@ -3890,11 +4286,22 @@ function buildBuilderMiniBoardCells(state, side) {
 
   return cells.map((cell) => ({
     ...cell,
+    occupied: Boolean(cell.slotKey),
     hasBuff: cell.effects.some((effect) => effect.kind === "buff"),
     hasDebuff: cell.effects.some((effect) => effect.kind === "debuff" || effect.kind === "damage"),
     hasHeal: cell.effects.some((effect) => effect.kind === "heal"),
     hasUtility: cell.effects.some((effect) => effect.kind === "utility"),
-    effectSummary: summarizeBuilderCellEffects(cell.effects)
+    effectSummary: summarizeBuilderCellEffects(cell.effects),
+    tone: getBuilderTimelinePrimaryTone(cell.effects),
+    displayTitle:
+      side === "ally" && cell.isSelf ? state.commander?.name || "自部隊" : cell.slotLabel || (cell.slotKey ? "部隊" : ""),
+    displayNote: [
+      side === "ally" && cell.isSelf ? "自部隊" : "",
+      side === "enemy" && cell.isTarget ? "基準敵" : "",
+      summarizeBuilderCellEffects(cell.effects) || cell.rowLabel
+    ]
+      .filter(Boolean)
+      .join(" / ")
   }));
 }
 
@@ -3992,6 +4399,7 @@ function buildBuilderState() {
     .sort((left, right) => left.orderScore - right.orderScore || compareCharactersBase(left.character, right.character));
   const timelineWindows = timelineEntries.flatMap((entry) => entry.windows).sort(compareBuilderEffects);
   const timelineSegments = buildBuilderTimelineSegments(timelineEntries);
+  const timelineRows = buildBuilderTimelineRows(timelineEntries);
 
   const overviewNotes = [];
   if (!commander && selectedEntries.length) {
@@ -4030,11 +4438,13 @@ function buildBuilderState() {
     timelineEntries,
     timelineWindows,
     timelineSegments,
+    timelineRows,
     activeEffects,
     boardCells: buildBuilderBoardSnapshot({
       formation,
       formationSlot,
       targetSlotKey,
+      commander,
       activeEffects
     }),
     overviewNotes: uniqueValues(overviewNotes)
@@ -4457,6 +4867,288 @@ function renderBuilderView() {
   }).join("");
 }
 
+function renderBuilderTimeline(state) {
+  if (!state.commander) {
+    return renderEmptyState("主将を選ぶと、0～50秒の戦法タイムラインと連鎖率をまとめて表示します。");
+  }
+
+  if (!state.timelineRows.length) {
+    return renderEmptyState("戦法を表示できる武将がまだ選ばれていません。");
+  }
+
+  const axisMarkup = Array.from(
+    { length: BUILDER_TIMELINE_MAX_SECOND / 10 + 1 },
+    (_, index) => `<span>${index * 10}秒</span>`
+  ).join("");
+  const rowMarkup = state.timelineRows
+    .map((row) => {
+      const isActive =
+        state.previewSecond >= row.startSecond &&
+        (state.previewSecond < row.endSecond ||
+          (row.endSecond === BUILDER_TIMELINE_MAX_SECOND && state.previewSecond === BUILDER_TIMELINE_MAX_SECOND));
+      const barMarkup = row.effects
+        .map(
+          (effect, index) => `
+            <span
+              class="builder-timeline-bar tone-${escapeHtml(effect.tone || "utility")} ${effect.estimated ? "is-estimated" : ""}"
+              style="--start:${effect.clippedStart}; --end:${effect.clippedEnd}; --lane:${index}"
+              title="${escapeHtml(`${effect.characterName} / ${effect.shortLabel} / ${effect.text}`)}"
+            >
+              <span>${escapeHtml(effect.shortLabel)}</span>
+            </span>
+          `
+        )
+        .join("");
+      const effectMetaMarkup = row.effects
+        .map(
+          (effect) => `
+            <span class="timeline-effect-chip tone-${escapeHtml(effect.tone || "utility")}">
+              <strong>${escapeHtml(effect.shortLabel)}</strong>
+              <small>${escapeHtml(`${effect.startSecond}～${effect.endSecond}秒 / ${getBuilderEffectScopeLabel(effect)}`)}</small>
+            </span>
+          `
+        )
+        .join("");
+
+      return `
+        <button
+          class="builder-timeline-row ${isActive ? "is-active" : ""}"
+          type="button"
+          data-builder-preview-second="${row.previewSecond}"
+        >
+          <div class="builder-timeline-row-head">
+            <div>
+              <div class="builder-timeline-source">${escapeHtml(`${row.sourceLabel} / ${row.characterName}`)}</div>
+              <strong class="builder-timeline-title">${escapeHtml(row.battleArtName)}</strong>
+            </div>
+            <div class="builder-timeline-meta">
+              <span>${escapeHtml(`${row.triggerSecond}秒発動`)}</span>
+              <span>${escapeHtml(row.sourceLabel === "主将" ? "100% / 主将" : formatPercent(row.activationRate))}</span>
+              <span>${escapeHtml(row.estimated ? "推定秒含む" : "確定秒のみ")}</span>
+            </div>
+          </div>
+          <div class="builder-timeline-track" style="--lanes:${Math.max(row.effects.length, 1)}">
+            ${barMarkup}
+            <div class="builder-timeline-now" style="--at:${state.previewSecond}"></div>
+          </div>
+          <div class="builder-timeline-row-foot">${effectMetaMarkup}</div>
+        </button>
+      `;
+    })
+    .join("");
+
+  return `
+    <div class="builder-timeline-shell">
+      <div class="builder-timeline-axis">${axisMarkup}</div>
+      <div class="builder-timeline-rows">${rowMarkup}</div>
+    </div>
+  `;
+}
+
+function renderBuilderBoardLegend() {
+  return `
+    <span class="legend-chip"><span class="legend-swatch is-buff"></span>味方バフ</span>
+    <span class="legend-chip"><span class="legend-swatch is-debuff"></span>敵デバフ / ダメージ</span>
+    <span class="legend-chip"><span class="legend-swatch is-heal"></span>回復</span>
+    <span class="legend-chip"><span class="legend-swatch is-utility"></span>補助 / 解除 / 悠然</span>
+  `;
+}
+
+function renderBuilderBoardPanel(title, caption, cells, side) {
+  return `
+    <article class="builder-board-faction ${side === "ally" ? "is-friendly" : "is-enemy"}">
+      <div class="builder-board-faction-head">
+        <strong>${escapeHtml(title)}</strong>
+        <span>${escapeHtml(caption)}</span>
+      </div>
+      <div class="builder-board-grid">
+        ${cells
+          .map((cell) => {
+            const classes = [
+              "builder-board-cell",
+              cell.occupied ? "is-occupied" : "is-empty",
+              cell.isSelf ? "is-self" : "",
+              cell.isTarget ? "is-target" : "",
+              cell.effectSummary ? `tone-${cell.tone || "utility"}` : ""
+            ]
+              .filter(Boolean)
+              .join(" ");
+
+            return `
+              <div class="${classes}">
+                ${
+                  side === "enemy" && cell.slotKey
+                    ? `<button type="button" data-builder-target-slot="${escapeHtml(cell.slotKey)}" aria-label="${escapeHtml(`${cell.slotLabel}を基準敵にする`)}"></button>`
+                    : ""
+                }
+                ${
+                  cell.occupied
+                    ? `
+                      <div class="builder-board-slot">${escapeHtml(cell.slotLabel)}</div>
+                      <div class="builder-board-name">${escapeHtml(cell.displayTitle || "")}</div>
+                      <div class="builder-board-note">${escapeHtml(cell.displayNote || "")}</div>
+                      <div class="builder-board-effect">${escapeHtml(cell.effectSummary || "効果なし")}</div>
+                    `
+                    : `<div class="builder-board-note">空きマス</div>`
+                }
+              </div>
+            `;
+          })
+          .join("")}
+      </div>
+    </article>
+  `;
+}
+
+function renderBuilderBoard(state) {
+  return `
+    <div class="builder-board-stage">
+      <div class="builder-board-stage-head">
+        <strong>${escapeHtml(`${state.previewSecond}秒時点 / ${state.formation.label}`)}</strong>
+        <span>${escapeHtml(`自部隊: ${state.formationSlot.label} / 基準敵: ${formationSlotLabelFor(state.targetSlotKey)}`)}</span>
+      </div>
+      <div class="builder-board-stage-grid">
+        ${renderBuilderBoardPanel("味方盤面", "自部隊を含む十字基準の5枠", state.boardCells.allyCells, "ally")}
+        ${renderBuilderBoardPanel("敵盤面", "敵マスを押すと単体対象の基準を変更", state.boardCells.enemyCells, "enemy")}
+      </div>
+    </div>
+  `;
+}
+
+function renderBuilderActiveEffects(state) {
+  if (!state.activeEffects.length) {
+    return `
+      <div class="builder-effect-stream">
+        <div class="builder-effect-stream-head">
+          <strong>${escapeHtml(`${state.previewSecond}秒時点の継続効果 0件`)}</strong>
+          <span>この秒には残っているバフ / デバフはありません。</span>
+        </div>
+      </div>
+    `;
+  }
+
+  const items = state.activeEffects
+    .map((effect) => {
+      const targetSlots = resolveBuilderEffectTargetSlots(
+        effect,
+        state.formation,
+        state.formationSlot.key,
+        state.targetSlotKey
+      )
+        .map((slotKey) => formationSlotLabelFor(slotKey))
+        .join(" / ");
+
+      return `
+        <article class="builder-effect-item tone-${escapeHtml(effect.tone || "utility")}">
+          <div class="builder-effect-item-head">
+            <strong>${escapeHtml(`${effect.characterName} / ${effect.shortLabel}`)}</strong>
+            <span>${escapeHtml(`${effect.startSecond}～${effect.endSecond}秒`)}</span>
+          </div>
+          <div class="army-list-row">
+            <span>対象</span>
+            <span>${escapeHtml(`${effect.side === "ally" ? "味方" : "敵"} / ${getBuilderEffectScopeLabel(effect)} / ${targetSlots}`)}</span>
+          </div>
+          <div class="army-list-row">
+            <span>連鎖率</span>
+            <span>${escapeHtml(effect.sourceLabel === "主将" ? "100% / 主将" : formatPercent(effect.activationRate))}</span>
+          </div>
+          <div class="army-list-row">
+            <span>内容</span>
+            <span>${escapeHtml(effect.text)}</span>
+          </div>
+        </article>
+      `;
+    })
+    .join("");
+
+  return `
+    <div class="builder-effect-stream">
+      <div class="builder-effect-stream-head">
+        <strong>${escapeHtml(`${state.previewSecond}秒時点の継続効果 ${state.activeEffects.length}件`)}</strong>
+        <span>タイムライン行と敵盤面を押すと表示が連動します。</span>
+      </div>
+      ${items}
+    </div>
+  `;
+}
+
+function renderBuilderView() {
+  if (!elements.builderView) {
+    return;
+  }
+
+  const state = buildBuilderState();
+  const validationMessages = [];
+
+  if (state.duplicateNames.length) {
+    validationMessages.push(
+      `重複武将: ${state.duplicateNames.map((row) => `${row.name} ×${row.count}`).join(" / ")}`
+    );
+  }
+
+  if (!state.commander && state.selectedEntries.length) {
+    validationMessages.push("主将を選ぶと連鎖率とタイムラインを計算できます。");
+  }
+
+  elements.builderSummary.textContent = formatSummaryText(
+    [
+      `陣形: ${state.formation.label}`,
+      `位置: ${state.formationSlot.label}`,
+      `列: ${builderRowLabelFor(state.rowKey)}`,
+      `主将: ${state.commander?.name ?? "未選択"}`,
+      `選択枠: ${state.selectedEntries.length}/${BUILDER_SLOT_DEFS.length}`,
+      `表示行: ${state.timelineRows.length}行`,
+      `現在: ${state.previewSecond}秒`
+    ],
+    "編成条件を指定してください。"
+  );
+  setBuilderValidation(validationMessages.join(" / "));
+  elements.builderTimelineCount.textContent = `0～${BUILDER_TIMELINE_MAX_SECOND}秒 / ${state.timelineRows.length}行`;
+  const timelineSection = elements.builderTimeline?.closest(".result-section");
+  const boardSection = elements.builderBoardGrid?.closest(".result-section");
+  const activeEffectsCard = elements.builderActiveEffects?.closest(".module-card");
+  if (timelineSection) {
+    const heading = timelineSection.querySelector("h2");
+    const description = timelineSection.querySelector(".result-header p");
+    if (heading) {
+      heading.textContent = "戦法タイムライン";
+    }
+    if (description) {
+      description.textContent = "0～50秒の間で、どの戦法がいつ発動し、どの効果が何秒続くかを横並びで確認します。";
+    }
+  }
+  if (boardSection) {
+    const heading = boardSection.querySelector("h2");
+    const description = boardSection.querySelector(".result-header p");
+    if (heading) {
+      heading.textContent = "盤面プレビュー";
+    }
+    if (description) {
+      description.textContent = "選択中の秒で、味方盤面と敵盤面のどこに効果が残っているかを確認します。";
+    }
+  }
+  if (activeEffectsCard) {
+    const heading = activeEffectsCard.querySelector("h2");
+    if (heading) {
+      heading.textContent = "その秒の継続効果";
+    }
+  }
+  if (elements.builderPreviewSecondLabel) {
+    elements.builderPreviewSecondLabel.textContent = `${state.previewSecond}秒時点の盤面と継続効果を表示します。タイムライン行を押すとその秒へ移動します。`;
+  }
+  if (elements.builderBoardLegend) {
+    elements.builderBoardLegend.innerHTML = renderBuilderBoardLegend();
+  }
+  elements.builderTimeline.innerHTML = renderBuilderTimeline(state);
+  elements.builderBoardGrid.innerHTML = renderBuilderBoard(state);
+  elements.builderActiveEffects.innerHTML = renderBuilderActiveEffects(state);
+  elements.builderOverviewGrid.innerHTML = renderBuilderOverview(state);
+  elements.builderSlotGrid.innerHTML = BUILDER_SLOT_DEFS.map((slot) => {
+    const entry = state.slotEntries.find((row) => row.key === slot.key);
+    return renderBuilderSlotCard(entry, state.rowKey);
+  }).join("");
+}
+
 function resetBuilderView() {
   if (!elements.builderView) {
     return;
@@ -4848,6 +5540,7 @@ function renderCharacterDb() {
     showPersonalities: true,
     showGuideInsights: true,
     showSeason3Info: true,
+    searchKeyword: keyword,
     highlightedTags: [...tags, ...features],
     selectedConditionKeys,
     emptyMessage: "条件に一致する武将はいません。"
@@ -4901,7 +5594,9 @@ function renderSkillDb() {
 
   updateFavoriteToggleLabels();
   elements.skillDbCount.textContent = `${sorted.length}件`;
-  elements.skillList.innerHTML = renderSkillCards(sorted, "条件に一致する技能はありません。");
+  elements.skillList.innerHTML = renderSkillCards(sorted, "条件に一致する技能はありません。", {
+    searchKeyword: keyword
+  });
 }
 
 function resetSkillDb() {
@@ -4992,17 +5687,88 @@ function renderSlotQuickCard(title, slotKey, candidates) {
   `;
 }
 
+function buildCharacterCompareContext(characters) {
+  return {
+    statMax: STAT_DEFS.reduce((result, stat) => {
+      result[stat.key] = Math.max(...characters.map((character) => character?.[stat.key] ?? 0), 1);
+      return result;
+    }, {}),
+    metricMax: {
+      commander: Math.max(...characters.map((character) => character?.slotFit?.scores?.commander ?? 0), 1),
+      vice: Math.max(...characters.map((character) => character?.slotFit?.scores?.vice ?? 0), 1),
+      aide: Math.max(...characters.map((character) => character?.slotFit?.scores?.aide ?? 0), 1),
+      topTwo: Math.max(...characters.map((character) => (character?.top1?.value ?? 0) + (character?.top2?.value ?? 0)), 1)
+    }
+  };
+}
+
+function renderCompareRadar(character, context) {
+  const size = 148;
+  const center = size / 2;
+  const radius = 54;
+  const count = STAT_DEFS.length;
+  const labelRadius = radius + 18;
+  const rings = [0.33, 0.66, 1];
+
+  function pointFor(index, ratio) {
+    const angle = -Math.PI / 2 + (index / count) * Math.PI * 2;
+    return {
+      x: center + Math.cos(angle) * radius * ratio,
+      y: center + Math.sin(angle) * radius * ratio
+    };
+  }
+
+  const grids = rings
+    .map((ring) =>
+      STAT_DEFS.map((_, index) => {
+        const point = pointFor(index, ring);
+        return `${point.x.toFixed(1)},${point.y.toFixed(1)}`;
+      }).join(" ")
+    )
+    .map((points) => `<polygon class="compare-radar-grid" points="${points}" />`)
+    .join("");
+  const spokes = STAT_DEFS.map((_, index) => {
+    const point = pointFor(index, 1);
+    return `<line class="compare-radar-spoke" x1="${center}" y1="${center}" x2="${point.x.toFixed(1)}" y2="${point.y.toFixed(1)}" />`;
+  }).join("");
+  const polygon = STAT_DEFS.map((stat, index) => {
+    const point = pointFor(index, (character[stat.key] ?? 0) / Math.max(context.statMax[stat.key] ?? 1, 1));
+    return `${point.x.toFixed(1)},${point.y.toFixed(1)}`;
+  }).join(" ");
+  const labels = STAT_DEFS.map((stat, index) => {
+    const point = pointFor(index, labelRadius / radius);
+    return `<text class="compare-radar-label" x="${point.x.toFixed(1)}" y="${point.y.toFixed(1)}" text-anchor="middle">${escapeHtml(stat.label)}</text>`;
+  }).join("");
+
+  return `
+    <div class="compare-radar-wrap" aria-hidden="true">
+      <svg class="compare-radar" viewBox="0 0 ${size} ${size}">
+        ${grids}
+        ${spokes}
+        <polygon class="compare-radar-shape" points="${polygon}" />
+        <circle class="compare-radar-core" cx="${center}" cy="${center}" r="3.5" />
+        ${labels}
+      </svg>
+    </div>
+  `;
+}
+
+function renderCompareMetricCell(label, value, isBest = false) {
+  return `
+    <div class="${isBest ? "is-best" : ""}">
+      <dt>${escapeHtml(label)}</dt>
+      <dd>${value}</dd>
+    </div>
+  `;
+}
+
 function renderCompareObjectiveBlock(character) {
   if (character.season3?.objectiveScores) {
     const objectiveMarkup = Object.entries(character.season3.objectiveScores)
       .sort((left, right) => right[1] - left[1])
       .slice(0, 3)
       .map(
-        ([objectiveKey, score]) => `
-          <span class="meta-chip">
-            ${escapeHtml(objectiveLabelFor(objectiveKey))} ${score}
-          </span>
-        `
+        ([objectiveKey, score]) => renderVisualBadge("objective", objectiveKey, `${objectiveLabelFor(objectiveKey)} ${score}`)
       )
       .join("");
     return `<div class="meta-chip-list">${objectiveMarkup}</div>`;
@@ -5011,9 +5777,7 @@ function renderCompareObjectiveBlock(character) {
   if (character.objectiveTags.length) {
     return `
       <div class="meta-chip-list">
-        ${character.objectiveTags
-          .map((objectiveKey) => `<span class="meta-chip">${escapeHtml(objectiveLabelFor(objectiveKey))}</span>`)
-          .join("")}
+        ${character.objectiveTags.map((objectiveKey) => renderVisualBadge("objective", objectiveKey, objectiveLabelFor(objectiveKey))).join("")}
       </div>
     `;
   }
@@ -5021,12 +5785,13 @@ function renderCompareObjectiveBlock(character) {
   return `<p class="compare-note">用途タグは未整理です。</p>`;
 }
 
-function renderCharacterCompareCard(character) {
+function renderCharacterCompareCard(character, context) {
   const note =
     character.season3?.roleSummary ||
     character.guide?.evaluationPoints?.[0] ||
     character.slotFit.reasons[character.slotFit.bestKey][0] ||
     "";
+  const topTwoValue = character.top1.value + character.top2.value;
 
   return `
     <article class="compare-card">
@@ -5048,20 +5813,33 @@ function renderCharacterCompareCard(character) {
         </button>
       </div>
       <div class="meta-chip-list">
+        ${renderVisualBadge("type", character.type || "-", `${character.type || "-"}タイプ`)}
         <span class="meta-chip is-highlight">${escapeHtml(character.slotFit.sorted[0].label)} ${character.slotFit.sorted[0].score}</span>
         <span class="meta-chip">${escapeHtml(character.slotFit.sorted[1].label)} ${character.slotFit.sorted[1].score}</span>
         <span class="meta-chip">基礎連鎖率 ${escapeHtml(formatPercent(character.chainBase * 100))}</span>
       </div>
+      ${renderCompareRadar(character, context)}
       <dl class="compare-metric-grid">
-        <div><dt>主将</dt><dd>${character.slotFit.scores.commander}</dd></div>
-        <div><dt>副将</dt><dd>${character.slotFit.scores.vice}</dd></div>
-        <div><dt>補佐</dt><dd>${character.slotFit.scores.aide}</dd></div>
-        <div><dt>上位2値</dt><dd>${character.top1.value + character.top2.value}</dd></div>
+        ${renderCompareMetricCell("主将", character.slotFit.scores.commander, character.slotFit.scores.commander >= context.metricMax.commander)}
+        ${renderCompareMetricCell("副将", character.slotFit.scores.vice, character.slotFit.scores.vice >= context.metricMax.vice)}
+        ${renderCompareMetricCell("補佐", character.slotFit.scores.aide, character.slotFit.scores.aide >= context.metricMax.aide)}
+        ${renderCompareMetricCell("上位2値", topTwoValue, topTwoValue >= context.metricMax.topTwo)}
       </dl>
+      <div class="compare-stat-list">
+        ${STAT_DEFS.map((stat) => {
+          const isBest = (character[stat.key] ?? 0) >= (context.statMax[stat.key] ?? 0);
+          return `
+            <div class="compare-stat-row ${isBest ? "is-best" : ""}">
+              <span>${renderVisualBadge("stat", stat.key, stat.label, { compact: true })}</span>
+              <strong>${character[stat.key]}</strong>
+            </div>
+          `;
+        }).join("")}
+      </div>
       <p class="compare-note">1位 ${escapeHtml(character.top1.label)} ${character.top1.value} / 2位 ${escapeHtml(character.top2.label)} ${character.top2.value}</p>
       ${renderCompareObjectiveBlock(character)}
       <div class="meta-chip-list">
-        ${character.featureTags.slice(0, 5).map((feature) => `<span class="meta-chip is-feature">${escapeHtml(feature)}</span>`).join("")}
+        ${character.featureTags.slice(0, 5).map((feature) => renderVisualBadge("feature", feature, feature)).join("")}
       </div>
       <p class="compare-note">${escapeHtml(note)}</p>
       <div class="compare-actions">
@@ -5080,14 +5858,15 @@ function renderCharacterComparePanel() {
   const compared = getComparedCharacterNames()
     .map((name) => characterByName[name])
     .filter(Boolean);
+  const compareContext = buildCharacterCompareContext(compared);
 
   elements.characterCompareCount.textContent = `${compared.length}/3`;
   elements.characterCompareSummary.textContent = compared.length
-    ? "主将 / 副将 / 補佐適性、上位2ステ、用途タグを横並びで比べられます。"
+    ? "主将 / 副将 / 補佐適性に加えて、レーダーと最大値ハイライトで差分を見比べられます。"
     : "カードの「比較に追加」で最大3体まで横並び比較できます。";
 
   elements.characterCompareList.innerHTML = compared.length
-    ? compared.map((character) => renderCharacterCompareCard(character)).join("")
+    ? compared.map((character) => renderCharacterCompareCard(character, compareContext)).join("")
     : renderEmptyState("比較したい武将を追加すると、ここに差分を表示します。");
 }
 
@@ -5364,7 +6143,7 @@ function buildSeason3ObjectiveCore(objectiveKey) {
 
 function renderSeason3CoreCard(core) {
   if (!core) {
-    return renderEmptyState("Season 3 コア提案データがありません。");
+    return renderEmptyState("S3コア提案データがありません。");
   }
 
   const commanderChainText = core.partners.length
@@ -5376,7 +6155,7 @@ function renderSeason3CoreCard(core) {
   return `
     <article class="quick-card">
       <h3>${escapeHtml(objectiveLabelFor(core.objectiveKey))}コア</h3>
-      <p>${escapeHtml(core.commander.name)} を軸にした Season 3 コア案</p>
+      <p>${escapeHtml(core.commander.name)} を軸にした S3コア案</p>
       <ul>
         <li><span>主将候補</span><strong>${escapeHtml(core.commander.name)}</strong></li>
         <li><span>副将候補</span><strong>${escapeHtml(core.partners[0]?.name ?? "-")}</strong></li>
@@ -5521,7 +6300,7 @@ function renderFeatureBoard() {
 
   elements.s3HeroSeasonLabel.textContent = SEASON3.seasonLabel;
   elements.s3ThemeLabel.textContent = SEASON3.theme;
-  elements.s3RevisionLabel.textContent = SEASON3.masterRevision;
+  elements.s3RevisionLabel.textContent = formatDataRevisionLabel(SEASON3.masterRevision);
   elements.s3ContextNotes.innerHTML = SEASON3.contextNotes
     .map((note) => `<li>${escapeHtml(note)}</li>`)
     .join("");
@@ -5530,9 +6309,9 @@ function renderFeatureBoard() {
     [
       `目的: ${objectiveLabel}`,
       `優先スロット: ${S3_SLOT_FOCUS_DEFS.find((item) => item.key === slotFocus)?.label ?? slotFocus}`,
-      `Revision: ${SEASON3.masterRevision}`
+      `データ版: ${SEASON3.masterRevision}`
     ],
-    "Season 3 の注目候補を表示しています。"
+    "S3の注目候補を表示しています。"
   );
   elements.s3HeroCount.textContent = `${sortedHeroes.length}体`;
   elements.s3HeroList.innerHTML = renderCharacterCards(sortedHeroes, {
@@ -5540,7 +6319,7 @@ function renderFeatureBoard() {
     showSeason3Info: true,
     showActions: true,
     showBattleArt: false,
-    emptyMessage: "Season 3 注目武将データがありません。"
+    emptyMessage: "S3注目武将データがありません。"
   });
   elements.s3UpgradeGrid.innerHTML = topUpgrades.length
     ? topUpgrades.map((character) => renderS3UpgradeCard(character, objectiveKey, slotFocus)).join("")
@@ -5548,22 +6327,22 @@ function renderFeatureBoard() {
   elements.s3SkillCount.textContent = `${season3FeaturedSkills.length}件`;
   elements.s3SkillList.innerHTML = renderSkillCards(
     season3FeaturedSkills,
-    "Season 3 注目技能データがありません。"
+    "S3注目技能データがありません。"
   );
   elements.s3WeightGrid.innerHTML = [
     renderSeason3WeightCard(
       `${objectiveLabel}の戦闘軸`,
-      "season3-objectives.json の用途別重みです。",
+      "目的別スコアの重みを表示しています。",
       objectiveWeights
     ),
     renderSeason3WeightCard(
       "部隊スコア軸",
-      "season3-builder-weights.json の unitWeights を表示しています。",
+      "部隊スコアの重みを表示しています。",
       unitWeights
     ),
     renderSeason3WeightCard(
       "軍勢スコア軸",
-      "season3-builder-weights.json の armyWeights を表示しています。",
+      "軍勢スコアの重みを表示しています。",
       armyWeights
     ),
     renderSeason3WeightCard("主要減点", "自動編成で避ける失点要素です。", penaltyEntries)
@@ -5651,6 +6430,556 @@ function resetS3Board() {
   elements.s3SlotFocus.value = "balanced";
   renderFeatureBoard();
 }
+
+function getCurrentViewKey() {
+  return (
+    elements.viewButtons.find((button) => button.classList.contains("is-active"))?.dataset.viewTab ||
+    window.location.hash.replace(/^#/, "") ||
+    getUiState().activeView ||
+    "power"
+  );
+}
+
+function updateTrustSnapshot() {
+  if (!elements.trustSnapshot) {
+    return;
+  }
+
+  const parts = [
+    `シーズン: ${SEASON3.seasonLabel || "-"}`,
+    formatDataRevisionLabel(SEASON3.masterRevision),
+    `更新基準 ${SEASON3.updatedAt || "-"}`
+  ];
+
+  elements.trustSnapshot.textContent = parts.join(" / ");
+}
+
+function updateShareScopeNote(viewKey = getCurrentViewKey()) {
+  if (!elements.shareScopeNote) {
+    return;
+  }
+
+  const meta = VIEW_META[viewKey] ?? VIEW_META.power;
+  const hint = SHARE_VIEW_HINTS[viewKey] ?? SHARE_VIEW_HINTS.power;
+  elements.shareScopeNote.textContent = `${meta.label}: ${hint}`;
+}
+
+let statusToastTimer = null;
+
+function showStatusToast(message) {
+  if (!elements.statusToast || !message) {
+    return;
+  }
+
+  elements.statusToast.textContent = message;
+  elements.statusToast.classList.add("is-visible");
+
+  if (statusToastTimer) {
+    window.clearTimeout(statusToastTimer);
+  }
+
+  statusToastTimer = window.setTimeout(() => {
+    elements.statusToast.classList.remove("is-visible");
+  }, 2600);
+}
+
+async function copyTextToClipboard(text) {
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(text);
+    return true;
+  }
+
+  const textarea = document.createElement("textarea");
+  textarea.value = text;
+  textarea.setAttribute("readonly", "readonly");
+  textarea.style.position = "fixed";
+  textarea.style.opacity = "0";
+  document.body.append(textarea);
+  textarea.select();
+  const succeeded = document.execCommand("copy");
+  textarea.remove();
+  return succeeded;
+}
+
+function downloadJsonFile(filename, data) {
+  const blob = new Blob([JSON.stringify(data, null, 2)], {
+    type: "application/json"
+  });
+  downloadBlobFile(filename, blob);
+}
+
+function downloadBlobFile(filename, blob) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 0);
+}
+
+function registerPwa() {
+  const isLocalHost = /^(localhost|127\.0\.0\.1)$/u.test(window.location.hostname);
+  if (!("serviceWorker" in navigator) || (window.location.protocol !== "https:" && !isLocalHost)) {
+    return;
+  }
+
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("./sw.js").catch(() => {});
+  });
+}
+
+function encodeJsonToBase64Url(value) {
+  const bytes = new TextEncoder().encode(JSON.stringify(value));
+  let binary = "";
+  bytes.forEach((byte) => {
+    binary += String.fromCharCode(byte);
+  });
+  return btoa(binary).replace(/\+/gu, "-").replace(/\//gu, "_").replace(/=+$/u, "");
+}
+
+function decodeJsonFromBase64Url(value) {
+  const normalized = String(value ?? "").replace(/-/gu, "+").replace(/_/gu, "/");
+  const padded = normalized + "=".repeat((4 - (normalized.length % 4 || 4)) % 4);
+  const binary = atob(padded);
+  const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+  return JSON.parse(new TextDecoder().decode(bytes));
+}
+
+function arrayIfNonEmpty(values) {
+  return values.length ? values : undefined;
+}
+
+function optionalSelection(values, defaults) {
+  return values.join("|") === defaults.join("|") ? undefined : values;
+}
+
+function collectPowerShareState() {
+  return {
+    primary: elements.primaryStat.value || undefined,
+    secondary: elements.secondaryStat.value || undefined,
+    chainCommander: elements.chainCommander.value.trim() || undefined,
+    chainSortEnabled: elements.chainSortEnabled.checked || undefined,
+    rarities: optionalSelection(readCheckedValuesIn(elements.powerForm, "power-rarity"), defaultRarities),
+    conditions: arrayIfNonEmpty(readCheckedValuesIn(elements.powerForm, "power-condition")),
+    features: arrayIfNonEmpty(readCheckedValuesIn(elements.powerForm, "power-feature"))
+  };
+}
+
+function collectCharacterShareState() {
+  return {
+    keyword: elements.characterKeyword.value.trim() || undefined,
+    sortKey: elements.characterSort.value !== "rarityTenpu" ? elements.characterSort.value : undefined,
+    rarities: optionalSelection(readCheckedValuesIn(elements.characterView, "db-rarity"), defaultRarities),
+    types: optionalSelection(readCheckedValuesIn(elements.characterView, "db-type"), defaultTypes),
+    objectives: arrayIfNonEmpty(readCheckedValuesIn(elements.characterView, "db-objective")),
+    tags: arrayIfNonEmpty(readCheckedValuesIn(elements.characterView, "db-tag")),
+    features: arrayIfNonEmpty(readCheckedValuesIn(elements.characterView, "db-feature")),
+    favoritesOnly: elements.characterFavoriteToggle?.dataset.active === "true" || undefined,
+    compare: arrayIfNonEmpty(getComparedCharacterNames())
+  };
+}
+
+function collectSkillShareState() {
+  return {
+    keyword: elements.skillKeyword.value.trim() || undefined,
+    sortKey: elements.skillSort.value !== "order" ? elements.skillSort.value : undefined,
+    conditions: arrayIfNonEmpty(readCheckedValuesIn(elements.skillView, "skill-condition")),
+    effects: arrayIfNonEmpty(readCheckedValuesIn(elements.skillView, "skill-effect")),
+    favoritesOnly: elements.skillFavoriteToggle?.dataset.active === "true" || undefined
+  };
+}
+
+function collectSynergyShareState() {
+  return {
+    commander: elements.synergyCommander.value.trim() || undefined,
+    keyword: elements.synergyKeyword.value.trim() || undefined,
+    rarities: optionalSelection(readCheckedValuesIn(elements.synergyView, "synergy-rarity"), defaultRarities),
+    conditions: arrayIfNonEmpty(readCheckedValuesIn(elements.synergyView, "synergy-condition")),
+    features: arrayIfNonEmpty(readCheckedValuesIn(elements.synergyView, "synergy-feature"))
+  };
+}
+
+function collectBuilderShareState() {
+  return {
+    formation: elements.builderFormation?.value || undefined,
+    formationSlot: elements.builderFormationSlot?.value || undefined,
+    targetSlot: elements.builderTargetSlot?.value || undefined,
+    previewSecond: elements.builderPreviewSecond?.value || undefined,
+    commander: elements.builderCommander?.value || undefined,
+    vice1: elements.builderVice1?.value || undefined,
+    vice2: elements.builderVice2?.value || undefined,
+    aide1: elements.builderAide1?.value || undefined,
+    aide2: elements.builderAide2?.value || undefined,
+    vice1Enabled: elements.builderVice1Enabled?.checked === false ? false : undefined,
+    vice2Enabled: elements.builderVice2Enabled?.checked === false ? false : undefined
+  };
+}
+
+function collectBoardShareState() {
+  return {
+    objective: elements.s3Objective?.value || undefined,
+    slotFocus: elements.s3SlotFocus?.value || undefined
+  };
+}
+
+function collectCurrentSharePayload() {
+  const view = getCurrentViewKey();
+  let state = {};
+
+  switch (view) {
+    case "power":
+      state = collectPowerShareState();
+      break;
+    case "character":
+      state = collectCharacterShareState();
+      break;
+    case "skill":
+      state = collectSkillShareState();
+      break;
+    case "synergy":
+      state = collectSynergyShareState();
+      break;
+    case "builder":
+      state = collectBuilderShareState();
+      break;
+    case "army":
+      state = window.KH_ARMY_SHARE_API?.collectShareState?.() ?? {};
+      break;
+    case "board":
+      state = collectBoardShareState();
+      break;
+    default:
+      state = {};
+  }
+
+  return {
+    version: SHARE_PAYLOAD_VERSION,
+    view,
+    state
+  };
+}
+
+function buildShareUrl(payload) {
+  const url = new URL(window.location.origin + window.location.pathname);
+  url.searchParams.set(SHARE_PARAM_KEY, encodeJsonToBase64Url(payload));
+  url.hash = payload.view;
+  return url.toString();
+}
+
+function readSharedPayloadFromLocation() {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const encoded = params.get(SHARE_PARAM_KEY);
+    if (!encoded) {
+      return null;
+    }
+
+    const decoded = decodeJsonFromBase64Url(encoded);
+    if (decoded?.version !== SHARE_PAYLOAD_VERSION || !VIEW_KEYS.includes(decoded.view)) {
+      return null;
+    }
+
+    return decoded;
+  } catch (error) {
+    return null;
+  }
+}
+
+function applyPowerShareState(state = {}) {
+  resetPowerSearch();
+  elements.primaryStat.value = state.primary ?? "";
+  elements.secondaryStat.value = state.secondary ?? "";
+  elements.chainCommander.value = state.chainCommander ?? "";
+  elements.chainSortEnabled.checked = Boolean(state.chainSortEnabled);
+  setCheckedValuesByName("power-rarity", state.rarities ?? defaultRarities);
+  setCheckedValuesByName("power-condition", state.conditions ?? []);
+  setCheckedValuesByName("power-feature", state.features ?? []);
+  renderPowerResults();
+}
+
+function applyCharacterShareState(state = {}) {
+  resetCharacterDb();
+  elements.characterKeyword.value = state.keyword ?? "";
+  elements.characterSort.value = state.sortKey ?? "rarityTenpu";
+  setCheckedValuesByName("db-rarity", state.rarities ?? defaultRarities);
+  setCheckedValuesByName("db-type", state.types ?? defaultTypes);
+  setCheckedValuesByName("db-objective", state.objectives ?? []);
+  setCheckedValuesByName("db-tag", state.tags ?? []);
+  setCheckedValuesByName("db-feature", state.features ?? []);
+  setToggleButtonState(elements.characterFavoriteToggle, Boolean(state.favoritesOnly));
+  saveUiState({ characterFavoritesOnly: Boolean(state.favoritesOnly) });
+  saveComparedCharacterNames(state.compare ?? []);
+  renderCharacterDb();
+}
+
+function applySkillShareState(state = {}) {
+  resetSkillDb();
+  elements.skillKeyword.value = state.keyword ?? "";
+  elements.skillSort.value = state.sortKey ?? "order";
+  setCheckedValuesByName("skill-condition", state.conditions ?? []);
+  setCheckedValuesByName("skill-effect", state.effects ?? []);
+  setToggleButtonState(elements.skillFavoriteToggle, Boolean(state.favoritesOnly));
+  saveUiState({ skillFavoritesOnly: Boolean(state.favoritesOnly) });
+  renderSkillDb();
+}
+
+function applySynergyShareState(state = {}) {
+  resetSynergy();
+  elements.synergyCommander.value = state.commander ?? "";
+  elements.synergyKeyword.value = state.keyword ?? "";
+  setCheckedValuesByName("synergy-rarity", state.rarities ?? defaultRarities);
+  setCheckedValuesByName("synergy-condition", state.conditions ?? []);
+  setCheckedValuesByName("synergy-feature", state.features ?? []);
+  renderSynergy();
+}
+
+function applyBuilderShareState(state = {}) {
+  resetBuilderView();
+  if (elements.builderFormation && state.formation) {
+    elements.builderFormation.value = state.formation;
+    populateBuilderFormationSlotOptions();
+    populateBuilderTargetSlotOptions();
+  }
+  if (elements.builderFormationSlot) {
+    elements.builderFormationSlot.value = state.formationSlot ?? elements.builderFormationSlot.value;
+  }
+  if (elements.builderTargetSlot) {
+    elements.builderTargetSlot.value = state.targetSlot ?? elements.builderTargetSlot.value;
+  }
+  if (elements.builderPreviewSecond && state.previewSecond) {
+    elements.builderPreviewSecond.value = state.previewSecond;
+  }
+  if (elements.builderCommander) {
+    elements.builderCommander.value = state.commander ?? "";
+  }
+  if (elements.builderVice1) {
+    elements.builderVice1.value = state.vice1 ?? "";
+  }
+  if (elements.builderVice2) {
+    elements.builderVice2.value = state.vice2 ?? "";
+  }
+  if (elements.builderAide1) {
+    elements.builderAide1.value = state.aide1 ?? "";
+  }
+  if (elements.builderAide2) {
+    elements.builderAide2.value = state.aide2 ?? "";
+  }
+  if (elements.builderVice1Enabled) {
+    elements.builderVice1Enabled.checked = state.vice1Enabled !== false;
+  }
+  if (elements.builderVice2Enabled) {
+    elements.builderVice2Enabled.checked = state.vice2Enabled !== false;
+  }
+  renderBuilderView();
+}
+
+function applyBoardShareState(state = {}) {
+  resetS3Board();
+  if (elements.s3Objective && state.objective) {
+    elements.s3Objective.value = state.objective;
+  }
+  if (elements.s3SlotFocus && state.slotFocus) {
+    elements.s3SlotFocus.value = state.slotFocus;
+  }
+  renderFeatureBoard();
+}
+
+function applySharedPayload(payload, options = {}) {
+  if (!payload || payload.version !== SHARE_PAYLOAD_VERSION || !VIEW_KEYS.includes(payload.view)) {
+    return false;
+  }
+
+  if (payload.view === "army") {
+    if (window.KH_ARMY_SHARE_API?.applyShareState) {
+      window.KH_ARMY_SHARE_API.applyShareState(payload.state ?? {}, options);
+      return true;
+    }
+    window.__KH_PENDING_SHARE_PAYLOAD = payload;
+    return false;
+  }
+
+  switch (payload.view) {
+    case "power":
+      applyPowerShareState(payload.state);
+      break;
+    case "character":
+      applyCharacterShareState(payload.state);
+      break;
+    case "skill":
+      applySkillShareState(payload.state);
+      break;
+    case "synergy":
+      applySynergyShareState(payload.state);
+      break;
+    case "builder":
+      applyBuilderShareState(payload.state);
+      break;
+    case "board":
+      applyBoardShareState(payload.state);
+      break;
+    default:
+      return false;
+  }
+
+  setActiveView(payload.view, { updateHash: true });
+  updateBackupMeta();
+
+  if (options.showToast !== false) {
+    showStatusToast("共有リンクの条件を復元しました。");
+  }
+  return true;
+}
+
+function updateBackupMeta() {
+  if (!elements.backupMeta) {
+    return;
+  }
+
+  const ownedCount = window.KH_ARMY_SHARE_API?.getOwnedCount?.() ?? 0;
+  elements.backupMeta.textContent = formatSummaryText(
+    [
+      `お気に入り ${getFavoriteCharacterNames().length + getFavoriteSkillNames().length}件`,
+      `比較 ${getComparedCharacterNames().length}体`,
+      `最近使った項目 ${getHeroRecentEntries().length}件`,
+      `手持ち ${ownedCount}体`
+    ],
+    "共有は現在のタブ条件、JSON はお気に入り・比較・最近使った項目・手持ち入力のバックアップに使えます。"
+  );
+}
+
+function buildBackupPayload() {
+  return {
+    version: BACKUP_VERSION,
+    exportedAt: new Date().toISOString(),
+    uiState: getUiState(),
+    heroRecent: getHeroRecentEntries(),
+    favoriteCharacters: getFavoriteCharacterNames(),
+    favoriteSkills: getFavoriteSkillNames(),
+    armyRoster: window.KH_ARMY_SHARE_API?.exportState?.() ?? null
+  };
+}
+
+function refreshUiAfterExternalState(targetView) {
+  renderHeroCommand();
+  setToggleButtonState(elements.characterFavoriteToggle, Boolean(getUiState().characterFavoritesOnly));
+  setToggleButtonState(elements.skillFavoriteToggle, Boolean(getUiState().skillFavoritesOnly));
+  updateFavoriteToggleLabels();
+  renderPowerResults();
+  renderCharacterDb();
+  renderSkillDb();
+  renderSynergy();
+  renderBuilderView();
+  renderFeatureBoard();
+  setActiveView(targetView || getUiState().activeView || "power", { updateHash: true });
+  updateTrustSnapshot();
+  updateShareScopeNote();
+  updateBackupMeta();
+}
+
+async function copyCurrentStateLink() {
+  const payload = collectCurrentSharePayload();
+  const url = buildShareUrl(payload);
+  await copyTextToClipboard(url);
+  showStatusToast("現在の条件を共有リンクとしてコピーしました。");
+}
+
+function downloadBackup() {
+  const stamp = new Date().toISOString().slice(0, 10);
+  downloadJsonFile(`${BACKUP_FILE_PREFIX}-${stamp}.json`, buildBackupPayload());
+  showStatusToast("JSON バックアップを書き出しました。");
+}
+
+function applyBackupPayload(payload) {
+  if (payload?.version !== BACKUP_VERSION) {
+    throw new Error("unsupported-backup-version");
+  }
+
+  writeStoredJson(UI_STATE_STORAGE_KEY, payload.uiState ?? {});
+  writeStoredJson(HERO_RECENT_STORAGE_KEY, payload.heroRecent ?? []);
+  writeStoredJson(FAVORITE_CHARACTERS_STORAGE_KEY, payload.favoriteCharacters ?? []);
+  writeStoredJson(FAVORITE_SKILLS_STORAGE_KEY, payload.favoriteSkills ?? []);
+  window.KH_ARMY_SHARE_API?.importState?.(payload.armyRoster ?? null, { rerender: false });
+
+  refreshUiAfterExternalState(payload.uiState?.activeView ?? "power");
+  if ((payload.uiState?.activeView ?? "") === "army") {
+    window.KH_ARMY_SHARE_API?.refresh?.();
+  }
+  showStatusToast("JSON バックアップを読み込みました。");
+}
+
+async function importBackupFromFile(file) {
+  if (!file) {
+    return;
+  }
+
+  const text = await file.text();
+  applyBackupPayload(JSON.parse(text));
+}
+
+function clearBrowserStoredData() {
+  const confirmed = window.confirm(
+    "お気に入り、比較、最近使った項目、手持ち入力などのブラウザ保存データを初期化します。続けますか？"
+  );
+  if (!confirmed) {
+    return;
+  }
+
+  [
+    UI_STATE_STORAGE_KEY,
+    HERO_RECENT_STORAGE_KEY,
+    FAVORITE_CHARACTERS_STORAGE_KEY,
+    FAVORITE_SKILLS_STORAGE_KEY
+  ].forEach((key) => window.localStorage.removeItem(key));
+
+  window.KH_ARMY_SHARE_API?.importState?.(null, { rerender: false });
+
+  resetPowerSearch();
+  resetCharacterDb();
+  resetSkillDb();
+  resetSynergy();
+  resetBuilderView();
+  resetS3Board();
+  refreshUiAfterExternalState("power");
+  showStatusToast("ブラウザ保存データを初期化しました。");
+}
+
+function bindUtilityActions() {
+  elements.copyStateLinkButton?.addEventListener("click", async () => {
+    try {
+      await copyCurrentStateLink();
+    } catch (error) {
+      showStatusToast("共有リンクのコピーに失敗しました。");
+    }
+  });
+
+  elements.downloadBackupButton?.addEventListener("click", downloadBackup);
+  elements.importBackupButton?.addEventListener("click", () => elements.backupImportInput?.click());
+  elements.backupImportInput?.addEventListener("change", async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    try {
+      await importBackupFromFile(file);
+    } catch (error) {
+      showStatusToast("JSON の読み込みに失敗しました。");
+    } finally {
+      event.target.value = "";
+    }
+  });
+  elements.clearBrowserDataButton?.addEventListener("click", clearBrowserStoredData);
+}
+
+window.__KH_PENDING_SHARE_PAYLOAD = readSharedPayloadFromLocation();
+window.KH_APP_API = {
+  updateBackupMeta,
+  showStatusToast,
+  downloadBlobFile,
+  applySharedPayload
+};
 
 function openSkillDialog(skillName) {
   const skill = getSkillRecord(skillName);
@@ -5942,9 +7271,12 @@ function boot() {
   bindViewTabs();
   bindGlobalActions();
   bindHeroCommand();
+  bindUtilityActions();
+  registerPwa();
   setToggleButtonState(elements.characterFavoriteToggle, Boolean(getUiState().characterFavoritesOnly));
   setToggleButtonState(elements.skillFavoriteToggle, Boolean(getUiState().skillFavoritesOnly));
   updateFavoriteToggleLabels();
+  updateTrustSnapshot();
 
   elements.powerForm.addEventListener("submit", (event) => {
     event.preventDefault();
@@ -6006,8 +7338,18 @@ function boot() {
   renderBuilderView();
   renderFeatureBoard();
 
-  const initialView = window.location.hash.replace(/^#/, "") || getUiState().activeView || "power";
+  const initialView =
+    window.__KH_PENDING_SHARE_PAYLOAD?.view ||
+    window.location.hash.replace(/^#/, "") ||
+    getUiState().activeView ||
+    "power";
   setActiveView(initialView, { updateHash: false });
+  window.setTimeout(updateBackupMeta, 0);
+
+  if (window.__KH_PENDING_SHARE_PAYLOAD && window.__KH_PENDING_SHARE_PAYLOAD.view !== "army") {
+    applySharedPayload(window.__KH_PENDING_SHARE_PAYLOAD, { showToast: true });
+    window.__KH_PENDING_SHARE_PAYLOAD = null;
+  }
 }
 
 boot();
