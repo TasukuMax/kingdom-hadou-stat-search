@@ -281,6 +281,34 @@ function setArmyRosterOwned(characterId, owned) {
   });
 }
 
+function cycleArmyRosterQuickState(characterId) {
+  const current = getArmyRosterProfile(characterId);
+
+  if (!current.owned) {
+    patchArmyRosterProfile(characterId, {
+      owned: true,
+      investmentTier: "trained",
+      equipmentFit: current.equipmentFit || armyRosterState.defaultEquipmentFit
+    });
+    return;
+  }
+
+  if (current.investmentTier === "trained") {
+    patchArmyRosterProfile(characterId, {
+      owned: true,
+      investmentTier: "usable",
+      equipmentFit: current.equipmentFit || armyRosterState.defaultEquipmentFit
+    });
+    return;
+  }
+
+  patchArmyRosterProfile(characterId, {
+    owned: false,
+    investmentTier: armyRosterState.defaultInvestmentTier,
+    equipmentFit: current.equipmentFit || armyRosterState.defaultEquipmentFit
+  });
+}
+
 function setArmyRosterDefaults(nextDefaults) {
   armyRosterState.defaultInvestmentTier = sanitizeArmyTierKey(
     nextDefaults.defaultInvestmentTier ?? armyRosterState.defaultInvestmentTier,
@@ -1000,38 +1028,24 @@ function renderArmyRosterGrid() {
   elements.armyRosterGrid.innerHTML = filtered
     .map((character) => {
       const profile = getArmyRosterProfile(character.id);
-      const snapshot = getArmyCharacterPowerSnapshot(character);
       const isOwned = profile.owned;
-      const chips = [
-        `${character.rarity} / ${character.type || "-"}`,
-        `${character.top1?.label ?? "-"}1位`,
-        isOwned ? getArmyProfileLabel(ARMY_INVESTMENT_TIER_DEFS, profile.investmentTier) : "",
-        isOwned ? getArmyProfileLabel(ARMY_EQUIPMENT_FIT_DEFS, profile.equipmentFit) : ""
-      ].filter(Boolean);
+      const statusLabel = isOwned
+        ? getArmyProfileLabel(ARMY_INVESTMENT_TIER_DEFS, profile.investmentTier)
+        : "未育成";
+      const stateClass = isOwned ? `is-tier-${profile.investmentTier}` : "is-tier-untrained";
 
       return `
         <button
-          class="army-roster-card ${isOwned ? "is-owned" : ""}"
+          class="army-roster-card ${isOwned ? "is-owned" : ""} ${stateClass}"
           type="button"
           data-army-roster-toggle="${character.id}"
           aria-pressed="${isOwned ? "true" : "false"}"
+          aria-label="${escapeHtml(`${character.name} ${statusLabel}`)}"
+          title="${escapeHtml(`${character.name} / ${statusLabel}`)}"
         >
-          <div class="army-roster-head">
-            <img src="${escapeHtml(character.imageUrl)}" alt="${escapeHtml(character.name)}" loading="lazy" />
-            <div class="army-roster-main">
-              <h3>${escapeHtml(character.name)}</h3>
-              <p>${escapeHtml(character.rarity)} / ${escapeHtml(character.type || "-")} / 天賦 ${escapeHtml(
-                character.tenpu
-              )}</p>
-              <div class="army-roster-chip-list">
-                ${chips.map((chip) => `<span class="army-roster-chip">${escapeHtml(chip)}</span>`).join("")}
-              </div>
-            </div>
-          </div>
-          <div class="army-roster-foot">
-            <span>${isOwned ? "推定現在値" : "最大見込み"}</span>
-            <span>${formatArmyEstimateNumber(isOwned ? snapshot.current : snapshot.potential)}</span>
-          </div>
+          <img src="${escapeHtml(character.imageUrl)}" alt="${escapeHtml(character.name)}" loading="lazy" />
+          <span class="army-roster-rarity-badge">${escapeHtml(character.rarity)}</span>
+          <span class="army-roster-state-badge">${escapeHtml(statusLabel)}</span>
         </button>
       `;
     })
@@ -3801,7 +3815,7 @@ function bindArmyPlannerEvents() {
     const rosterButton = event.target.closest("[data-army-roster-toggle]");
     if (rosterButton) {
       const characterId = Number(rosterButton.dataset.armyRosterToggle);
-      setArmyRosterOwned(characterId, !isArmyCharacterOwned(characterId));
+      cycleArmyRosterQuickState(characterId);
       renderArmyRosterUi();
       scheduleArmyPlannerRebuild();
       return;
