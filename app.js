@@ -3334,6 +3334,38 @@ const BUILDER_EFFECT_FALLBACK_SECONDS = {
   utility: 8
 };
 
+const BUILDER_TIMELINE_MAX_SECOND = 40;
+const BUILDER_EFFECT_SHORT_LABEL_RULES = [
+  [/悠然/u, "悠然"],
+  [/堅固/u, "堅固"],
+  [/回復/u, "回復"],
+  [/反撃/u, "反撃"],
+  [/会心/u, "会心"],
+  [/連撃/u, "連撃"],
+  [/被ダメージ.*軽減|被害を軽減/u, "被ダメ軽減"],
+  [/攻撃速度.*上昇|攻速.*上昇/u, "攻速上昇"],
+  [/攻撃速度.*低下|攻速.*低下/u, "攻速低下"],
+  [/防御.*上昇/u, "防御上昇"],
+  [/攻撃.*上昇/u, "攻撃上昇"],
+  [/戦威.*上昇/u, "戦威上昇"],
+  [/策略.*上昇/u, "策略上昇"],
+  [/強化.*付与/u, "強化付与"],
+  [/弱化.*付与/u, "弱化付与"],
+  [/強化解除/u, "強化解除"],
+  [/弱化解除/u, "弱化解除"],
+  [/対物/u, "対物"],
+  [/ダメージ/u, "ダメージ"]
+];
+const BUILDER_SCOPE_LABELS = {
+  army: "全体",
+  self: "自身",
+  target: "単体",
+  allyRow: "同横列",
+  allyColumn: "同縦列",
+  enemyRow: "敵横列",
+  enemyColumn: "敵縦列"
+};
+
 function builderFormationFor(key) {
   return FORMATION_MAP[key] ?? FORMATION_DEFS[0];
 }
@@ -3358,6 +3390,41 @@ function getFormationSlotOptionDefs(formation) {
 
 function formatFormationTiming(formation) {
   return formation.timings.map((value) => `${value}秒`).join(" → ");
+}
+
+function getBuilderEffectShortLabel(effect) {
+  const text = `${effect?.text ?? ""}`.replace(/（[^）]*）/gu, "").trim();
+  for (const [pattern, label] of BUILDER_EFFECT_SHORT_LABEL_RULES) {
+    if (pattern.test(text)) {
+      return label;
+    }
+  }
+
+  const compact = text
+    .replace(/[、。].*$/u, "")
+    .replace(/を.*$/u, "")
+    .replace(/の.*$/u, "")
+    .trim();
+  if (compact) {
+    return compact.length > 10 ? `${compact.slice(0, 10)}…` : compact;
+  }
+  return effect?.battleArtName || "効果";
+}
+
+function getBuilderActivationRateForEntry(entry) {
+  return entry.key === "commander" ? 1 : Math.max(0, Math.min(1, Number(entry.chainStats?.rate ?? 0)));
+}
+
+function getBuilderEffectScopeLabel(effect) {
+  return BUILDER_SCOPE_LABELS[effect.scope] ?? "単体";
+}
+
+function compareBuilderEffects(left, right) {
+  return (
+    left.startSecond - right.startSecond ||
+    right.activationRate - left.activationRate ||
+    left.characterName.localeCompare(right.characterName, "ja")
+  );
 }
 
 function populateBuilderFormationSlotOptions() {
@@ -3671,6 +3738,7 @@ function buildBuilderTimelineWindows(entry, formation, formationSlotKey) {
   const baseSecond = getFormationSlotBaseSecond(formation, formationSlotKey);
   const cycleLength = getFormationCycleLength(formation);
   const triggerOffset = BUILDER_CHAIN_SECOND_OFFSETS[entry.orderScore] ?? 0;
+  const activationRate = getBuilderActivationRateForEntry(entry);
   const triggerSeconds = [];
   const windows = [];
 
@@ -3681,14 +3749,19 @@ function buildBuilderTimelineWindows(entry, formation, formationSlotKey) {
     }
 
     triggerSeconds.push(triggerSecond);
-    for (const effect of parseBuilderBattleArtEffects(entry.character)) {
+    for (const [effectIndex, effect] of parseBuilderBattleArtEffects(entry.character).entries()) {
       windows.push({
         ...effect,
+        id: `${entry.key}-${entry.character.id}-${cycle}-${effectIndex}`,
         startSecond: triggerSecond,
         endSecond: Math.min(60, triggerSecond + Math.max(effect.duration, 1)),
         characterName: entry.character.name,
         sourceLabel: entry.label,
-        battleArtName: entry.character.battleArtName || entry.character.name
+        battleArtName: entry.character.battleArtName || entry.character.name,
+        shortLabel: getBuilderEffectShortLabel(effect),
+        activationRate,
+        chainOrder: entry.character.battleArtMeta?.chainOrder ?? null,
+        sourceSlotKey: formationSlotKey
       });
     }
   }
@@ -3724,48 +3797,94 @@ function resolveBuilderEffectTargetSlots(effect, formation, sourceSlotKey, targe
   return [effect.side === "ally" ? sourceSlot.key : targetSlot.key];
 }
 
-function buildBuilderBoardSnapshot(state) {
-  const layout = getBuilderBoardLayout(state.formation);
-  const cells = Array.from({ length: 81 }, (_, index) => ({
-    x: index % 9,
-    y: Math.floor(index / 9),
-    isFriendly: false,
-    isEnemy: false,
+function buildBuilderTimelineSegments(timelineEntries) {
+  const windows = timelineEntries
+    .flatMap((entry) => entry.windows)
+    .map((effect) => ({
+      ...effect,
+      clippedStart: Math.max(0, Math.min(BUILDER_TIMELINE_MAX_SECOND, effect.startSecond)),
+      clippedEnd: Math.max(0, Math.min(BUILDER_TIMELINE_MAX_SECOND, effect.endSecond))
+    }))
+    .filter((effect) => effect.clippedEnd > effect.clippedStart)
+    .sort(compareBuilderEffects);
+
+  const boundaries = uniqueValues([
+    0,
+    BUILDER_TIMELINE_MAX_SECOND,
+    ...windows.flatMap((effect) => [effect.clippedStart, effect.clippedEnd])
+  ]).sort((left, right) => left - right);
+
+  const segments = [];
+  for (let index = 0; index < boundaries.length - 1; index += 1) {
+    const startSecond = boundaries[index];
+    const endSecond = boundaries[index + 1];
+    if (endSecond <= startSecond) {
+      continue;
+    }
+
+    const activeEffects = windows
+      .filter((effect) => effect.clippedStart < endSecond && effect.clippedEnd > startSecond)
+      .sort(compareBuilderEffects);
+    segments.push({
+      id: `segment-${startSecond}-${endSecond}`,
+      startSecond,
+      endSecond,
+      previewSecond: Math.min(
+        BUILDER_TIMELINE_MAX_SECOND,
+        Math.max(0, Math.floor((startSecond + endSecond) / 2))
+      ),
+      tone: activeEffects[0]?.tone ?? "empty",
+      activeEffects
+    });
+  }
+
+  return segments;
+}
+
+function summarizeBuilderCellEffects(effects) {
+  const labels = uniqueValues(effects.map((effect) => effect.shortLabel));
+  if (!labels.length) {
+    return "";
+  }
+  return labels.length === 1 ? labels[0] : `${labels[0]} +${labels.length - 1}`;
+}
+
+function buildBuilderMiniBoardCells(state, side) {
+  const cells = Array.from({ length: 9 }, (_, index) => ({
+    x: index % 3,
+    y: Math.floor(index / 3),
+    slotKey: "",
+    slotLabel: "",
+    rowLabel: "",
+    isSelf: false,
     isTarget: false,
-    labels: [],
     effects: []
   }));
 
-  const cellAt = (x, y) => cells[y * 9 + x];
+  const cellAt = (x, y) => cells[y * 3 + x];
   for (const slot of state.formation.slots) {
-    const allyCell = cellAt(layout.ally[slot.key].x, layout.ally[slot.key].y);
-    allyCell.isFriendly = true;
-    allyCell.labels.push(`${slot.label}`);
-    if (slot.key === state.formationSlot.key) {
-      allyCell.labels.push("自部隊");
+    const cell = cellAt(slot.gridCol, slot.gridRow);
+    cell.slotKey = slot.key;
+    cell.slotLabel = slot.label;
+    cell.rowLabel = builderRowLabelFor(slot.rowKey);
+    if (side === "ally" && slot.key === state.formationSlot.key) {
+      cell.isSelf = true;
     }
-
-    const enemyCell = cellAt(layout.enemy[slot.key].x, layout.enemy[slot.key].y);
-    enemyCell.isEnemy = true;
-    enemyCell.labels.push(`${slot.label}`);
-    if (slot.key === state.targetSlotKey) {
-      enemyCell.isTarget = true;
+    if (side === "enemy" && slot.key === state.targetSlotKey) {
+      cell.isTarget = true;
     }
   }
 
-  for (const effect of state.activeEffects) {
+  for (const effect of state.activeEffects.filter((row) => row.side === side)) {
     const targetSlotKeys = resolveBuilderEffectTargetSlots(
       effect,
       state.formation,
       state.formationSlot.key,
       state.targetSlotKey
     );
-    const sideMap = effect.side === "ally" ? layout.ally : layout.enemy;
-
     for (const slotKey of targetSlotKeys) {
-      const point = sideMap[slotKey];
-      const cell = cellAt(point.x, point.y);
-      cell.effects.push(effect);
+      const slot = getFormationSlotMeta(state.formation, slotKey);
+      cellAt(slot.gridCol, slot.gridRow).effects.push(effect);
     }
   }
 
@@ -3774,8 +3893,16 @@ function buildBuilderBoardSnapshot(state) {
     hasBuff: cell.effects.some((effect) => effect.kind === "buff"),
     hasDebuff: cell.effects.some((effect) => effect.kind === "debuff" || effect.kind === "damage"),
     hasHeal: cell.effects.some((effect) => effect.kind === "heal"),
-    hasUtility: cell.effects.some((effect) => effect.kind === "utility")
+    hasUtility: cell.effects.some((effect) => effect.kind === "utility"),
+    effectSummary: summarizeBuilderCellEffects(cell.effects)
   }));
+}
+
+function buildBuilderBoardSnapshot(state) {
+  return {
+    allyCells: buildBuilderMiniBoardCells(state, "ally"),
+    enemyCells: buildBuilderMiniBoardCells(state, "enemy")
+  };
 }
 
 function buildBuilderState() {
@@ -3786,7 +3913,10 @@ function buildBuilderState() {
   );
   const rowKey = formationSlot.rowKey;
   const targetSlotKey = elements.builderTargetSlot?.value || formation.slots[0]?.key;
-  const previewSecond = Math.max(0, Math.min(60, Number(elements.builderPreviewSecond?.value ?? 20)));
+  const previewSecond = Math.max(
+    0,
+    Math.min(BUILDER_TIMELINE_MAX_SECOND, Number(elements.builderPreviewSecond?.value ?? 20))
+  );
   const slotInputs = getBuilderSlotInputs();
   const toggleMap = getBuilderToggleMap();
   const commander = characterByName[slotInputs.commander?.value] ?? null;
@@ -3860,6 +3990,8 @@ function buildBuilderState() {
       ...buildBuilderTimelineWindows(entry, formation, formationSlot.key)
     }))
     .sort((left, right) => left.orderScore - right.orderScore || compareCharactersBase(left.character, right.character));
+  const timelineWindows = timelineEntries.flatMap((entry) => entry.windows).sort(compareBuilderEffects);
+  const timelineSegments = buildBuilderTimelineSegments(timelineEntries);
 
   const overviewNotes = [];
   if (!commander && selectedEntries.length) {
@@ -3876,10 +4008,9 @@ function buildBuilderState() {
   }
   overviewNotes.push(`${formation.label} は ${formatFormationTiming(formation)} で回る想定です。`);
 
-  const activeEffects = timelineEntries
-    .flatMap((entry) => entry.windows)
+  const activeEffects = timelineWindows
     .filter((effect) => previewSecond >= effect.startSecond && previewSecond < effect.endSecond)
-    .sort((left, right) => left.startSecond - right.startSecond || left.characterName.localeCompare(right.characterName, "ja"));
+    .sort(compareBuilderEffects);
 
   return {
     formation,
@@ -3897,6 +4028,8 @@ function buildBuilderState() {
     activeSkillCount,
     inactiveSkillCount,
     timelineEntries,
+    timelineWindows,
+    timelineSegments,
     activeEffects,
     boardCells: buildBuilderBoardSnapshot({
       formation,
@@ -3910,68 +4043,52 @@ function buildBuilderState() {
 
 function renderBuilderTimeline(state) {
   if (!state.commander) {
-    return renderEmptyState("主将を選ぶと、主将→副将の連鎖順タイムラインを表示します。");
+    return renderEmptyState("主将を選ぶと、0〜40秒の発動帯と連鎖率をまとめて表示します。");
   }
 
-  if (!state.timelineEntries.length) {
+  if (!state.timelineSegments.length) {
     return renderEmptyState("戦法を表示できる武将がまだ選ばれていません。");
   }
 
-  const axisMarkup = Array.from({ length: 7 }, (_, index) => `<span>${index * 10}秒</span>`).join("");
-  const rowMarkup = state.timelineEntries
-    .map((entry) => {
-      const rowBoostText = entry.character.battleArtMeta?.rowBoosts.includes(state.rowKey)
-        ? `${builderRowLabelFor(state.rowKey)}で効果拡張`
-        : "列依存なし";
-      const chainText =
-        entry.key === "commander"
-          ? "主将戦法は必ず発動"
-          : `連鎖率 ${formatPercent(entry.chainStats?.rate ?? 0)} / ${rowBoostText}`;
-      const triggerText = entry.triggerSeconds.map((second) => `${second}秒`).join(" / ");
-      const windowMarkup = entry.windows
-        .map((effect, index) => `
-          <div
-            class="timeline-event ${effect.estimated ? "is-estimated" : ""}"
-            style="--start:${effect.startSecond}; --end:${Math.max(effect.endSecond, effect.startSecond + 1)}"
-          >
-            <strong>${escapeHtml(`${effect.startSecond}秒`)}</strong>
-            <span>${escapeHtml(effect.text)}</span>
-          </div>
-        `)
-        .join("");
-      const markerMarkup = entry.triggerSeconds
-        .map((second) => `<div class="timeline-marker" style="--at:${second}"></div>`)
-        .join("");
+  const axisMarkup = Array.from({ length: 5 }, (_, index) => `<span>${index * 10}秒</span>`).join("");
+  const segmentMarkup = state.timelineSegments
+    .map((segment) => {
+      const isActive =
+        state.previewSecond >= segment.startSecond &&
+        (state.previewSecond < segment.endSecond ||
+          (segment.endSecond === BUILDER_TIMELINE_MAX_SECOND && state.previewSecond === BUILDER_TIMELINE_MAX_SECOND));
+      const effectMarkup = segment.activeEffects.length
+        ? segment.activeEffects
+            .map(
+              (effect) => `
+                <span class="timeline-effect-chip tone-${escapeHtml(effect.tone || "utility")}">
+                  <strong>${escapeHtml(effect.characterName)}</strong>
+                  <small>${escapeHtml(`${effect.shortLabel} / ${formatPercent(effect.activationRate)}`)}</small>
+                </span>
+              `
+            )
+            .join("")
+        : `<span class="timeline-effect-chip is-empty"><strong>有効効果なし</strong><small>次の発動待ち</small></span>`;
 
       return `
-        <article class="timeline-row-card">
-          <div class="timeline-row-head">
-            <div>
-              <p class="skill-group-title">${escapeHtml(entry.label)}</p>
-              <h3>${escapeHtml(entry.character.name)}</h3>
-              <p class="subline">${escapeHtml(entry.character.battleArtName || "戦法名なし")} / ${escapeHtml(
-                entry.character.battleArtMeta?.type || "-"
-              )}</p>
-            </div>
-            <div class="meta-chip-list">
-              <span class="meta-chip">連鎖順 ${escapeHtml(entry.character.battleArtMeta?.chainOrder || "-")}</span>
-              <span class="meta-chip">発動 ${escapeHtml(triggerText)}</span>
-              ${entry.key !== "commander" ? `<span class="meta-chip">${escapeHtml(chainText)}</span>` : ""}
-            </div>
+        <button
+          class="timeline-segment-card ${isActive ? "is-active" : ""}"
+          type="button"
+          data-builder-preview-second="${segment.previewSecond}"
+        >
+          <div class="timeline-segment-head">
+            <strong>${escapeHtml(`${segment.startSecond}〜${segment.endSecond}秒`)}</strong>
+            <span>${escapeHtml(segment.activeEffects.length ? `${segment.activeEffects.length}効果` : "空白区間")}</span>
           </div>
-          <div class="timeline-track tone-${escapeHtml(entry.character.battleArtMeta?.tone || "utility")}">
-            ${windowMarkup}
-            ${markerMarkup}
+          <div class="timeline-segment-track">
+            <div
+              class="timeline-segment-range tone-${escapeHtml(segment.tone)} ${segment.activeEffects.length ? "" : "is-empty"}"
+              style="--start:${segment.startSecond}; --end:${segment.endSecond}"
+            ></div>
             <div class="timeline-now" style="--at:${state.previewSecond}"></div>
           </div>
-          ${
-            entry.pairingNotes.length
-              ? `<ul class="bullet-list">${entry.pairingNotes
-                  .map((note) => `<li>${escapeHtml(note)}</li>`)
-                  .join("")}</ul>`
-              : ""
-          }
-        </article>
+          <div class="timeline-effect-list">${effectMarkup}</div>
+        </button>
       `;
     })
     .join("");
@@ -3979,7 +4096,7 @@ function renderBuilderTimeline(state) {
   return `
     <div class="timeline-shell">
       <div class="timeline-axis">${axisMarkup}</div>
-      <div class="timeline-list">${rowMarkup}</div>
+      <div class="timeline-list">${segmentMarkup}</div>
     </div>
   `;
 }
@@ -4038,17 +4155,24 @@ function renderBuilderBoardLegend() {
     <span class="legend-chip"><span class="legend-swatch is-buff"></span>味方バフ</span>
     <span class="legend-chip"><span class="legend-swatch is-debuff"></span>敵デバフ / ダメージ</span>
     <span class="legend-chip"><span class="legend-swatch is-heal"></span>回復</span>
-    <span class="legend-chip"><span class="legend-swatch is-utility"></span>堅固 / 悠然 / 解除</span>
+    <span class="legend-chip"><span class="legend-swatch is-utility"></span>悠然 / 堅固 / 解除</span>
   `;
 }
 
-function renderBuilderBoard(state) {
-  return state.boardCells
+function renderBuilderBoardPanel(title, cells, side) {
+  return `
+    <article class="board-panel">
+      <div class="board-panel-head">
+        <strong>${escapeHtml(title)}</strong>
+        <span>${escapeHtml(side === "enemy" ? "敵マスをタップで基準変更" : "自部隊の3×3")}</span>
+      </div>
+      <div class="board-grid-mini">
+        ${cells
     .map((cell) => {
       const classes = [
         "board-cell",
-        cell.isFriendly ? "is-friendly" : "",
-        cell.isEnemy ? "is-enemy" : "",
+        side === "ally" ? "is-friendly" : "is-enemy",
+        cell.isSelf ? "is-self" : "",
         cell.isTarget ? "is-target" : "",
         cell.hasBuff ? "has-buff" : "",
         cell.hasDebuff ? "has-debuff" : "",
@@ -4057,24 +4181,37 @@ function renderBuilderBoard(state) {
       ]
         .filter(Boolean)
         .join(" ");
-      const label = cell.labels[0] ?? "";
-      const note =
-        cell.labels.includes("自部隊") ? "自部隊" : cell.isTarget ? "基準敵" : cell.effects.length ? `${cell.effects.length}件` : "";
+      const noteParts = [
+        cell.isSelf ? "自部隊" : "",
+        cell.isTarget ? "基準敵" : "",
+        cell.effectSummary || cell.rowLabel
+      ].filter(Boolean);
 
       return `
         <div class="${classes}">
-          ${cell.isEnemy ? `<button type="button" data-builder-target-slot="${escapeHtml(
-            FORMATION_SLOT_KEY_ORDER.find((slotKey) => {
-              const slot = getBuilderBoardLayout(state.formation).enemy[slotKey];
-              return slot.x === cell.x && slot.y === cell.y;
-            }) || ""
-          )}"></button>` : ""}
-          <div class="board-cell-label">${escapeHtml(label)}</div>
-          <div class="board-cell-note">${escapeHtml(note)}</div>
+          ${
+            side === "enemy" && cell.slotKey
+              ? `<button type="button" data-builder-target-slot="${escapeHtml(cell.slotKey)}"></button>`
+              : ""
+          }
+          <div class="board-cell-label">${escapeHtml(cell.slotLabel || "空き")}</div>
+          <div class="board-cell-note">${escapeHtml(noteParts.join(" / "))}</div>
         </div>
       `;
     })
-    .join("");
+    .join("")}
+      </div>
+    </article>
+  `;
+}
+
+function renderBuilderBoard(state) {
+  return `
+    <div class="board-grid-duo">
+      ${renderBuilderBoardPanel("味方 3×3", state.boardCells.allyCells, "ally")}
+      ${renderBuilderBoardPanel("敵 3×3", state.boardCells.enemyCells, "enemy")}
+    </div>
+  `;
 }
 
 function renderBuilderActiveEffects(state) {
@@ -4084,26 +4221,45 @@ function renderBuilderActiveEffects(state) {
 
   return state.activeEffects
     .map(
-      (effect) => `
+      (effect) => {
+        const targetSlots = resolveBuilderEffectTargetSlots(
+          effect,
+          state.formation,
+          state.formationSlot.key,
+          state.targetSlotKey
+        )
+          .map((slotKey) => formationSlotLabelFor(slotKey))
+          .join(" / ");
+
+        return `
         <article class="army-slot-item">
           <div class="army-list-row">
-            <span>${escapeHtml(effect.sourceLabel)} ${escapeHtml(effect.characterName)}</span>
             <span>${escapeHtml(`${effect.startSecond}〜${effect.endSecond}秒`)}</span>
+            <span>${escapeHtml(effect.estimated ? "推定秒" : "確定秒")}</span>
+          </div>
+          <div class="army-list-row">
+            <span>発動</span>
+            <span>${escapeHtml(`${effect.characterName} / ${effect.shortLabel}`)}</span>
+          </div>
+          <div class="army-list-row">
+            <span>連鎖率</span>
+            <span>${escapeHtml(effect.sourceLabel === "主将" ? "100% / 主将" : formatPercent(effect.activationRate))}</span>
+          </div>
+          <div class="army-list-row">
+            <span>対象</span>
+            <span>${escapeHtml(`${effect.side === "ally" ? "味方" : "敵"} / ${getBuilderEffectScopeLabel(effect)} / ${targetSlots}`)}</span>
           </div>
           <div class="army-list-row">
             <span>戦法</span>
             <span>${escapeHtml(effect.battleArtName)}</span>
           </div>
           <div class="army-list-row">
-            <span>効果</span>
+            <span>内容</span>
             <span>${escapeHtml(effect.text)}</span>
           </div>
-          <div class="army-list-row">
-            <span>表示</span>
-            <span>${escapeHtml(effect.estimated ? "推定秒" : "確定秒")}</span>
-          </div>
         </article>
-      `
+      `;
+      }
     )
     .join("");
 }
@@ -4278,15 +4434,15 @@ function renderBuilderView() {
       `列: ${builderRowLabelFor(state.rowKey)}`,
       `主将: ${state.commander?.name ?? "未選択"}`,
       `選択枠: ${state.selectedEntries.length}/${BUILDER_SLOT_DEFS.length}`,
-      `戦法表示: ${state.timelineEntries.length}件`,
-      `表示秒数: ${state.previewSecond}秒`
+      `表示帯: ${state.timelineSegments.filter((segment) => segment.activeEffects.length).length}区間`,
+      `現在: ${state.previewSecond}秒`
     ],
     "編成条件を指定してください。"
   );
   setBuilderValidation(validationMessages.join(" / "));
-  elements.builderTimelineCount.textContent = `${state.timelineEntries.length}件`;
+  elements.builderTimelineCount.textContent = `0〜${BUILDER_TIMELINE_MAX_SECOND}秒 / ${state.timelineSegments.length}区間`;
   if (elements.builderPreviewSecondLabel) {
-    elements.builderPreviewSecondLabel.textContent = `${state.previewSecond}秒時点の盤面を表示します。`;
+    elements.builderPreviewSecondLabel.textContent = `${state.previewSecond}秒時点の3×3盤面を表示します。時間帯カードをタップするとその秒へ移動します。`;
   }
   if (elements.builderBoardLegend) {
     elements.builderBoardLegend.innerHTML = renderBuilderBoardLegend();
@@ -5821,6 +5977,13 @@ function boot() {
     elements.builderPreviewSecond?.addEventListener("input", renderBuilderView);
     elements.builderView.addEventListener("change", renderBuilderView);
     elements.builderView.addEventListener("click", (event) => {
+      const previewButton = event.target.closest("[data-builder-preview-second]");
+      if (previewButton && elements.builderPreviewSecond) {
+        elements.builderPreviewSecond.value = previewButton.dataset.builderPreviewSecond;
+        renderBuilderView();
+        return;
+      }
+
       const targetButton = event.target.closest("[data-builder-target-slot]");
       if (!targetButton || !elements.builderTargetSlot) {
         return;
