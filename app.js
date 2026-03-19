@@ -1639,6 +1639,10 @@ const elements = {
   characterResetButton: document.querySelector("#characterResetButton"),
   characterFavoriteToggle: document.querySelector("#characterFavoriteToggle"),
   characterSummary: document.querySelector("#characterSummary"),
+  characterCompareCount: document.querySelector("#characterCompareCount"),
+  characterCompareSummary: document.querySelector("#characterCompareSummary"),
+  characterCompareList: document.querySelector("#characterCompareList"),
+  characterCompareResetButton: document.querySelector("#characterCompareResetButton"),
   characterQuickGrid: document.querySelector("#characterQuickGrid"),
   characterCount: document.querySelector("#characterCount"),
   characterList: document.querySelector("#characterList"),
@@ -1840,6 +1844,35 @@ function setToggleButtonState(button, active) {
   button.dataset.active = active ? "true" : "false";
   button.classList.toggle("is-active", active);
   button.setAttribute("aria-pressed", active ? "true" : "false");
+}
+
+function getComparedCharacterNames() {
+  return (getUiState().characterCompareNames ?? []).filter((name) => characterByName[name]);
+}
+
+function saveComparedCharacterNames(names) {
+  saveUiState({
+    characterCompareNames: uniqueValues(names).filter((name) => characterByName[name]).slice(0, 3)
+  });
+}
+
+function isComparedCharacter(name) {
+  return getComparedCharacterNames().includes(name);
+}
+
+function toggleComparedCharacter(name) {
+  const current = getComparedCharacterNames();
+  if (current.includes(name)) {
+    saveComparedCharacterNames(current.filter((item) => item !== name));
+    return;
+  }
+
+  const next = [...current, name];
+  saveComparedCharacterNames(next.slice(-3));
+}
+
+function clearComparedCharacters() {
+  saveComparedCharacterNames([]);
 }
 
 function setCheckedValuesByName(name, values) {
@@ -3046,6 +3079,20 @@ function renderFavoriteButton(kind, name) {
   `;
 }
 
+function renderCompareButton(name) {
+  const active = isComparedCharacter(name);
+  return `
+    <button
+      type="button"
+      class="mini-button ${active ? "is-toned" : ""}"
+      data-toggle-compare-character="${escapeHtml(name)}"
+      aria-pressed="${active ? "true" : "false"}"
+    >
+      ${active ? "比較から外す" : "比較に追加"}
+    </button>
+  `;
+}
+
 function renderSlotFitSummary(character) {
   const scoreMarkup = character.slotFit.sorted
     .map(
@@ -3075,6 +3122,7 @@ function renderCardActions(character) {
   return `
     <div class="card-actions">
       ${renderFavoriteButton("character", character.name)}
+      ${renderCompareButton(character.name)}
       <button
         type="button"
         class="mini-button"
@@ -4634,6 +4682,7 @@ function renderCharacterDb() {
   );
 
   updateFavoriteToggleLabels();
+  renderCharacterComparePanel();
   if (elements.characterQuickGrid) {
     elements.characterQuickGrid.innerHTML = quickCards.join("");
   }
@@ -4787,6 +4836,105 @@ function renderSlotQuickCard(title, slotKey, candidates) {
   `;
 }
 
+function renderCompareObjectiveBlock(character) {
+  if (character.season3?.objectiveScores) {
+    const objectiveMarkup = Object.entries(character.season3.objectiveScores)
+      .sort((left, right) => right[1] - left[1])
+      .slice(0, 3)
+      .map(
+        ([objectiveKey, score]) => `
+          <span class="meta-chip">
+            ${escapeHtml(objectiveLabelFor(objectiveKey))} ${score}
+          </span>
+        `
+      )
+      .join("");
+    return `<div class="meta-chip-list">${objectiveMarkup}</div>`;
+  }
+
+  if (character.objectiveTags.length) {
+    return `
+      <div class="meta-chip-list">
+        ${character.objectiveTags
+          .map((objectiveKey) => `<span class="meta-chip">${escapeHtml(objectiveLabelFor(objectiveKey))}</span>`)
+          .join("")}
+      </div>
+    `;
+  }
+
+  return `<p class="compare-note">用途タグは未整理です。</p>`;
+}
+
+function renderCharacterCompareCard(character) {
+  const note =
+    character.season3?.roleSummary ||
+    character.guide?.evaluationPoints?.[0] ||
+    character.slotFit.reasons[character.slotFit.bestKey][0] ||
+    "";
+
+  return `
+    <article class="compare-card">
+      <div class="compare-card-head">
+        <div class="compare-card-id">
+          <img class="compare-thumb" src="${escapeHtml(character.imageUrl)}" alt="${escapeHtml(character.name)}" loading="lazy">
+          <div>
+            <h3>${escapeHtml(character.name)}</h3>
+            <p class="subline">${escapeHtml(character.rarity)} / ${escapeHtml(character.type || "-")}タイプ / 天賦 ${character.tenpu}</p>
+          </div>
+        </div>
+        <button
+          type="button"
+          class="favorite-button"
+          data-toggle-compare-character="${escapeHtml(character.name)}"
+          aria-pressed="true"
+        >
+          外す
+        </button>
+      </div>
+      <div class="meta-chip-list">
+        <span class="meta-chip is-highlight">${escapeHtml(character.slotFit.sorted[0].label)} ${character.slotFit.sorted[0].score}</span>
+        <span class="meta-chip">${escapeHtml(character.slotFit.sorted[1].label)} ${character.slotFit.sorted[1].score}</span>
+        <span class="meta-chip">基礎連鎖率 ${escapeHtml(formatPercent(character.chainBase * 100))}</span>
+      </div>
+      <dl class="compare-metric-grid">
+        <div><dt>主将</dt><dd>${character.slotFit.scores.commander}</dd></div>
+        <div><dt>副将</dt><dd>${character.slotFit.scores.vice}</dd></div>
+        <div><dt>補佐</dt><dd>${character.slotFit.scores.aide}</dd></div>
+        <div><dt>上位2値</dt><dd>${character.top1.value + character.top2.value}</dd></div>
+      </dl>
+      <p class="compare-note">1位 ${escapeHtml(character.top1.label)} ${character.top1.value} / 2位 ${escapeHtml(character.top2.label)} ${character.top2.value}</p>
+      ${renderCompareObjectiveBlock(character)}
+      <div class="meta-chip-list">
+        ${character.featureTags.slice(0, 5).map((feature) => `<span class="meta-chip is-feature">${escapeHtml(feature)}</span>`).join("")}
+      </div>
+      <p class="compare-note">${escapeHtml(note)}</p>
+      <div class="compare-actions">
+        <button type="button" class="mini-button" data-use-builder-commander="${escapeHtml(character.name)}">編成へ送る</button>
+        <button type="button" class="mini-button" data-use-synergy-reference="${escapeHtml(character.name)}">相性を見る</button>
+      </div>
+    </article>
+  `;
+}
+
+function renderCharacterComparePanel() {
+  if (!elements.characterCompareList || !elements.characterCompareSummary || !elements.characterCompareCount) {
+    return;
+  }
+
+  const compared = getComparedCharacterNames()
+    .map((name) => characterByName[name])
+    .filter(Boolean);
+
+  elements.characterCompareCount.textContent = `${compared.length}/3`;
+  elements.characterCompareSummary.textContent = compared.length
+    ? "主将 / 副将 / 補佐適性、上位2ステ、用途タグを横並びで比べられます。"
+    : "カードの「比較に追加」で最大3体まで横並び比較できます。";
+
+  elements.characterCompareList.innerHTML = compared.length
+    ? compared.map((character) => renderCharacterCompareCard(character)).join("")
+    : renderEmptyState("比較したい武将を追加すると、ここに差分を表示します。");
+}
+
 function updateFavoriteToggleLabels() {
   if (elements.characterFavoriteToggle) {
     const active = elements.characterFavoriteToggle.dataset.active === "true";
@@ -4803,6 +4951,61 @@ function updateFavoriteToggleLabels() {
       ? `お気に入りのみ ${count}`
       : `お気に入りを見る ${count}`;
   }
+}
+
+function applyResearchPreset(presetKey) {
+  const presetLabels = {
+    commander: "主将候補",
+    vice: "副将候補",
+    aide: "補佐候補",
+    siege: "攻城対物",
+    srAide: "SR補助"
+  };
+
+  switch (presetKey) {
+    case "commander":
+      resetCharacterDb();
+      elements.characterSort.value = "commanderFit";
+      setActiveView("character", { scrollToNav: true });
+      renderCharacterDb();
+      break;
+    case "vice":
+      resetCharacterDb();
+      elements.characterSort.value = "viceFit";
+      setActiveView("character", { scrollToNav: true });
+      renderCharacterDb();
+      break;
+    case "aide":
+      resetCharacterDb();
+      elements.characterSort.value = "aideFit";
+      setActiveView("character", { scrollToNav: true });
+      renderCharacterDb();
+      break;
+    case "siege":
+      resetCharacterDb();
+      elements.characterSort.value = "viceFit";
+      setCheckedValuesByName("db-objective", ["siege"]);
+      setCheckedValuesByName("db-feature", ["対物"]);
+      setActiveView("character", { scrollToNav: true });
+      renderCharacterDb();
+      break;
+    case "srAide":
+      resetCharacterDb();
+      elements.characterSort.value = "aideFit";
+      setCheckedValuesByName("db-rarity", ["SR"]);
+      setActiveView("character", { scrollToNav: true });
+      renderCharacterDb();
+      break;
+    default:
+      return;
+  }
+
+  pushHeroRecentEntry({
+    type: "shortcut",
+    value: `preset:${presetKey}`,
+    label: `${presetLabels[presetKey] ?? presetKey}プリセット`,
+    summary: "研究ベースの絞り込みを適用"
+  });
 }
 
 function renderSynergy() {
@@ -5433,6 +5636,26 @@ function bindGlobalActions() {
     const builderButton = event.target.closest("[data-use-builder-commander]");
     if (builderButton) {
       openBuilderWithCommander(builderButton.dataset.useBuilderCommander);
+      return;
+    }
+
+    const compareButton = event.target.closest("[data-toggle-compare-character]");
+    if (compareButton) {
+      toggleComparedCharacter(compareButton.dataset.toggleCompareCharacter);
+      renderCharacterDb();
+      return;
+    }
+
+    const presetButton = event.target.closest("[data-apply-research-preset]");
+    if (presetButton) {
+      applyResearchPreset(presetButton.dataset.applyResearchPreset);
+      return;
+    }
+
+    const clearCompareButton = event.target.closest("#characterCompareResetButton");
+    if (clearCompareButton) {
+      clearComparedCharacters();
+      renderCharacterDb();
       return;
     }
 
