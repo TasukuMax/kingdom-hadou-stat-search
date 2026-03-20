@@ -25,7 +25,7 @@ const SEASON3 =
         sources: []
       };
 
-const VIEW_KEYS = ["power", "character", "skill", "synergy", "builder", "army", "board"];
+const VIEW_KEYS = ["power", "character", "skill", "synergy", "builder", "army", "gacha", "board"];
 const UI_STATE_STORAGE_KEY = "kh-site-ui-v1";
 const HERO_RECENT_STORAGE_KEY = "kh-hero-recent-v1";
 const FAVORITE_CHARACTERS_STORAGE_KEY = "kh-favorite-characters-v1";
@@ -42,6 +42,7 @@ const SHARE_VIEW_HINTS = {
   synergy: "相性検索の基準武将、候補条件、特徴フィルタをURLに含めます。",
   builder: "編成ツールの陣形、主将・副将・補佐、秒数プレビューをURLに含めます。",
   army: "軍勢の軸武将、コンセプト、レア条件、手持ち情報までURLに含めます。長い場合は JSON 共有も使ってください。",
+  gacha: "ガチャシミュレーターの累計回数、直近結果、武将ごとの獲得回数をURLに含めます。",
   board: "S3ハブの目的と優先スロットをURLに含めます。"
 };
 
@@ -52,6 +53,7 @@ const VIEW_META = {
   synergy: { label: "相性検索", shortLabel: "相性", summary: "主将基準の連鎖率と共通個性で並べる" },
   builder: { label: "編成ツールβ", shortLabel: "編成", summary: "1部隊の主将・副将・補佐・9x9盤面を確認する" },
   army: { label: "軍勢自動編成β", shortLabel: "軍勢", summary: "25体軍勢を自動提案する" },
+  gacha: { label: "ガチャシミュ", shortLabel: "ガチャ", summary: "英傑登用の排出率、天井、累計回数を再現する" },
   board: { label: "S3ハブ", shortLabel: "S3", summary: "S3の採点軸と注目候補を見る" }
 };
 
@@ -6844,6 +6846,9 @@ function collectCurrentSharePayload() {
     case "army":
       state = window.KH_ARMY_SHARE_API?.collectShareState?.() ?? {};
       break;
+    case "gacha":
+      state = window.KH_GACHA_SIM_API?.collectShareState?.() ?? {};
+      break;
     case "board":
       state = collectBoardShareState();
       break;
@@ -6991,6 +6996,15 @@ function applySharedPayload(payload, options = {}) {
   if (payload.view === "army") {
     if (window.KH_ARMY_SHARE_API?.applyShareState) {
       window.KH_ARMY_SHARE_API.applyShareState(payload.state ?? {}, options);
+      return true;
+    }
+    window.__KH_PENDING_SHARE_PAYLOAD = payload;
+    return false;
+  }
+
+  if (payload.view === "gacha") {
+    if (window.KH_GACHA_SIM_API?.applyShareState) {
+      window.KH_GACHA_SIM_API.applyShareState(payload.state ?? {}, options);
       return true;
     }
     window.__KH_PENDING_SHARE_PAYLOAD = payload;
