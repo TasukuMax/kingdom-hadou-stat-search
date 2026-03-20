@@ -63,7 +63,8 @@ const HERO_SHORTCUT_DEFS = [
   { key: "character-siege", label: "対物武将", hint: "武将DB", description: "対物タグを持つ武将に絞ります。" },
   { key: "skill-front", label: "前列技能", hint: "技能DB", description: "前列条件の技能だけを表示します。" },
   { key: "synergy-ouki", label: "王騎相性", hint: "相性検索", description: "王騎を主将にした副将候補を出します。" },
-  { key: "army-siege", label: "対物軍勢", hint: "軍勢編成", description: "対物特化の軍勢コンセプトへ切り替えます。" }
+  { key: "army-siege", label: "対物軍勢", hint: "軍勢編成", description: "対物特化の軍勢コンセプトへ切り替えます。" },
+  { key: "gacha-s3", label: "S3ガチャ", hint: "ガチャシミュ", description: "シーズン3英傑登用の結果画面へ直接移動します。" }
 ];
 
 const HERO_RESULT_TYPE_PRIORITY = {
@@ -92,6 +93,149 @@ const STAT_DEFS = [
   { key: "defense", label: "防御" },
   { key: "war", label: "戦威" },
   { key: "strategy", label: "策略" }
+];
+
+const EQUIPMENT_FAMILY_DEFS = [
+  { key: "all", label: "すべて" },
+  { key: "blade", label: "刀剣" },
+  { key: "polearm", label: "長柄" },
+  { key: "ranged", label: "遠隔" },
+  { key: "helmet", label: "頭防具" },
+  { key: "armor", label: "胴防具" },
+  { key: "shield", label: "盾" }
+];
+
+const EQUIPMENT_PRESET_DEFS = [
+  {
+    key: "manual",
+    family: "all",
+    label: "手入力",
+    stats: { attack: 0, defense: 0, war: 0, strategy: 0 },
+    note: "基礎値が分かっている場合は、そのまま下の数値欄へ入力してください。"
+  },
+  {
+    key: "mountain-sword",
+    family: "blade",
+    label: "山の民の刀",
+    stats: { attack: 30, defense: 20, war: 0, strategy: 0 },
+    note: "GameWith記事の説明をもとにした順位判定用プリセットです。攻撃寄りの刀剣として扱います。"
+  },
+  {
+    key: "straight-sword",
+    family: "blade",
+    label: "直剣",
+    stats: { attack: 18, defense: 28, war: 0, strategy: 0 },
+    note: "直剣は防御寄りの刀剣として扱います。"
+  },
+  {
+    key: "long-spear",
+    family: "polearm",
+    label: "長槍",
+    stats: { attack: 30, defense: 0, war: 20, strategy: 0 },
+    note: "長槍は攻撃寄り、長矛は戦威寄りになるようにプリセットしています。"
+  },
+  {
+    key: "long-halberd",
+    family: "polearm",
+    label: "長矛",
+    stats: { attack: 20, defense: 0, war: 30, strategy: 0 },
+    note: "長矛は戦威寄りの長柄として扱います。"
+  },
+  {
+    key: "short-bow",
+    family: "ranged",
+    label: "短弓",
+    stats: { attack: 18, defense: 0, war: 0, strategy: 30 },
+    note: "遠隔武器は策略寄りとして扱い、短弓は攻撃をやや残しています。"
+  },
+  {
+    key: "crossbow",
+    family: "ranged",
+    label: "弩",
+    stats: { attack: 10, defense: 0, war: 0, strategy: 34 },
+    note: "弩は遠隔の中でも策略寄りと見なす暫定プリセットです。"
+  },
+  {
+    key: "heavy-helmet",
+    family: "helmet",
+    label: "重装兜",
+    stats: { attack: 0, defense: 30, war: 18, strategy: 0 },
+    note: "重装兜は防御寄りの頭防具として扱います。"
+  },
+  {
+    key: "light-helmet",
+    family: "helmet",
+    label: "軽装兜",
+    stats: { attack: 0, defense: 14, war: 0, strategy: 28 },
+    note: "軽装兜は策略寄りの頭防具として扱います。"
+  },
+  {
+    key: "heavy-armor",
+    family: "armor",
+    label: "重装鎧",
+    stats: { attack: 0, defense: 30, war: 20, strategy: 0 },
+    note: "重装鎧は防御寄り、軽装鎧は策略も伸ばす前提で置いています。"
+  },
+  {
+    key: "light-armor",
+    family: "armor",
+    label: "軽装鎧",
+    stats: { attack: 0, defense: 18, war: 0, strategy: 24 },
+    note: "軽装鎧は防御と策略の両方を見る暫定プリセットです。"
+  },
+  {
+    key: "round-shield",
+    family: "shield",
+    label: "丸盾",
+    stats: { attack: 20, defense: 20, war: 20, strategy: 0 },
+    note: "丸盾は攻撃・防御・戦威をバランス良く見る前提です。"
+  },
+  {
+    key: "heavy-shield",
+    family: "shield",
+    label: "重装盾",
+    stats: { attack: 0, defense: 32, war: 24, strategy: 0 },
+    note: "重装盾は防御と戦威を伸ばす盾として扱います。"
+  }
+];
+
+const EQUIPMENT_TRAIT_TEMPLATE_DEFS = [
+  {
+    key: "none",
+    label: "なし",
+    stats: { attack: 0, defense: 0, war: 0, strategy: 0 },
+    note: "特性補正を使わない場合の初期値です。"
+  },
+  {
+    key: "attack-lv1",
+    label: "攻撃 +10 (Lv1)",
+    stats: { attack: 10, defense: 0, war: 0, strategy: 0 },
+    note: "GameWith記事の Lv1 特性テンプレートです。"
+  },
+  {
+    key: "war-lv1",
+    label: "戦威 +10 (Lv1)",
+    stats: { attack: 0, defense: 0, war: 10, strategy: 0 },
+    note: "GameWith記事の Lv1 特性テンプレートです。"
+  },
+  {
+    key: "attack-war-lv1",
+    label: "攻撃 +5 / 戦威 +5",
+    stats: { attack: 5, defense: 0, war: 5, strategy: 0 },
+    note: "GameWith記事の Lv1 特性テンプレートです。"
+  },
+  {
+    key: "attack-defense-lv1",
+    label: "攻撃 +5 / 防御 +5",
+    stats: { attack: 5, defense: 5, war: 0, strategy: 0 },
+    note: "GameWith記事の Lv1 特性テンプレートです。"
+  },
+  {
+    key: "defense-war-lv1",
+    label: "防御 +5 / 戦威 +5",
+    stats: { attack: 0, defense: 5, war: 5, strategy: 0 },
+    note: "GameWith記事の Lv1 特性テンプレートです。"
+  }
 ];
 
 const CONDITION_DEFS = [
@@ -1858,6 +2002,24 @@ const elements = {
   partialDescription: document.querySelector("#partialDescription"),
   partialCount: document.querySelector("#partialCount"),
   partialList: document.querySelector("#partialList"),
+  equipmentMatchForm: document.querySelector("#equipmentMatchForm"),
+  equipmentFamily: document.querySelector("#equipmentFamily"),
+  equipmentPreset: document.querySelector("#equipmentPreset"),
+  equipmentPresetNote: document.querySelector("#equipmentPresetNote"),
+  equipmentTraitTemplate: document.querySelector("#equipmentTraitTemplate"),
+  equipmentBaseAttack: document.querySelector("#equipmentBaseAttack"),
+  equipmentBaseDefense: document.querySelector("#equipmentBaseDefense"),
+  equipmentBaseWar: document.querySelector("#equipmentBaseWar"),
+  equipmentBaseStrategy: document.querySelector("#equipmentBaseStrategy"),
+  equipmentTraitAttack: document.querySelector("#equipmentTraitAttack"),
+  equipmentTraitDefense: document.querySelector("#equipmentTraitDefense"),
+  equipmentTraitWar: document.querySelector("#equipmentTraitWar"),
+  equipmentTraitStrategy: document.querySelector("#equipmentTraitStrategy"),
+  equipmentMatchResetButton: document.querySelector("#equipmentMatchResetButton"),
+  equipmentMatchSummary: document.querySelector("#equipmentMatchSummary"),
+  equipmentMatchCount: document.querySelector("#equipmentMatchCount"),
+  equipmentMatchPair: document.querySelector("#equipmentMatchPair"),
+  equipmentMatchPreview: document.querySelector("#equipmentMatchPreview"),
 
   characterView: document.querySelector("#view-character"),
   characterKeyword: document.querySelector("#characterKeyword"),
@@ -2542,6 +2704,9 @@ function applyHeroShortcut(shortcutKey) {
       if (typeof renderArmyPlanner === "function") {
         renderArmyPlanner();
       }
+      break;
+    case "gacha-s3":
+      setActiveView("gacha", { scrollToNav: true });
       break;
     default:
       return;
@@ -5575,7 +5740,7 @@ function getPowerSearchState(primary, secondary, rarities, conditions, features,
 
 function renderPowerEmptyState() {
   elements.summary.textContent =
-    "第1ステータス、技能条件、特徴タグ、連鎖率ソートを組み合わせて、戦力を伸ばしやすい武将を探せます。";
+    "第1ステータス、技能条件、特徴タグ、連鎖率ソートを組み合わせて、戦力を伸ばしやすい武将を探せます。上の装備相性検索から反映することもできます。";
 
   elements.exactTitle.textContent = "検索の使い方";
   elements.exactDescription.textContent =
@@ -5683,6 +5848,282 @@ function resetPowerSearch() {
     .forEach((input) => (input.checked = false));
   setPowerValidation("");
   renderPowerResults();
+}
+
+const EQUIPMENT_PRESET_BY_KEY = Object.fromEntries(EQUIPMENT_PRESET_DEFS.map((entry) => [entry.key, entry]));
+const EQUIPMENT_TRAIT_TEMPLATE_BY_KEY = Object.fromEntries(
+  EQUIPMENT_TRAIT_TEMPLATE_DEFS.map((entry) => [entry.key, entry])
+);
+
+function readEquipmentStatInputs(prefix) {
+  return {
+    attack: Math.max(0, Number(elements[`${prefix}Attack`]?.value || 0)),
+    defense: Math.max(0, Number(elements[`${prefix}Defense`]?.value || 0)),
+    war: Math.max(0, Number(elements[`${prefix}War`]?.value || 0)),
+    strategy: Math.max(0, Number(elements[`${prefix}Strategy`]?.value || 0))
+  };
+}
+
+function writeEquipmentStatInputs(prefix, stats = {}) {
+  for (const stat of STAT_DEFS) {
+    const input = elements[`${prefix}${stat.key.slice(0, 1).toUpperCase()}${stat.key.slice(1)}`];
+    if (!input) {
+      continue;
+    }
+    input.value = String(Math.max(0, Number(stats[stat.key] || 0)));
+  }
+}
+
+function buildEquipmentPresetOptions() {
+  const family = elements.equipmentFamily?.value || "all";
+  return EQUIPMENT_PRESET_DEFS.filter((entry) => entry.key === "manual" || family === "all" || entry.family === family);
+}
+
+function renderEquipmentPresetOptions() {
+  if (!elements.equipmentPreset) {
+    return;
+  }
+
+  const current = elements.equipmentPreset.value;
+  const options = buildEquipmentPresetOptions();
+  elements.equipmentPreset.innerHTML = options
+    .map((entry) => `<option value="${escapeHtml(entry.key)}">${escapeHtml(entry.label)}</option>`)
+    .join("");
+  elements.equipmentPreset.value = options.some((entry) => entry.key === current) ? current : options[0]?.key || "manual";
+  updateEquipmentPresetNote();
+}
+
+function updateEquipmentPresetNote() {
+  if (!elements.equipmentPresetNote) {
+    return;
+  }
+  const preset = EQUIPMENT_PRESET_BY_KEY[elements.equipmentPreset?.value] ?? EQUIPMENT_PRESET_BY_KEY.manual;
+  const traitTemplate = EQUIPMENT_TRAIT_TEMPLATE_BY_KEY[elements.equipmentTraitTemplate?.value] ?? null;
+  const noteParts = [preset?.note ?? ""];
+  if (traitTemplate?.note && traitTemplate.key !== "none") {
+    noteParts.push(traitTemplate.note);
+  }
+  elements.equipmentPresetNote.textContent = noteParts.filter(Boolean).join(" ");
+}
+
+function applyEquipmentPresetFromSelection() {
+  const preset = EQUIPMENT_PRESET_BY_KEY[elements.equipmentPreset?.value] ?? EQUIPMENT_PRESET_BY_KEY.manual;
+  if (!preset || preset.key === "manual") {
+    updateEquipmentPresetNote();
+    return;
+  }
+  writeEquipmentStatInputs("equipmentBase", preset.stats);
+  updateEquipmentPresetNote();
+}
+
+function applyEquipmentTraitTemplateFromSelection() {
+  const template = EQUIPMENT_TRAIT_TEMPLATE_BY_KEY[elements.equipmentTraitTemplate?.value] ?? EQUIPMENT_TRAIT_TEMPLATE_BY_KEY.none;
+  writeEquipmentStatInputs("equipmentTrait", template.stats);
+  updateEquipmentPresetNote();
+}
+
+function sortEquipmentStatEntries(statMap = {}) {
+  return STAT_DEFS.map((stat, priority) => ({
+    ...stat,
+    value: Math.max(0, Number(statMap[stat.key] || 0)),
+    priority
+  })).sort((left, right) => right.value - left.value || left.priority - right.priority);
+}
+
+function formatEquipmentTotals(statMap = {}) {
+  return sortEquipmentStatEntries(statMap)
+    .filter((entry) => entry.value > 0)
+    .map((entry) => `${entry.label}${entry.value}`)
+    .join(" / ");
+}
+
+function getEquipmentAffinityScore(character, totals, primaryKey, secondaryKey) {
+  const totalWeight = Math.max(
+    1,
+    STAT_DEFS.reduce((sum, stat) => sum + Math.max(0, Number(totals[stat.key] || 0)), 0)
+  );
+  const weightedScore = STAT_DEFS.reduce(
+    (sum, stat) => sum + (Math.max(0, Number(totals[stat.key] || 0)) / totalWeight) * Number(character[stat.key] || 0),
+    0
+  );
+  const primaryBonus = character.top1.key === primaryKey ? 300 : character.top2.key === primaryKey ? 140 : 0;
+  const secondaryBonus =
+    secondaryKey && character.top2.key === secondaryKey
+      ? 180
+      : secondaryKey && character.top1.key === secondaryKey
+        ? 90
+        : 0;
+  const exactBonus =
+    secondaryKey && character.top1.key === primaryKey && character.top2.key === secondaryKey ? 260 : 0;
+  const reverseBonus =
+    secondaryKey && character.top1.key === secondaryKey && character.top2.key === primaryKey ? 120 : 0;
+  return weightedScore + primaryBonus + secondaryBonus + exactBonus + reverseBonus + Number(character.tenpu || 0) * 0.02;
+}
+
+function getEquipmentMatchState() {
+  const baseStats = readEquipmentStatInputs("equipmentBase");
+  const traitStats = readEquipmentStatInputs("equipmentTrait");
+  const totals = STAT_DEFS.reduce(
+    (result, stat) => ({
+      ...result,
+      [stat.key]: Math.max(0, Number(baseStats[stat.key] || 0) + Number(traitStats[stat.key] || 0))
+    }),
+    {}
+  );
+  const rankedTotals = sortEquipmentStatEntries(totals);
+  const positives = rankedTotals.filter((entry) => entry.value > 0);
+  const primary = positives[0] ?? null;
+  const secondary = positives[1] ?? null;
+
+  if (!primary) {
+    return {
+      totals,
+      primary: null,
+      secondary: null,
+      matchCount: 0,
+      summary: "基礎値か特性補正を入力すると、装備と噛み合う武将候補をここに出します。",
+      pairLabel: "まずは装備の数値を入力してください。",
+      preview: []
+    };
+  }
+
+  const candidates = preparedCharacters
+    .filter((character) => ["SSR", "SR"].includes(character.rarity))
+    .map((character) => {
+      const exact = character.top1.key === primary.key && (!secondary || character.top2.key === secondary.key);
+      const reverse = Boolean(
+        secondary && character.top1.key === secondary.key && character.top2.key === primary.key
+      );
+      const partial = !exact && !reverse && (character.top1.key === primary.key || (secondary && character.top2.key === secondary.key));
+      return {
+        character,
+        exact,
+        reverse,
+        partial,
+        score: getEquipmentAffinityScore(character, totals, primary.key, secondary?.key || "")
+      };
+    })
+    .filter((entry) => entry.exact || entry.reverse || entry.partial)
+    .sort((left, right) => {
+      if (Number(right.exact) !== Number(left.exact)) {
+        return Number(right.exact) - Number(left.exact);
+      }
+      if (Number(right.reverse) !== Number(left.reverse)) {
+        return Number(right.reverse) - Number(left.reverse);
+      }
+      if (Number(right.partial) !== Number(left.partial)) {
+        return Number(right.partial) - Number(left.partial);
+      }
+      return right.score - left.score || compareCharactersBase(left.character, right.character);
+    });
+
+  const topLine = secondary
+    ? `${primary.label}1位 / ${secondary.label}2位 を優先します。`
+    : `${primary.label}1位 を優先します。`;
+  return {
+    totals,
+    primary,
+    secondary,
+    matchCount: candidates.length,
+    summary: `合計値は ${formatEquipmentTotals(totals)} です。${topLine} その条件に近い武将を上から並べています。`,
+    pairLabel: secondary
+      ? `相性軸: ${primary.label} → ${secondary.label}`
+      : `相性軸: ${primary.label} 単軸`,
+    preview: candidates.slice(0, 6)
+  };
+}
+
+function renderEquipmentMatchPreview() {
+  if (!elements.equipmentMatchSummary || !elements.equipmentMatchPreview) {
+    return;
+  }
+
+  const matchState = getEquipmentMatchState();
+  elements.equipmentMatchSummary.textContent = matchState.summary;
+  elements.equipmentMatchCount.textContent = matchState.matchCount ? `${matchState.matchCount}体候補` : "";
+  elements.equipmentMatchPair.textContent = matchState.pairLabel;
+
+  if (!matchState.preview.length) {
+    elements.equipmentMatchPreview.innerHTML = renderEmptyState(
+      "候補がまだありません。装備の数値を入力するか、種類プリセットを選んでください。"
+    );
+    return;
+  }
+
+  elements.equipmentMatchPreview.innerHTML = matchState.preview
+    .map((entry) => {
+      const matchLabel = entry.exact ? "完全一致" : entry.reverse ? "逆順一致" : "準一致";
+      return `
+        <article class="equipment-match-row">
+          <div class="equipment-match-row__thumb">
+            <img src="${escapeHtml(entry.character.imageUrl)}" alt="${escapeHtml(entry.character.name)}" loading="lazy">
+          </div>
+          <div class="equipment-match-row__body">
+            <strong>${escapeHtml(entry.character.name)}</strong>
+            <span>${escapeHtml(matchLabel)} / 1位 ${escapeHtml(entry.character.top1.label)} / 2位 ${escapeHtml(
+              entry.character.top2.label
+            )}</span>
+          </div>
+          <span class="equipment-match-row__score">適合 ${Math.round(entry.score)}</span>
+        </article>
+      `;
+    })
+    .join("");
+}
+
+function applyEquipmentMatchSearch() {
+  const matchState = getEquipmentMatchState();
+  if (!matchState.primary) {
+    showStatusToast("装備の基礎値か特性補正を入力してください。");
+    return;
+  }
+
+  elements.primaryStat.value = matchState.primary.key;
+  syncSecondaryOptions();
+  elements.secondaryStat.value = matchState.secondary?.key ?? "";
+  setPowerValidation("");
+  renderPowerResults();
+  showStatusToast(
+    matchState.secondary
+      ? `装備相性から ${matchState.primary.label} → ${matchState.secondary.label} で検索しました。`
+      : `装備相性から ${matchState.primary.label} で検索しました。`
+  );
+  elements.searchSummary?.scrollIntoView?.({ behavior: "smooth", block: "start" });
+}
+
+function resetEquipmentMatch() {
+  if (!elements.equipmentFamily) {
+    return;
+  }
+  elements.equipmentFamily.value = "all";
+  renderEquipmentPresetOptions();
+  elements.equipmentPreset.value = "manual";
+  elements.equipmentTraitTemplate.value = "none";
+  writeEquipmentStatInputs("equipmentBase", {});
+  writeEquipmentStatInputs("equipmentTrait", {});
+  updateEquipmentPresetNote();
+  renderEquipmentMatchPreview();
+}
+
+function initializeEquipmentMatchControls() {
+  if (!elements.equipmentFamily || !elements.equipmentPreset || !elements.equipmentTraitTemplate) {
+    return;
+  }
+
+  elements.equipmentFamily.innerHTML = EQUIPMENT_FAMILY_DEFS.map(
+    (entry) => `<option value="${escapeHtml(entry.key)}">${escapeHtml(entry.label)}</option>`
+  ).join("");
+  elements.equipmentTraitTemplate.innerHTML = EQUIPMENT_TRAIT_TEMPLATE_DEFS.map(
+    (entry) => `<option value="${escapeHtml(entry.key)}">${escapeHtml(entry.label)}</option>`
+  ).join("");
+  elements.equipmentFamily.value = "all";
+  elements.equipmentTraitTemplate.value = "none";
+  renderEquipmentPresetOptions();
+  if (!elements.equipmentPreset.value) {
+    elements.equipmentPreset.value = "manual";
+  }
+  updateEquipmentPresetNote();
+  renderEquipmentMatchPreview();
 }
 
 function renderCharacterDb() {
@@ -7488,6 +7929,7 @@ function boot() {
   setToggleButtonState(elements.skillFavoriteToggle, Boolean(getUiState().skillFavoritesOnly));
   updateFavoriteToggleLabels();
   updateTrustSnapshot();
+  initializeEquipmentMatchControls();
 
   elements.powerForm.addEventListener("submit", (event) => {
     event.preventDefault();
@@ -7496,6 +7938,35 @@ function boot() {
   elements.powerForm.addEventListener("change", renderPowerResults);
   elements.chainCommander.addEventListener("input", renderPowerResults);
   elements.resetButton.addEventListener("click", resetPowerSearch);
+  elements.equipmentMatchForm?.addEventListener("submit", (event) => {
+    event.preventDefault();
+    applyEquipmentMatchSearch();
+  });
+  elements.equipmentFamily?.addEventListener("change", () => {
+    renderEquipmentPresetOptions();
+    renderEquipmentMatchPreview();
+  });
+  elements.equipmentPreset?.addEventListener("change", () => {
+    applyEquipmentPresetFromSelection();
+    renderEquipmentMatchPreview();
+  });
+  elements.equipmentTraitTemplate?.addEventListener("change", () => {
+    applyEquipmentTraitTemplateFromSelection();
+    renderEquipmentMatchPreview();
+  });
+  [
+    elements.equipmentBaseAttack,
+    elements.equipmentBaseDefense,
+    elements.equipmentBaseWar,
+    elements.equipmentBaseStrategy,
+    elements.equipmentTraitAttack,
+    elements.equipmentTraitDefense,
+    elements.equipmentTraitWar,
+    elements.equipmentTraitStrategy
+  ]
+    .filter(Boolean)
+    .forEach((input) => input.addEventListener("input", renderEquipmentMatchPreview));
+  elements.equipmentMatchResetButton?.addEventListener("click", resetEquipmentMatch);
 
   elements.characterKeyword.addEventListener("input", renderCharacterDb);
   elements.characterSort.addEventListener("change", renderCharacterDb);
