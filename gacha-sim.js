@@ -8,6 +8,7 @@
   const SHARE_STATE_VERSION = 1;
   const DRAW_ANIMATION_MS = 4700;
   const PULL_PRICE_YEN = 150;
+  const TEN_PULL_HISTORY_LIMIT = 12;
   const VIDEO_URL = "./assets/s3-eiketsu-summon.mov";
   const LOCAL_GACHA_ASSET_BASE = "./assets/gacha";
   const SHARE_IMAGE_WIDTH = 1600;
@@ -337,6 +338,8 @@
       totalPulls: 0,
       pullCounts: {},
       lastBatch: [],
+      tenPullHistory: [],
+      selectedTenPullId: "",
       animationEnabled: true
     };
   }
@@ -350,6 +353,31 @@
       guaranteeKind: result.guaranteeKind || "",
       sequence: Number(result.sequence || 0)
     });
+  }
+
+  function serializeResult(entry) {
+    return {
+      name: entry.name,
+      rarity: entry.rarity,
+      tenpu: entry.tenpu,
+      guaranteeKind: entry.guaranteeKind,
+      sequence: entry.sequence
+    };
+  }
+
+  function sanitizeHistoryEntry(entry) {
+    if (!entry || !Array.isArray(entry.batch)) {
+      return null;
+    }
+    const batch = entry.batch.map(sanitizeResult).filter(Boolean).slice(0, 10);
+    if (!batch.length) {
+      return null;
+    }
+    return {
+      id: String(entry.id || `ten-${batch.at(-1)?.sequence || 0}`),
+      batch,
+      endedAtPull: Number(entry.endedAtPull || batch.at(-1)?.sequence || 0)
+    };
   }
 
   function sanitizeState(raw) {
@@ -374,6 +402,16 @@
     if (Array.isArray(raw.lastBatch)) {
       nextState.lastBatch = raw.lastBatch.map(sanitizeResult).filter(Boolean).slice(-10);
     }
+
+    if (Array.isArray(raw.tenPullHistory)) {
+      nextState.tenPullHistory = raw.tenPullHistory
+        .map(sanitizeHistoryEntry)
+        .filter(Boolean)
+        .slice(0, TEN_PULL_HISTORY_LIMIT);
+    }
+
+    const selectedId = String(raw.selectedTenPullId || "");
+    nextState.selectedTenPullId = nextState.tenPullHistory.some((entry) => entry.id === selectedId) ? selectedId : "";
 
     const countedPulls = Object.values(nextState.pullCounts).reduce((sum, count) => sum + Number(count), 0);
     if (countedPulls > 0 && nextState.totalPulls < countedPulls) {
@@ -400,13 +438,13 @@
       bannerKey: state.bannerKey,
       totalPulls: state.totalPulls,
       pullCounts: state.pullCounts,
-      lastBatch: state.lastBatch.map((entry) => ({
-        name: entry.name,
-        rarity: entry.rarity,
-        tenpu: entry.tenpu,
-        guaranteeKind: entry.guaranteeKind,
-        sequence: entry.sequence
+      lastBatch: state.lastBatch.map(serializeResult),
+      tenPullHistory: state.tenPullHistory.map((entry) => ({
+        id: entry.id,
+        endedAtPull: entry.endedAtPull,
+        batch: entry.batch.map(serializeResult)
       })),
+      selectedTenPullId: state.selectedTenPullId,
       animationEnabled: state.animationEnabled
     };
 
@@ -514,6 +552,17 @@
             ${renderProbabilityDisclosure("100回ごとの天賦900確定", "100回目は天賦900のSSRのみを抽選します。", "gachaGuarantee900Rates")}
           </div>
         </section>
+
+        <section class="result-section partial-section gacha-history-card">
+          <div class="result-header">
+            <div>
+              <h2>10連履歴</h2>
+              <p>各10連で出た武将をそのまま残します。履歴を押すと、その10連を結果画面へ戻して共有できます。</p>
+            </div>
+            <span class="count-pill" id="gachaHistoryCount"></span>
+          </div>
+          <div class="gacha-history-list" id="gachaHistoryList"></div>
+        </section>
       </div>
 
       <div class="gacha-side-column">
@@ -584,10 +633,61 @@
     statGrid: root.querySelector("#gachaStatGrid"),
     uniqueCount: root.querySelector("#gachaUniqueCount"),
     pullCounts: root.querySelector("#gachaPullCounts"),
+    historyCount: root.querySelector("#gachaHistoryCount"),
+    historyList: root.querySelector("#gachaHistoryList"),
     normalRates: root.querySelector("#gachaNormalRates"),
     guaranteeRates: root.querySelector("#gachaGuaranteeRates"),
     guarantee900Rates: root.querySelector("#gachaGuarantee900Rates")
   };
+
+  function buildTenPullHistoryId(batch) {
+    return `ten-${batch.at(-1)?.sequence || 0}`;
+  }
+
+  function recordTenPullHistory(batch) {
+    const entry = {
+      id: buildTenPullHistoryId(batch),
+      endedAtPull: Number(batch.at(-1)?.sequence || 0),
+      batch: batch.map((result) => sanitizeResult(result)).filter(Boolean)
+    };
+    state.tenPullHistory = [
+      entry,
+      ...state.tenPullHistory.filter((current) => current.id !== entry.id)
+    ].slice(0, TEN_PULL_HISTORY_LIMIT);
+    return entry;
+  }
+
+  function getSelectedTenPullEntry() {
+    return state.selectedTenPullId
+      ? state.tenPullHistory.find((entry) => entry.id === state.selectedTenPullId) ?? null
+      : null;
+  }
+
+  function getDisplayBatch() {
+    return getSelectedTenPullEntry()?.batch ?? state.lastBatch;
+  }
+
+  function getBatchRangeLabel(batch) {
+    if (!batch.length) {
+      return "";
+    }
+    const first = Number(batch[0]?.sequence || 0);
+    const last = Number(batch.at(-1)?.sequence || first);
+    if (!first || !last) {
+      return batch.length >= 10 ? "10連結果" : "単発結果";
+    }
+    return first === last ? `${last}回目` : `${first}〜${last}回目`;
+  }
+
+  function countBatchRarities(batch) {
+    return batch.reduce(
+      (summary, entry) => {
+        summary[entry.rarity] = (summary[entry.rarity] || 0) + 1;
+        return summary;
+      },
+      { SSR: 0, SR: 0, R: 0 }
+    );
+  }
 
   function getApproximateSpend(totalPulls) {
     return Number(totalPulls || 0) * PULL_PRICE_YEN;
@@ -635,6 +735,12 @@
       batch.push(pullOne());
     }
     state.lastBatch = batch;
+    if (count >= 10) {
+      const historyEntry = recordTenPullHistory(batch);
+      state.selectedTenPullId = historyEntry.id;
+    } else {
+      state.selectedTenPullId = "";
+    }
     saveState();
     return batch;
   }
@@ -693,21 +799,15 @@
     };
   }
 
-  function summarizeBatch(batch) {
+  function summarizeBatch(batch, options = {}) {
     if (!batch.length) {
       return "まだ登用していません。右側のボタンから開始してください。";
     }
 
-    const counts = batch.reduce(
-      (summary, entry) => {
-        summary[entry.rarity] = (summary[entry.rarity] || 0) + 1;
-        return summary;
-      },
-      { SSR: 0, SR: 0, R: 0 }
-    );
+    const counts = countBatchRarities(batch);
 
     const highlightedNames = batch.filter((entry) => entry.rarity === "SSR").map((entry) => entry.name);
-    const countLabel = batch.length >= 10 ? "直近10連" : "直近結果";
+    const countLabel = options.label || (batch.length >= 10 ? "直近10連" : "直近結果");
     const ssrSuffix = highlightedNames.length ? ` / SSR: ${highlightedNames.join("、")}` : "";
     return `${countLabel}は SSR ${counts.SSR || 0} / SR ${counts.SR || 0} / R ${counts.R || 0}${ssrSuffix}`;
   }
@@ -726,7 +826,8 @@
   }
 
   function getShareableBatch() {
-    return state.lastBatch.length === 10 ? state.lastBatch.slice(0, 10) : [];
+    const batch = getDisplayBatch();
+    return batch.length === 10 ? batch.slice(0, 10) : [];
   }
 
   function buildShareSummary() {
@@ -735,10 +836,11 @@
       return "10連結果が表示されると、ここからそのまま画像化して共有できます。";
     }
     const ssrEntries = batch.filter((entry) => entry.rarity === "SSR");
+    const shareScope = getSelectedTenPullEntry() ? `${getBatchRangeLabel(batch)}の` : "直近10連の";
     if (!ssrEntries.length) {
-      return "直近10連結果を画像共有できます。今回のSSRは0体です。";
+      return `${shareScope}画像共有ができます。今回のSSRは0体です。`;
     }
-    return `直近10連結果を画像共有できます。SSR ${ssrEntries.length}体: ${ssrEntries.map((entry) => entry.name).join("、")}`;
+    return `${shareScope}画像共有ができます。SSR ${ssrEntries.length}体: ${ssrEntries.map((entry) => entry.name).join("、")}`;
   }
 
   function renderPortrait(record, className = "gacha-result-card__portrait") {
@@ -793,11 +895,58 @@
   }
 
   function renderResultsGrid() {
-    const batch = state.lastBatch.slice(-10);
+    const batch = getDisplayBatch().slice(-10);
     const filledCards = batch.map(buildResultCard);
     const emptyCount = Math.max(0, 10 - filledCards.length);
     const emptyCards = Array.from({ length: emptyCount }, () => buildEmptyResultCard());
     elements.resultsGrid.innerHTML = [...filledCards, ...emptyCards].join("");
+  }
+
+  function buildHistoryMiniCard(record) {
+    return `
+      <article class="gacha-history-mini">
+        <div class="gacha-history-mini__thumb">
+          ${renderPortrait(record)}
+        </div>
+        <span class="gacha-history-mini__name">${escapeHtml(record.name)}</span>
+        <span class="gacha-history-mini__rarity">${escapeHtml(record.rarity)} / 天賦${escapeHtml(record.tenpu)}</span>
+      </article>
+    `;
+  }
+
+  function renderHistoryList() {
+    if (!elements.historyList || !elements.historyCount) {
+      return;
+    }
+
+    elements.historyCount.textContent = state.tenPullHistory.length ? `${state.tenPullHistory.length}件` : "";
+    if (!state.tenPullHistory.length) {
+      elements.historyList.innerHTML = '<p class="toolbar-summary">10連を引くと、ここに結果履歴が残ります。</p>';
+      return;
+    }
+
+    elements.historyList.innerHTML = state.tenPullHistory
+      .map((entry) => {
+        const counts = countBatchRarities(entry.batch);
+        const isActive = entry.id === state.selectedTenPullId;
+        return `
+          <article class="gacha-history-entry${isActive ? " is-active" : ""}">
+            <div class="gacha-history-entry__head">
+              <div>
+                <h3>${escapeHtml(getBatchRangeLabel(entry.batch))}</h3>
+                <p>SSR ${counts.SSR || 0} / SR ${counts.SR || 0} / R ${counts.R || 0}</p>
+              </div>
+              <button class="mini-button" type="button" data-gacha-history-id="${escapeHtml(entry.id)}">
+                ${isActive ? "表示中" : "この10連を表示"}
+              </button>
+            </div>
+            <div class="gacha-history-entry__grid">
+              ${entry.batch.map(buildHistoryMiniCard).join("")}
+            </div>
+          </article>
+        `;
+      })
+      .join("");
   }
 
   function findPulledRecord(name) {
@@ -1062,6 +1211,7 @@
     const ssrCount = batch.filter((entry) => entry.rarity === "SSR").length;
     const topLine = `累計 ${formatCount(state.totalPulls)}回 / 概算 ${formatCurrencyYen(getApproximateSpend(state.totalPulls))}`;
     const pityText = buildPityNotice();
+    const batchTitle = getSelectedTenPullEntry() ? `${getBatchRangeLabel(batch)}の結果` : "直近10連結果";
     const cardMarkup = batch
       .map((record, index) => {
         const x = 188 + (index % 5) * 250;
@@ -1102,7 +1252,7 @@
   <rect x="1148" y="72" width="336" height="44" rx="22" fill="rgba(13,6,6,0.56)" />
   <text x="1316" y="101" fill="#ffe9c2" font-size="22" font-weight="700" text-anchor="middle">${escapeHtml(topLine)}</text>
   <text x="96" y="146" fill="rgba(255,233,194,0.92)" font-size="26">Season 3 英傑登用 / ${escapeHtml(currentDate)}</text>
-  <text x="96" y="182" fill="#fff5eb" font-size="30" font-weight="800">直近10連結果</text>
+  <text x="96" y="182" fill="#fff5eb" font-size="30" font-weight="800">${escapeHtml(batchTitle)}</text>
   <text x="96" y="212" fill="#ffe49d" font-size="20" font-weight="700">SSR ${ssrCount}体 / 共有カード</text>
 
   ${cardMarkup}
@@ -1199,10 +1349,11 @@
   async function shareGachaShareImage() {
     const asset = await createGachaShareImageAsset();
     const file = new File([asset.blob], asset.filename, { type: "image/png" });
+    const batchScope = getSelectedTenPullEntry() ? `${getBatchRangeLabel(asset.batch)} / ` : "直近10連結果 / ";
     const shareData = {
       files: [file],
       title: "キングダム覇道 英傑登用 10連結果",
-      text: `直近10連結果 / SSR ${asset.batch.filter((entry) => entry.rarity === "SSR").length}体`
+      text: `${batchScope}SSR ${asset.batch.filter((entry) => entry.rarity === "SSR").length}体`
     };
 
     let canShareFiles = Boolean(navigator.share);
@@ -1244,10 +1395,15 @@
 
   function renderAll() {
     const hasShareableBatch = getShareableBatch().length === 10;
+    const displayBatch = getDisplayBatch();
+    const selectedEntry = getSelectedTenPullEntry();
     elements.animationToggle.checked = state.animationEnabled;
     elements.totalPullsStat.textContent = formatCount(state.totalPulls);
     elements.approxSpendStat.textContent = formatCurrencyYen(getApproximateSpend(state.totalPulls));
-    elements.latestSummary.textContent = summarizeBatch(state.lastBatch);
+    elements.latestSummary.textContent = summarizeBatch(
+      displayBatch,
+      selectedEntry ? { label: `${getBatchRangeLabel(displayBatch)}の結果` } : {}
+    );
     elements.shareSummary.textContent = buildShareSummary();
     elements.pityNotice.textContent = buildPityNotice();
     elements.controlSummary.textContent = buildDrawControlSummary();
@@ -1260,6 +1416,7 @@
     renderResultsGrid();
     renderStatGrid();
     renderPullCounts();
+    renderHistoryList();
   }
 
   function resetState() {
@@ -1267,6 +1424,8 @@
     state.totalPulls = 0;
     state.pullCounts = {};
     state.lastBatch = [];
+    state.tenPullHistory = [];
+    state.selectedTenPullId = "";
     saveState();
     renderAll();
   }
@@ -1290,13 +1449,7 @@
       bannerKey: state.bannerKey,
       totalPulls: state.totalPulls,
       pullCounts: state.pullCounts,
-      lastBatch: state.lastBatch.map((entry) => ({
-        name: entry.name,
-        rarity: entry.rarity,
-        tenpu: entry.tenpu,
-        guaranteeKind: entry.guaranteeKind,
-        sequence: entry.sequence
-      })),
+      lastBatch: getDisplayBatch().map(serializeResult),
       animationEnabled: state.animationEnabled
     };
   }
@@ -1307,6 +1460,8 @@
     state.totalPulls = nextState.totalPulls;
     state.pullCounts = nextState.pullCounts;
     state.lastBatch = nextState.lastBatch;
+    state.tenPullHistory = nextState.tenPullHistory;
+    state.selectedTenPullId = nextState.selectedTenPullId;
     state.animationEnabled = nextState.animationEnabled;
     saveState();
     renderAll();
@@ -1336,9 +1491,24 @@
   });
 
   elements.resetStageButton.addEventListener("click", () => {
-    state.lastBatch = [];
+    if (state.selectedTenPullId) {
+      state.selectedTenPullId = "";
+    } else {
+      state.lastBatch = [];
+    }
     saveState();
     renderAll();
+  });
+
+  root.addEventListener("click", (event) => {
+    const historyButton = event.target.closest("[data-gacha-history-id]");
+    if (!historyButton) {
+      return;
+    }
+    state.selectedTenPullId = historyButton.dataset.gachaHistoryId || "";
+    saveState();
+    renderAll();
+    elements.stage?.scrollIntoView?.({ behavior: "smooth", block: "start" });
   });
 
   elements.exportImageButton.addEventListener("click", () => {
