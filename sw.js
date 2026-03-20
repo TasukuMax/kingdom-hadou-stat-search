@@ -1,4 +1,4 @@
-const CACHE_NAME = "kh-hadou-v4";
+const CACHE_NAME = "kh-hadou-v5";
 const CORE_ASSETS = [
   "./",
   "./index.html",
