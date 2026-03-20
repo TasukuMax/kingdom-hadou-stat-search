@@ -862,6 +862,222 @@
         gap: 10px;
       }
 
+      .featured-tool-panel {
+        position: relative;
+        overflow: hidden;
+      }
+
+      .featured-tool-panel::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        background:
+          radial-gradient(circle at 12% 18%, rgba(255, 206, 120, 0.18), transparent 26%),
+          radial-gradient(circle at 88% 18%, rgba(186, 63, 42, 0.12), transparent 24%);
+      }
+
+      .featured-tool-card {
+        position: relative;
+        display: grid;
+        grid-template-columns: minmax(0, 1.4fr) minmax(260px, 0.8fr);
+        gap: 18px;
+        margin-top: 18px;
+        padding: 24px;
+        border-radius: 24px;
+        color: #fff4de;
+        border: 1px solid rgba(255, 214, 152, 0.16);
+        background:
+          linear-gradient(135deg, rgba(94, 23, 18, 0.96), rgba(43, 12, 10, 0.98) 60%, rgba(25, 11, 10, 1)),
+          radial-gradient(circle at top, rgba(255, 201, 119, 0.14), transparent 34%);
+        box-shadow:
+          0 28px 48px rgba(35, 14, 10, 0.28),
+          inset 0 1px 0 rgba(255, 236, 205, 0.08);
+      }
+
+      .featured-tool-copy {
+        display: grid;
+        gap: 12px;
+      }
+
+      .featured-tool-kicker {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        margin: 0;
+        color: rgba(255, 225, 172, 0.86);
+        font-size: 0.78rem;
+        font-weight: 700;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+      }
+
+      .featured-tool-kicker::before {
+        content: "";
+        width: 10px;
+        height: 10px;
+        border-radius: 999px;
+        background: #ffd36a;
+        box-shadow: 0 0 18px rgba(255, 211, 106, 0.6);
+      }
+
+      .featured-tool-card h2 {
+        margin: 0;
+        font-family: "Noto Serif JP", serif;
+        font-size: clamp(1.45rem, 2.8vw, 2rem);
+        line-height: 1.35;
+      }
+
+      .featured-tool-card p {
+        margin: 0;
+        color: rgba(255, 236, 207, 0.82);
+        line-height: 1.75;
+      }
+
+      .featured-tool-badges {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
+      .featured-tool-badges .meta-chip {
+        color: #fff5df;
+        border-color: rgba(255, 224, 174, 0.14);
+        background: rgba(255, 249, 238, 0.08);
+      }
+
+      .featured-tool-actions {
+        display: grid;
+        align-content: center;
+        gap: 12px;
+        padding: 18px;
+        border-radius: 20px;
+        border: 1px solid rgba(255, 222, 168, 0.14);
+        background: rgba(13, 5, 5, 0.38);
+        backdrop-filter: blur(10px);
+      }
+
+      .featured-tool-actions p {
+        color: rgba(255, 236, 207, 0.72);
+        font-size: 0.9rem;
+      }
+
+      .equipment-match-panel {
+        margin-top: 18px;
+      }
+
+      .equipment-match-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 14px;
+      }
+
+      .equipment-stat-shell {
+        margin-top: 16px;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+      }
+
+      .equipment-stat-card {
+        padding: 16px;
+        border-radius: 20px;
+        border: 1px solid rgba(125, 89, 47, 0.12);
+        background: linear-gradient(180deg, rgba(255, 251, 244, 0.82), rgba(242, 233, 220, 0.68));
+      }
+
+      .equipment-stat-card h3 {
+        margin: 0 0 12px;
+        font-size: 1rem;
+      }
+
+      .equipment-stat-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .equipment-match-note {
+        margin-top: 12px;
+      }
+
+      .equipment-match-summary {
+        margin-top: 14px;
+        padding: 14px 16px;
+        border-radius: 18px;
+        border: 1px solid rgba(184, 139, 86, 0.14);
+        background: rgba(255, 249, 239, 0.76);
+        line-height: 1.7;
+      }
+
+      .equipment-match-meta {
+        margin-top: 12px;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+      }
+
+      .equipment-match-meta p {
+        margin: 0;
+        color: var(--muted);
+      }
+
+      .equipment-match-preview {
+        margin-top: 14px;
+        display: grid;
+        gap: 10px;
+      }
+
+      .equipment-match-row {
+        display: grid;
+        grid-template-columns: 56px minmax(0, 1fr) auto;
+        gap: 12px;
+        align-items: center;
+        padding: 12px;
+        border-radius: 18px;
+        border: 1px solid rgba(184, 139, 86, 0.12);
+        background: rgba(255, 248, 236, 0.72);
+      }
+
+      .equipment-match-row__thumb {
+        width: 56px;
+        height: 56px;
+      }
+
+      .equipment-match-row__thumb img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        border-radius: 999px;
+        border: 3px solid rgba(210, 166, 97, 0.34);
+      }
+
+      .equipment-match-row__body strong,
+      .equipment-match-row__body span {
+        display: block;
+      }
+
+      .equipment-match-row__body span {
+        margin-top: 4px;
+        color: var(--muted);
+        font-size: 0.82rem;
+        line-height: 1.55;
+      }
+
+      .equipment-match-row__score {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 78px;
+        padding: 8px 12px;
+        border-radius: 999px;
+        color: var(--gold-deep);
+        font-weight: 800;
+        background: rgba(255, 240, 214, 0.92);
+      }
+
       .info-card {
         padding: 18px;
         border-radius: var(--radius-lg);
@@ -3219,9 +3435,9 @@
         bottom: 16px;
         z-index: 42;
         display: none;
-        grid-template-columns: repeat(5, minmax(0, 1fr));
+        grid-template-columns: repeat(6, minmax(0, 1fr));
         gap: 8px;
-        width: min(100% - 20px, 520px);
+        width: min(100% - 20px, 620px);
         padding: 10px;
         transform: translateX(-50%);
         border-radius: 22px;
@@ -3906,6 +4122,79 @@
         cursor: not-allowed;
       }
 
+      .gacha-history-list {
+        display: grid;
+        gap: 12px;
+      }
+
+      .gacha-history-entry {
+        padding: 16px;
+        border-radius: 20px;
+        border: 1px solid rgba(198, 152, 92, 0.12);
+        background: rgba(255, 249, 239, 0.74);
+      }
+
+      .gacha-history-entry.is-active {
+        border-color: rgba(183, 92, 46, 0.24);
+        box-shadow: 0 18px 30px rgba(111, 45, 20, 0.08);
+      }
+
+      .gacha-history-entry__head {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+      }
+
+      .gacha-history-entry__head h3 {
+        margin: 0;
+        font-size: 1rem;
+      }
+
+      .gacha-history-entry__head p {
+        margin: 6px 0 0;
+        color: var(--muted);
+        font-size: 0.84rem;
+      }
+
+      .gacha-history-entry__grid {
+        margin-top: 14px;
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      .gacha-history-mini {
+        display: grid;
+        gap: 6px;
+        text-align: center;
+      }
+
+      .gacha-history-mini__thumb {
+        width: min(100%, 72px);
+        aspect-ratio: 1;
+        margin: 0 auto;
+      }
+
+      .gacha-history-mini__thumb .gacha-result-card__portrait,
+      .gacha-history-mini__thumb .gacha-result-card__portrait--fallback {
+        border-width: 3px;
+      }
+
+      .gacha-history-mini__name {
+        display: block;
+        font-size: 0.76rem;
+        font-weight: 700;
+        line-height: 1.45;
+      }
+
+      .gacha-history-mini__rarity {
+        display: block;
+        color: var(--muted);
+        font-size: 0.68rem;
+      }
+
       .gacha-results-grid {
         gap: 12px 14px;
       }
@@ -4081,6 +4370,15 @@
           grid-template-columns: repeat(2, minmax(0, 1fr));
         }
 
+        .featured-tool-card,
+        .equipment-stat-shell {
+          grid-template-columns: 1fr;
+        }
+
+        .equipment-match-grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
         .gacha-count-card {
           grid-column: 1 / -1;
         }
@@ -4108,6 +4406,16 @@
       }
 
       @media (max-width: 640px) {
+        .featured-tool-card,
+        .equipment-match-grid,
+        .equipment-stat-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .featured-tool-card {
+          padding: 18px;
+        }
+
         .gacha-stage-card {
           padding: 12px;
         }
@@ -4198,6 +4506,10 @@
           grid-template-columns: 1fr;
         }
 
+        .gacha-history-entry__grid {
+          gap: 8px;
+        }
+
         .gacha-probability-disclosure__summary {
           padding: 14px;
         }
@@ -4209,6 +4521,15 @@
       }
 
       @media (max-width: 420px) {
+        .equipment-match-row {
+          grid-template-columns: 48px minmax(0, 1fr);
+        }
+
+        .equipment-match-row__score {
+          grid-column: 1 / -1;
+          justify-self: flex-start;
+        }
+
         .gacha-results-grid {
           grid-template-columns: repeat(5, minmax(0, 1fr));
         }
@@ -4237,6 +4558,10 @@
           height: 18px;
           padding: 0 6px;
           font-size: 0.64rem;
+        }
+
+        .gacha-history-entry__grid {
+          grid-template-columns: repeat(5, minmax(0, 1fr));
         }
       }
 
@@ -4632,6 +4957,36 @@
         </div>
       </section>
 
+      <section class="panel featured-tool-panel">
+        <div class="panel-header">
+          <div>
+            <h2>すぐ使う機能</h2>
+            <p>他のゲーム攻略サイトの導線を参考に、いま触る頻度が高い機能をホームから直接開ける形にしています。</p>
+          </div>
+        </div>
+        <article class="featured-tool-card">
+          <div class="featured-tool-copy">
+            <p class="featured-tool-kicker">Pickup Simulator</p>
+            <h2>シーズン3 英傑登用ガチャシミュレーター</h2>
+            <p>
+              10連結果の共有、20回ごとのSSR確定、100回ごとの天賦900確定、概算課金額までまとめて確認できます。
+              まずガチャから触りたい時は、ここから入るのが最短です。
+            </p>
+            <div class="featured-tool-badges meta-chip-list">
+              <span class="meta-chip">10連結果共有</span>
+              <span class="meta-chip">SSR履歴つき</span>
+              <span class="meta-chip">概算課金額</span>
+              <span class="meta-chip">シーズン3英傑登用</span>
+            </div>
+          </div>
+          <div class="featured-tool-actions">
+            <p>最新の10連結果、累計SSR、天井までの残り回数をすぐ見返せます。</p>
+            <button class="primary-button" type="button" data-switch-view="gacha">ガチャシミュを開く</button>
+            <button class="secondary-button" type="button" data-hero-shortcut="gacha-s3">ガチャ導線を上に出す</button>
+          </div>
+        </article>
+      </section>
+
       <section class="panel preset-panel">
         <div class="panel-header">
           <div>
@@ -4696,6 +5051,7 @@
         <button class="dock-button" type="button" data-view-tab="character">武将</button>
         <button class="dock-button" type="button" data-view-tab="army">軍勢</button>
         <button class="dock-button" type="button" data-view-tab="builder">編成</button>
+        <button class="dock-button" type="button" data-view-tab="gacha">ガチャ</button>
         <button class="dock-button dock-button-top" type="button" data-scroll-top="true">Top</button>
       </div>
 
@@ -4790,6 +5146,103 @@
             </ul>
           </div>
         </details>
+      </section>
+
+      <section class="panel equipment-match-panel">
+        <div class="panel-header">
+          <div>
+            <h2>装備相性検索β</h2>
+            <p>
+              装備の基礎値と特性補正を合算して、相性がいい武将を出します。装備種類プリセットは順位判定用の暫定値で、
+              正確な値が分かっている場合は下の数値欄でそのまま上書きできます。
+            </p>
+          </div>
+          <a class="source-link" href="https://gamewith.jp/kingdom-hadou/547079" target="_blank" rel="noreferrer">GameWith装備記事</a>
+        </div>
+
+        <form id="equipmentMatchForm">
+          <div class="equipment-match-grid">
+            <div class="field">
+              <label for="equipmentFamily">装備系統</label>
+              <select id="equipmentFamily" aria-label="装備系統"></select>
+              <p class="field-note">武器、防具、盾ごとの傾向からプリセットを絞り込みます。</p>
+            </div>
+
+            <div class="field">
+              <label for="equipmentPreset">装備種類</label>
+              <select id="equipmentPreset" aria-label="装備種類"></select>
+              <p class="field-note" id="equipmentPresetNote">手入力に切り替えると、下の基礎値だけで判定します。</p>
+            </div>
+
+            <div class="field">
+              <label for="equipmentTraitTemplate">特性テンプレート</label>
+              <select id="equipmentTraitTemplate" aria-label="特性テンプレート"></select>
+              <p class="field-note">GameWith記事で確認できた Lv1 特性をテンプレート化しています。複数特性や上位 Lv は手入力で調整してください。</p>
+            </div>
+
+            <div class="button-row">
+              <button class="primary-button" type="submit">相性候補を表示</button>
+              <button class="secondary-button" id="equipmentMatchResetButton" type="button">装備条件をリセット</button>
+            </div>
+          </div>
+
+          <div class="equipment-stat-shell">
+            <section class="equipment-stat-card">
+              <h3>基礎値</h3>
+              <div class="equipment-stat-grid">
+                <div class="field">
+                  <label for="equipmentBaseAttack">攻撃</label>
+                  <input id="equipmentBaseAttack" type="number" min="0" step="1" value="0" inputmode="numeric">
+                </div>
+                <div class="field">
+                  <label for="equipmentBaseDefense">防御</label>
+                  <input id="equipmentBaseDefense" type="number" min="0" step="1" value="0" inputmode="numeric">
+                </div>
+                <div class="field">
+                  <label for="equipmentBaseWar">戦威</label>
+                  <input id="equipmentBaseWar" type="number" min="0" step="1" value="0" inputmode="numeric">
+                </div>
+                <div class="field">
+                  <label for="equipmentBaseStrategy">策略</label>
+                  <input id="equipmentBaseStrategy" type="number" min="0" step="1" value="0" inputmode="numeric">
+                </div>
+              </div>
+            </section>
+
+            <section class="equipment-stat-card">
+              <h3>特性補正</h3>
+              <div class="equipment-stat-grid">
+                <div class="field">
+                  <label for="equipmentTraitAttack">攻撃</label>
+                  <input id="equipmentTraitAttack" type="number" min="0" step="1" value="0" inputmode="numeric">
+                </div>
+                <div class="field">
+                  <label for="equipmentTraitDefense">防御</label>
+                  <input id="equipmentTraitDefense" type="number" min="0" step="1" value="0" inputmode="numeric">
+                </div>
+                <div class="field">
+                  <label for="equipmentTraitWar">戦威</label>
+                  <input id="equipmentTraitWar" type="number" min="0" step="1" value="0" inputmode="numeric">
+                </div>
+                <div class="field">
+                  <label for="equipmentTraitStrategy">策略</label>
+                  <input id="equipmentTraitStrategy" type="number" min="0" step="1" value="0" inputmode="numeric">
+                </div>
+              </div>
+            </section>
+          </div>
+        </form>
+
+        <p class="field-note equipment-match-note">
+          いまは攻撃・防御・戦威・策略の4項目で判定します。武将ごとの装備可能種類までは公開データが足りないため、
+          先にステータス相性を出す形にしています。
+        </p>
+        <div class="equipment-match-summary" id="equipmentMatchSummary"></div>
+        <div class="equipment-match-meta">
+          <span class="count-pill" id="equipmentMatchCount"></span>
+          <p id="equipmentMatchPair"></p>
+        </div>
+        <div class="equipment-match-preview" id="equipmentMatchPreview"></div>
       </section>
 
       <section class="results">
