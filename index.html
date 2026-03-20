@@ -3876,6 +3876,191 @@
         line-height: 1.55;
       }
 
+      .gacha-stage__actionbar {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        gap: 12px;
+        align-items: center;
+        padding: 14px 16px;
+        border-radius: 16px;
+        background: rgba(19, 7, 6, 0.84);
+        border: 1px solid rgba(255, 226, 170, 0.12);
+      }
+
+      .gacha-stage__share-summary {
+        margin: 0;
+        color: rgba(255, 238, 204, 0.86);
+        font-size: 0.9rem;
+        line-height: 1.55;
+      }
+
+      .gacha-stage__share-buttons {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
+      .gacha-stage__share-buttons button:disabled {
+        opacity: 0.54;
+        cursor: not-allowed;
+      }
+
+      .gacha-results-grid {
+        gap: 12px 14px;
+      }
+
+      .gacha-result-card {
+        min-height: 258px;
+        padding: 6px 6px 12px;
+      }
+
+      .gacha-result-card__glow {
+        inset: 46px 18px 70px;
+        filter: blur(22px);
+      }
+
+      .gacha-result-card__topline {
+        min-height: 36px;
+      }
+
+      .gacha-result-card__tenpu-chip {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 4px 8px;
+        border-radius: 999px;
+        color: #ffe8bb;
+        font-size: 0.68rem;
+        font-weight: 700;
+        background: rgba(15, 5, 5, 0.72);
+        border: 1px solid rgba(255, 241, 206, 0.12);
+      }
+
+      .gacha-result-card__badge {
+        position: absolute;
+        top: 38px;
+        right: 8px;
+        z-index: 2;
+      }
+
+      .gacha-result-card__portrait-wrap {
+        width: 134px;
+        height: 134px;
+        margin-top: 4px;
+      }
+
+      .gacha-result-card__countline {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        margin-top: -4px;
+      }
+
+      .gacha-result-card__shard {
+        color: #fff0c8;
+        font-size: 0.88rem;
+      }
+
+      .gacha-result-card__count {
+        color: #fff7ea;
+        font-size: 1.86rem;
+        line-height: 1;
+        text-shadow: 0 8px 18px rgba(0, 0, 0, 0.32);
+      }
+
+      .gacha-result-card__bottom {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 6px;
+        align-items: center;
+        margin-top: 6px;
+      }
+
+      .gacha-result-card__type {
+        min-width: 28px;
+        height: 28px;
+        padding: 0 8px;
+        border-radius: 10px;
+        font-size: 0.88rem;
+        box-shadow: 0 8px 18px rgba(0, 0, 0, 0.22);
+      }
+
+      .gacha-result-card__nameplate {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 38px;
+        margin-top: 0;
+        padding: 8px 10px;
+        font-size: 1rem;
+      }
+
+      .gacha-result-card__placeholder-ring {
+        width: 132px;
+        height: 132px;
+        margin-top: 54px;
+      }
+
+      .gacha-probability-grid {
+        gap: 12px;
+      }
+
+      .gacha-probability-disclosure {
+        border-radius: 20px;
+        background: rgba(255, 249, 238, 0.72);
+        border: 1px solid rgba(201, 154, 96, 0.14);
+        overflow: hidden;
+      }
+
+      .gacha-probability-disclosure[open] {
+        box-shadow: 0 16px 28px rgba(94, 45, 19, 0.08);
+      }
+
+      .gacha-probability-disclosure__summary {
+        list-style: none;
+        cursor: pointer;
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        align-items: center;
+        padding: 16px;
+      }
+
+      .gacha-probability-disclosure__summary::-webkit-details-marker {
+        display: none;
+      }
+
+      .gacha-probability-disclosure__summary h3 {
+        margin: 0;
+        font-size: 1rem;
+      }
+
+      .gacha-probability-disclosure__summary p {
+        margin: 8px 0 0;
+        color: var(--muted);
+        font-size: 0.84rem;
+      }
+
+      .gacha-probability-disclosure__hint {
+        flex: 0 0 auto;
+        padding: 6px 10px;
+        border-radius: 999px;
+        color: var(--gold-deep);
+        font-size: 0.74rem;
+        font-weight: 700;
+        background: rgba(255, 241, 217, 0.88);
+      }
+
+      .gacha-probability-disclosure__body {
+        padding: 0 16px 16px;
+      }
+
+      .gacha-probability-disclosure__body .gacha-rate-row:first-child {
+        margin-top: 0;
+      }
+
       @keyframes gachaFallbackPulse {
         0%,
         100% {
@@ -3953,7 +4138,7 @@
         }
 
         .gacha-result-card {
-          min-height: 178px;
+          min-height: 196px;
           padding: 8px 4px 10px;
         }
 
@@ -3971,14 +4156,50 @@
           margin-top: 34px;
         }
 
+        .gacha-result-card__tenpu-chip {
+          padding: 3px 6px;
+          font-size: 0.56rem;
+        }
+
+        .gacha-result-card__count {
+          font-size: 1.16rem;
+        }
+
+        .gacha-result-card__bottom {
+          grid-template-columns: 20px 1fr;
+          gap: 4px;
+        }
+
+        .gacha-result-card__type {
+          min-width: 20px;
+          height: 20px;
+          padding: 0 4px;
+          font-size: 0.66rem;
+        }
+
         .gacha-result-card__nameplate {
-          padding: 7px 8px;
-          font-size: 0.78rem;
+          min-height: 30px;
+          padding: 6px 4px;
+          font-size: 0.72rem;
         }
 
         .gacha-result-card__badge {
           padding: 3px 6px;
           font-size: 0.56rem;
+        }
+
+        .gacha-stage__actionbar {
+          align-items: stretch;
+        }
+
+        .gacha-stage__share-buttons {
+          width: 100%;
+          display: grid;
+          grid-template-columns: 1fr;
+        }
+
+        .gacha-probability-disclosure__summary {
+          padding: 14px;
         }
 
         .gacha-button-grid,
@@ -4000,6 +4221,10 @@
         .gacha-result-card__placeholder-ring {
           width: 62px;
           height: 62px;
+        }
+
+        .gacha-result-card__tenpu-chip {
+          display: none;
         }
 
         .gacha-result-card__info {
