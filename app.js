@@ -102,8 +102,13 @@ const EQUIPMENT_FAMILY_DEFS = [
   { key: "ranged", label: "遠隔" },
   { key: "helmet", label: "頭防具" },
   { key: "armor", label: "胴防具" },
-  { key: "shield", label: "盾" }
+  { key: "shield", label: "盾" },
+  { key: "support", label: "補助品" }
 ];
+
+const EQUIPMENT_FAMILY_LABEL_BY_KEY = Object.fromEntries(
+  EQUIPMENT_FAMILY_DEFS.map((entry) => [entry.key, entry.label])
+);
 
 const EQUIPMENT_PRESET_DEFS = [
   {
@@ -117,87 +122,134 @@ const EQUIPMENT_PRESET_DEFS = [
     key: "mountain-sword",
     family: "blade",
     label: "山の民の刀",
-    stats: { attack: 30, defense: 20, war: 0, strategy: 0 },
-    note: "GameWith記事の説明をもとにした順位判定用プリセットです。攻撃寄りの刀剣として扱います。"
+    stats: { attack: 63, defense: 31, war: 0, strategy: 0 },
+    note: "動画で確認した SSR Lv30 の値です。山の民の刀は攻撃寄りの刀剣として扱います。"
   },
   {
     key: "straight-sword",
     family: "blade",
     label: "直剣",
-    stats: { attack: 18, defense: 28, war: 0, strategy: 0 },
-    note: "直剣は防御寄りの刀剣として扱います。"
+    stats: { attack: 31, defense: 63, war: 0, strategy: 0 },
+    note: "動画で確認した SSR Lv30 の値です。直剣は防御寄りの刀剣として扱います。"
   },
   {
     key: "long-spear",
     family: "polearm",
     label: "長槍",
-    stats: { attack: 30, defense: 0, war: 20, strategy: 0 },
-    note: "長槍は攻撃寄り、長矛は戦威寄りになるようにプリセットしています。"
+    stats: { attack: 63, defense: 0, war: 31, strategy: 0 },
+    note: "動画で確認した SSR Lv30 の値です。長槍は攻撃寄りの長柄です。"
   },
   {
     key: "long-halberd",
     family: "polearm",
     label: "長矛",
-    stats: { attack: 20, defense: 0, war: 30, strategy: 0 },
-    note: "長矛は戦威寄りの長柄として扱います。"
+    stats: { attack: 31, defense: 0, war: 63, strategy: 0 },
+    note: "動画で確認した SSR Lv30 の値です。長矛は戦威寄りの長柄です。"
   },
   {
     key: "short-bow",
     family: "ranged",
     label: "短弓",
-    stats: { attack: 18, defense: 0, war: 0, strategy: 30 },
-    note: "遠隔武器は策略寄りとして扱い、短弓は攻撃をやや残しています。"
+    stats: { attack: 63, defense: 0, war: 0, strategy: 31 },
+    note: "動画で確認した SSR Lv30 の値です。短弓は攻撃寄りの遠隔です。"
   },
   {
     key: "crossbow",
     family: "ranged",
-    label: "弩",
-    stats: { attack: 10, defense: 0, war: 0, strategy: 34 },
-    note: "弩は遠隔の中でも策略寄りと見なす暫定プリセットです。"
+    label: "弓",
+    stats: { attack: 0, defense: 0, war: 63, strategy: 31 },
+    note: "動画で確認した SSR Lv30 の値です。弓は戦威寄りの遠隔です。"
   },
   {
     key: "heavy-helmet",
     family: "helmet",
     label: "重装兜",
-    stats: { attack: 0, defense: 30, war: 18, strategy: 0 },
-    note: "重装兜は防御寄りの頭防具として扱います。"
-  },
-  {
-    key: "light-helmet",
-    family: "helmet",
-    label: "軽装兜",
-    stats: { attack: 0, defense: 14, war: 0, strategy: 28 },
-    note: "軽装兜は策略寄りの頭防具として扱います。"
+    stats: { attack: 0, defense: 63, war: 0, strategy: 31 },
+    note: "動画で確認した SSR Lv30 の値です。重装兜は防御寄りの頭防具です。"
   },
   {
     key: "heavy-armor",
     family: "armor",
     label: "重装鎧",
-    stats: { attack: 0, defense: 30, war: 20, strategy: 0 },
-    note: "重装鎧は防御寄り、軽装鎧は策略も伸ばす前提で置いています。"
-  },
-  {
-    key: "light-armor",
-    family: "armor",
-    label: "軽装鎧",
-    stats: { attack: 0, defense: 18, war: 0, strategy: 24 },
-    note: "軽装鎧は防御と策略の両方を見る暫定プリセットです。"
+    stats: { attack: 0, defense: 63, war: 31, strategy: 0 },
+    note: "動画で確認した SSR Lv30 の値です。重装鎧は防御寄りの胴防具です。"
   },
   {
     key: "round-shield",
     family: "shield",
     label: "丸盾",
-    stats: { attack: 20, defense: 20, war: 20, strategy: 0 },
-    note: "丸盾は攻撃・防御・戦威をバランス良く見る前提です。"
+    stats: { attack: 15, defense: 47, war: 31, strategy: 0 },
+    note: "動画で確認した SSR Lv30 の値です。丸盾は攻撃・防御・戦威を伸ばします。"
   },
   {
-    key: "heavy-shield",
-    family: "shield",
-    label: "重装盾",
-    stats: { attack: 0, defense: 32, war: 24, strategy: 0 },
-    note: "重装盾は防御と戦威を伸ばす盾として扱います。"
+    key: "strategy-book",
+    family: "support",
+    label: "軍略書",
+    stats: { attack: 0, defense: 15, war: 0, strategy: 47 },
+    note: "動画で確認した SSR Lv30 の値です。魅力 +31 も付きますが、この検索では攻撃・防御・戦威・策略のみを使います。"
   }
 ];
+
+const EQUIPMENT_FAMILY_ALIASES = {
+  刀剣: "blade",
+  長柄: "polearm",
+  遠隔: "ranged",
+  頭: "helmet",
+  頭防具: "helmet",
+  胴: "armor",
+  胴防具: "armor",
+  盾: "shield",
+  補助: "support",
+  補助品: "support"
+};
+
+const EQUIPMENT_CHARACTER_NAME_ALIASES = {
+  録鳴未: "録嗚未",
+  信: "信(童)",
+  "信(騎乗状態)": "信(臨時千人将)",
+  "信 (騎乗状態)": "信(臨時千人将)",
+  "信（騎乗状態）": "信(臨時千人将)"
+};
+
+const RAW_EQUIPMENT_COMPATIBILITY = {
+  騰: ["刀剣", "胴防具", "盾", "遠隔"],
+  王騎: ["長柄", "胴防具", "頭防具", "遠隔"],
+  嬴政: ["刀剣", "盾", "遠隔", "補助品"],
+  信: ["刀剣", "胴防具", "盾", "長柄"],
+  同金: ["長柄", "頭防具", "盾", "胴防具"],
+  昌文君: ["盾", "胴防具", "頭防具", "長柄"],
+  摎: ["刀剣", "胴防具", "盾", "頭"],
+  隆国: ["長柄", "胴防具", "盾", "頭"],
+  蒙恬: ["刀剣", "胴防具", "盾", "遠隔"],
+  河了貂: ["遠隔", "胴防具", "補助品", "頭"],
+  紫夏: ["遠隔", "盾", "補助品", "刀剣"],
+  蒙毅: ["補助品", "盾", "遠隔", "頭防具"],
+  録鳴未: ["長柄", "胴防具", "刀剣", "頭"],
+  干央: ["長柄", "胴防具", "刀剣", "頭"],
+  漂: ["刀剣", "胴防具", "盾", "補助品"],
+  壁: ["刀剣", "胴防具", "盾", "頭"],
+  鱗坊: ["長柄", "胴防具", "頭", "遠隔"],
+  楊端和: ["刀剣", "胴防具", "盾", "刀剣"],
+  李牧: ["刀剣", "胴防具", "盾", "補助品"],
+  "信(騎乗状態)": ["刀剣", "長柄", "頭", "胴防具"],
+  王賁: ["長柄", "胴防具", "頭", "刀剣"],
+  ランカイ: ["頭", "胴防具", "盾", "補助品"],
+  タジフ: ["刀剣", "長柄", "盾", "補助品"],
+  シュンメン: ["刀剣", "胴防具", "盾", "刀剣"],
+  玄峰: ["遠隔", "頭防具", "盾", "補助品"],
+  ムタ: ["遠隔", "刀剣", "頭", "補助品"],
+  徐完: ["刀剣", "胴防具", "盾", "頭"],
+  魏加: ["遠隔", "胴防具", "補助品", "頭防具"],
+  瑠衣: ["遠隔", "頭", "盾", "補助品"],
+  汗明: ["長柄", "胴防具", "頭", "刀剣"],
+  バミュウ: ["刀剣", "補助品", "盾", "遠隔"],
+  宮元: ["刀剣", "胴防具", "頭", "遠隔"],
+  成恢: ["遠隔", "頭", "盾", "補助品"],
+  介子坊: ["長柄", "胴防具", "盾", "頭"],
+  輪虎: ["刀剣", "刀剣", "胴防具", "盾"],
+  オルド: ["刀剣", "胴防具", "盾", "頭"],
+  黄離弦: ["遠隔", "胴防具", "頭", "補助品"]
+};
 
 const EQUIPMENT_TRAIT_TEMPLATE_DEFS = [
   {
@@ -1319,6 +1371,45 @@ function collectSkillEffectText(skillRecords) {
     .join(" ");
 }
 
+function normalizeEquipmentCharacterName(name = "") {
+  const normalized = String(name ?? "").replace(/\s+/gu, " ").trim();
+  return EQUIPMENT_CHARACTER_NAME_ALIASES[normalized] ?? normalized;
+}
+
+function normalizeEquipmentFamilyKey(value = "") {
+  const normalized = String(value ?? "").replace(/\s+/gu, "").trim();
+  if (!normalized) {
+    return null;
+  }
+  if (EQUIPMENT_FAMILY_LABEL_BY_KEY[normalized]) {
+    return normalized;
+  }
+  return EQUIPMENT_FAMILY_ALIASES[normalized] ?? null;
+}
+
+function buildEquipmentCompatibilityMap(rawMap = {}) {
+  return Object.fromEntries(
+    Object.entries(rawMap).map(([name, families]) => [
+      normalizeEquipmentCharacterName(name),
+      (Array.isArray(families) ? families : [])
+        .map((family) => normalizeEquipmentFamilyKey(family))
+        .filter((familyKey) => familyKey && familyKey !== "all" && EQUIPMENT_FAMILY_LABEL_BY_KEY[familyKey])
+    ])
+  );
+}
+
+function summarizeEquipmentFamilySlots(familyKeys = []) {
+  const counts = new Map();
+  familyKeys.forEach((familyKey) => {
+    counts.set(familyKey, (counts.get(familyKey) || 0) + 1);
+  });
+  return EQUIPMENT_FAMILY_DEFS.filter((entry) => entry.key !== "all" && counts.has(entry.key)).map((entry) => ({
+    key: entry.key,
+    label: entry.label,
+    count: counts.get(entry.key) || 0
+  }));
+}
+
 function collectTacticText(character) {
   return [character.battleArtName, ...(character.battleArtEffects ?? [])].filter(Boolean).join(" ");
 }
@@ -1895,6 +1986,12 @@ const preparedCharacters = RAW_CHARACTERS.map((character) => {
 const characterByName = Object.fromEntries(
   preparedCharacters.map((character) => [character.name, character])
 );
+
+const EQUIPMENT_COMPATIBILITY_BY_NAME = buildEquipmentCompatibilityMap(RAW_EQUIPMENT_COMPATIBILITY);
+const EQUIPMENT_COMPATIBLE_SSR_NAMES = new Set(
+  Object.keys(EQUIPMENT_COMPATIBILITY_BY_NAME).filter((name) => characterByName[name]?.rarity === "SSR")
+);
+let activeEquipmentPowerFilter = null;
 
 const preparedSkills = Object.values(RAW_SKILLS)
   .map((skill) => {
@@ -5612,12 +5709,14 @@ function buildPowerDescription(baseText, chainContext) {
 }
 
 function getPowerSearchState(primary, secondary, rarities, conditions, features, chainContext) {
+  const equipmentFilterLabel = getActiveEquipmentPowerFilterLabel();
   const filteredCharacters = preparedCharacters.filter(
     (character) =>
       rarities.includes(character.rarity) &&
       matchesConditions(character, conditions) &&
       features.every((feature) => character.featureTags.includes(feature)) &&
-      (!chainContext.chainReference || character.id !== chainContext.chainReference.id)
+      (!chainContext.chainReference || character.id !== chainContext.chainReference.id) &&
+      (!activeEquipmentPowerFilter?.names || activeEquipmentPowerFilter.names.has(character.name))
   );
 
   const sortContext = {
@@ -5634,6 +5733,7 @@ function getPowerSearchState(primary, secondary, rarities, conditions, features,
           conditions.length ? `技能条件: ${conditions.map(conditionLabelFor).join(" / ")}` : "",
           features.length ? `特徴: ${features.join(" / ")}` : "",
           rarities.length !== RARITY_DEFS.length ? `レアリティ: ${rarities.join(" / ")}` : "",
+          equipmentFilterLabel ? `装備条件: ${equipmentFilterLabel}` : "",
           chainContext.chainSortEnabled && chainContext.chainReference
             ? `連鎖率基準: ${chainContext.chainReference.name}`
             : ""
@@ -5645,7 +5745,9 @@ function getPowerSearchState(primary, secondary, rarities, conditions, features,
           ? `連鎖率順: ${chainContext.chainReference.name}`
           : "条件一致",
       exactDescription: buildPowerDescription(
-        "選択したレアリティ・技能条件・特徴に一致する武将です。魅力は除外し、攻撃・防御・戦威・策略の4項目だけを表示しています。",
+        `選択したレアリティ・技能条件・特徴に一致する武将です。魅力は除外し、攻撃・防御・戦威・策略の4項目だけを表示しています。${
+          equipmentFilterLabel ? ` ${equipmentFilterLabel}のみ対象です。` : ""
+        }`,
         chainContext
       ),
       partialTitle: "ステータス検索の使い方",
@@ -5669,6 +5771,7 @@ function getPowerSearchState(primary, secondary, rarities, conditions, features,
           conditions.length ? `技能条件: ${conditions.map(conditionLabelFor).join(" / ")}` : "",
           features.length ? `特徴: ${features.join(" / ")}` : "",
           rarities.length !== RARITY_DEFS.length ? `レアリティ: ${rarities.join(" / ")}` : "",
+          equipmentFilterLabel ? `装備条件: ${equipmentFilterLabel}` : "",
           chainContext.chainSortEnabled && chainContext.chainReference
             ? `連鎖率基準: ${chainContext.chainReference.name}`
             : ""
@@ -5677,12 +5780,16 @@ function getPowerSearchState(primary, secondary, rarities, conditions, features,
       ),
       exactTitle: `1位一致: ${labelFor(primary)}`,
       exactDescription: buildPowerDescription(
-        "最も高いステータスが選択項目の武将です。レアリティ・技能条件・特徴の絞り込みを反映しています。",
+        `最も高いステータスが選択項目の武将です。レアリティ・技能条件・特徴の絞り込みを反映しています。${
+          equipmentFilterLabel ? ` ${equipmentFilterLabel}のみ対象です。` : ""
+        }`,
         chainContext
       ),
       partialTitle: `2位一致: ${labelFor(primary)}`,
       partialDescription: buildPowerDescription(
-        "1位ではないものの、2番目に高いステータスが選択項目の武将です。レアリティ・技能条件・特徴の絞り込みを反映しています。",
+        `1位ではないものの、2番目に高いステータスが選択項目の武将です。レアリティ・技能条件・特徴の絞り込みを反映しています。${
+          equipmentFilterLabel ? ` ${equipmentFilterLabel}のみ対象です。` : ""
+        }`,
         chainContext
       ),
       exact: sortPowerMatches(
@@ -5700,27 +5807,32 @@ function getPowerSearchState(primary, secondary, rarities, conditions, features,
 
   return {
     summary: formatSummaryText(
-      [
-        `ステータス: ${labelFor(primary)} → ${labelFor(secondary)}`,
-        conditions.length ? `技能条件: ${conditions.map(conditionLabelFor).join(" / ")}` : "",
-        features.length ? `特徴: ${features.join(" / ")}` : "",
-        rarities.length !== RARITY_DEFS.length ? `レアリティ: ${rarities.join(" / ")}` : "",
-        chainContext.chainSortEnabled && chainContext.chainReference
-          ? `連鎖率基準: ${chainContext.chainReference.name}`
-          : ""
-      ].filter(Boolean),
-      "完全一致・逆順一致を表示しています。"
+        [
+          `ステータス: ${labelFor(primary)} → ${labelFor(secondary)}`,
+          conditions.length ? `技能条件: ${conditions.map(conditionLabelFor).join(" / ")}` : "",
+          features.length ? `特徴: ${features.join(" / ")}` : "",
+          rarities.length !== RARITY_DEFS.length ? `レアリティ: ${rarities.join(" / ")}` : "",
+          equipmentFilterLabel ? `装備条件: ${equipmentFilterLabel}` : "",
+          chainContext.chainSortEnabled && chainContext.chainReference
+            ? `連鎖率基準: ${chainContext.chainReference.name}`
+            : ""
+        ].filter(Boolean),
+        "完全一致・逆順一致を表示しています。"
     ),
     exactTitle: `完全一致: ${labelFor(primary)} → ${labelFor(secondary)}`,
-    exactDescription: buildPowerDescription(
-      "1位・2位の並び順まで一致する武将です。レアリティ・技能条件・特徴の絞り込みを反映しています。",
-      chainContext
-    ),
+      exactDescription: buildPowerDescription(
+        `1位・2位の並び順まで一致する武将です。レアリティ・技能条件・特徴の絞り込みを反映しています。${
+          equipmentFilterLabel ? ` ${equipmentFilterLabel}のみ対象です。` : ""
+        }`,
+        chainContext
+      ),
     partialTitle: `逆順一致: ${labelFor(secondary)} → ${labelFor(primary)}`,
-    partialDescription: buildPowerDescription(
-      "上位2項目は一致するものの、1位・2位の順番が逆の武将です。レアリティ・技能条件・特徴の絞り込みを反映しています。",
-      chainContext
-    ),
+      partialDescription: buildPowerDescription(
+        `上位2項目は一致するものの、1位・2位の順番が逆の武将です。レアリティ・技能条件・特徴の絞り込みを反映しています。${
+          equipmentFilterLabel ? ` ${equipmentFilterLabel}のみ対象です。` : ""
+        }`,
+        chainContext
+      ),
     exact: sortPowerMatches(
       filteredCharacters.filter(
         (character) => character.top1.key === primary && character.top2.key === secondary
@@ -5833,6 +5945,7 @@ function renderPowerResults() {
 }
 
 function resetPowerSearch() {
+  activeEquipmentPowerFilter = null;
   elements.primaryStat.value = "";
   elements.secondaryStat.value = "";
   elements.chainCommander.value = "";
@@ -5874,6 +5987,87 @@ function writeEquipmentStatInputs(prefix, stats = {}) {
   }
 }
 
+function getCharacterEquipmentFamilies(characterName = "") {
+  return EQUIPMENT_COMPATIBILITY_BY_NAME[normalizeEquipmentCharacterName(characterName)] ?? [];
+}
+
+function getEquipmentScopedCharacters(familyKey = "all") {
+  const normalizedFamily = normalizeEquipmentFamilyKey(familyKey) ?? "all";
+  return preparedCharacters
+    .filter((character) => character.rarity === "SSR")
+    .map((character) => {
+      const familySlots = getCharacterEquipmentFamilies(character.name);
+      if (!familySlots.length) {
+        return null;
+      }
+      if (normalizedFamily !== "all" && !familySlots.includes(normalizedFamily)) {
+        return null;
+      }
+      return {
+        character,
+        familySlots,
+        familySummary: summarizeEquipmentFamilySlots(familySlots)
+      };
+    })
+    .filter(Boolean);
+}
+
+function formatEquipmentFamilySummaryLabel(familySummary = []) {
+  return familySummary
+    .map((entry) => (entry.count > 1 ? `${entry.label} x${entry.count}` : entry.label))
+    .join(" / ");
+}
+
+function renderEquipmentFamilyChips(familySummary = []) {
+  if (!familySummary.length) {
+    return "";
+  }
+  return `
+    <div class="equipment-match-family-list">
+      ${familySummary
+        .map(
+          (entry) =>
+            `<span class="meta-chip">${escapeHtml(entry.count > 1 ? `${entry.label} x${entry.count}` : entry.label)}</span>`
+        )
+        .join("")}
+    </div>
+  `;
+}
+
+function setActiveEquipmentPowerFilter(filter) {
+  activeEquipmentPowerFilter = filter?.names?.size ? filter : null;
+}
+
+function clearActiveEquipmentPowerFilter(options = {}) {
+  if (!activeEquipmentPowerFilter) {
+    return;
+  }
+  activeEquipmentPowerFilter = null;
+  if (options.renderPowerResults) {
+    renderPowerResults();
+  }
+}
+
+function buildEquipmentPowerFilter(matchState) {
+  const names = (matchState.filteredNames ?? []).filter((name) => characterByName[name]);
+  if (!names.length) {
+    return null;
+  }
+  return {
+    familyKey: matchState.familyKey ?? "all",
+    familyLabel: matchState.familyLabel ?? "",
+    summaryLabel:
+      matchState.familyKey && matchState.familyKey !== "all"
+        ? `${matchState.familyLabel}を装備できるSSR`
+        : "装備可能情報があるSSR",
+    names: new Set(names)
+  };
+}
+
+function getActiveEquipmentPowerFilterLabel() {
+  return activeEquipmentPowerFilter?.summaryLabel ?? "";
+}
+
 function buildEquipmentPresetOptions() {
   const family = elements.equipmentFamily?.value || "all";
   return EQUIPMENT_PRESET_DEFS.filter((entry) => entry.key === "manual" || family === "all" || entry.family === family);
@@ -5911,6 +6105,11 @@ function applyEquipmentPresetFromSelection() {
   if (!preset || preset.key === "manual") {
     updateEquipmentPresetNote();
     return;
+  }
+  if (elements.equipmentFamily && preset.family !== "all" && elements.equipmentFamily.value !== preset.family) {
+    elements.equipmentFamily.value = preset.family;
+    renderEquipmentPresetOptions();
+    elements.equipmentPreset.value = preset.key;
   }
   writeEquipmentStatInputs("equipmentBase", preset.stats);
   updateEquipmentPresetNote();
@@ -5961,6 +6160,9 @@ function getEquipmentAffinityScore(character, totals, primaryKey, secondaryKey) 
 }
 
 function getEquipmentMatchState() {
+  const familyKey = normalizeEquipmentFamilyKey(elements.equipmentFamily?.value || "all") ?? "all";
+  const familyLabel = EQUIPMENT_FAMILY_LABEL_BY_KEY[familyKey] ?? "すべて";
+  const scopedCharacters = getEquipmentScopedCharacters(familyKey);
   const baseStats = readEquipmentStatInputs("equipmentBase");
   const traitStats = readEquipmentStatInputs("equipmentTrait");
   const totals = STAT_DEFS.reduce(
@@ -5978,25 +6180,31 @@ function getEquipmentMatchState() {
   if (!primary) {
     return {
       totals,
+      familyKey,
+      familyLabel,
       primary: null,
       secondary: null,
       matchCount: 0,
-      summary: "基礎値か特性補正を入力すると、装備と噛み合う武将候補をここに出します。",
-      pairLabel: "まずは装備の数値を入力してください。",
+      filteredNames: scopedCharacters.map((entry) => entry.character.name),
+      summary:
+        "基礎値か特性補正を入力すると、装備できるSSRの中から噛み合う武将候補をここに出します。",
+      pairLabel:
+        familyKey === "all"
+          ? "まずは装備の数値を入力してください。"
+          : `装備系統: ${familyLabel} を装備できるSSRに絞り込み中`,
       preview: []
     };
   }
 
-  const candidates = preparedCharacters
-    .filter((character) => ["SSR", "SR"].includes(character.rarity))
-    .map((character) => {
+  const candidates = scopedCharacters
+    .map((entry) => {
+      const { character } = entry;
       const exact = character.top1.key === primary.key && (!secondary || character.top2.key === secondary.key);
-      const reverse = Boolean(
-        secondary && character.top1.key === secondary.key && character.top2.key === primary.key
-      );
-      const partial = !exact && !reverse && (character.top1.key === primary.key || (secondary && character.top2.key === secondary.key));
+      const reverse = Boolean(secondary && character.top1.key === secondary.key && character.top2.key === primary.key);
+      const partial =
+        !exact && !reverse && (character.top1.key === primary.key || (secondary && character.top2.key === secondary.key));
       return {
-        character,
+        ...entry,
         exact,
         reverse,
         partial,
@@ -6020,15 +6228,22 @@ function getEquipmentMatchState() {
   const topLine = secondary
     ? `${primary.label}1位 / ${secondary.label}2位 を優先します。`
     : `${primary.label}1位 を優先します。`;
+  const scopeLine =
+    familyKey === "all"
+      ? `装備可能情報があるSSR ${scopedCharacters.length}体の中から並べています。`
+      : `${familyLabel}を装備できるSSR ${scopedCharacters.length}体の中から並べています。`;
   return {
     totals,
+    familyKey,
+    familyLabel,
     primary,
     secondary,
     matchCount: candidates.length,
-    summary: `合計値は ${formatEquipmentTotals(totals)} です。${topLine} その条件に近い武将を上から並べています。`,
+    filteredNames: scopedCharacters.map((entry) => entry.character.name),
+    summary: `合計値は ${formatEquipmentTotals(totals)} です。${topLine} ${scopeLine}`,
     pairLabel: secondary
-      ? `相性軸: ${primary.label} → ${secondary.label}`
-      : `相性軸: ${primary.label} 単軸`,
+      ? `${familyKey === "all" ? "" : `装備: ${familyLabel} / `}相性軸: ${primary.label} → ${secondary.label}`
+      : `${familyKey === "all" ? "" : `装備: ${familyLabel} / `}相性軸: ${primary.label} 単軸`,
     preview: candidates.slice(0, 6)
   };
 }
@@ -6063,6 +6278,7 @@ function renderEquipmentMatchPreview() {
             <span>${escapeHtml(matchLabel)} / 1位 ${escapeHtml(entry.character.top1.label)} / 2位 ${escapeHtml(
               entry.character.top2.label
             )}</span>
+            ${renderEquipmentFamilyChips(entry.familySummary)}
           </div>
           <span class="equipment-match-row__score">適合 ${Math.round(entry.score)}</span>
         </article>
@@ -6078,15 +6294,17 @@ function applyEquipmentMatchSearch() {
     return;
   }
 
+  setActiveEquipmentPowerFilter(buildEquipmentPowerFilter(matchState));
   elements.primaryStat.value = matchState.primary.key;
   syncSecondaryOptions();
   elements.secondaryStat.value = matchState.secondary?.key ?? "";
+  setCheckedValuesByName("power-rarity", ["SSR"]);
   setPowerValidation("");
   renderPowerResults();
   showStatusToast(
     matchState.secondary
-      ? `装備相性から ${matchState.primary.label} → ${matchState.secondary.label} で検索しました。`
-      : `装備相性から ${matchState.primary.label} で検索しました。`
+      ? `装備相性から ${matchState.primary.label} → ${matchState.secondary.label} を、${getActiveEquipmentPowerFilterLabel()}に絞って検索しました。`
+      : `装備相性から ${matchState.primary.label} を、${getActiveEquipmentPowerFilterLabel()}に絞って検索しました。`
   );
   elements.searchSummary?.scrollIntoView?.({ behavior: "smooth", block: "start" });
 }
@@ -6103,6 +6321,7 @@ function resetEquipmentMatch() {
   writeEquipmentStatInputs("equipmentTrait", {});
   updateEquipmentPresetNote();
   renderEquipmentMatchPreview();
+  clearActiveEquipmentPowerFilter({ renderPowerResults: true });
 }
 
 function initializeEquipmentMatchControls() {
@@ -7332,6 +7551,7 @@ function readSharedPayloadFromLocation() {
 
 function applyPowerShareState(state = {}) {
   resetPowerSearch();
+  activeEquipmentPowerFilter = null;
   elements.primaryStat.value = state.primary ?? "";
   elements.secondaryStat.value = state.secondary ?? "";
   elements.chainCommander.value = state.chainCommander ?? "";
