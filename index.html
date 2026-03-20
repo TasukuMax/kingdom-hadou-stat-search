@@ -1066,6 +1066,19 @@
         line-height: 1.55;
       }
 
+      .equipment-match-family-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-top: 8px;
+      }
+
+      .equipment-match-family-list .meta-chip {
+        margin-top: 0;
+        padding: 5px 8px;
+        font-size: 0.74rem;
+      }
+
       .equipment-match-row__score {
         display: inline-flex;
         align-items: center;
@@ -5153,8 +5166,8 @@
           <div>
             <h2>装備相性検索β</h2>
             <p>
-              装備の基礎値と特性補正を合算して、相性がいい武将を出します。装備種類プリセットは順位判定用の暫定値で、
-              正確な値が分かっている場合は下の数値欄でそのまま上書きできます。
+              装備の基礎値と特性補正を合算して、相性がいい武将を出します。装備種類プリセットは、送っていただいた動画で確認できた
+              SSR Lv30 時点の値を優先して入れています。正確な値が分かっている場合は、下の数値欄でそのまま上書きできます。
             </p>
           </div>
           <a class="source-link" href="https://gamewith.jp/kingdom-hadou/547079" target="_blank" rel="noreferrer">GameWith装備記事</a>
@@ -5165,7 +5178,7 @@
             <div class="field">
               <label for="equipmentFamily">装備系統</label>
               <select id="equipmentFamily" aria-label="装備系統"></select>
-              <p class="field-note">武器、防具、盾ごとの傾向からプリセットを絞り込みます。</p>
+              <p class="field-note">刀剣、長柄、遠隔、頭防具、胴防具、盾、補助品ごとに、装備できるSSRだけへ絞り込みます。</p>
             </div>
 
             <div class="field">
@@ -5177,7 +5190,7 @@
             <div class="field">
               <label for="equipmentTraitTemplate">特性テンプレート</label>
               <select id="equipmentTraitTemplate" aria-label="特性テンプレート"></select>
-              <p class="field-note">GameWith記事で確認できた Lv1 特性をテンプレート化しています。複数特性や上位 Lv は手入力で調整してください。</p>
+              <p class="field-note">GameWith記事と動画で確認できた特性候補を元にしています。複数特性や上位 Lv は手入力で調整してください。</p>
             </div>
 
             <div class="button-row">
