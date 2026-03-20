@@ -1,12 +1,14 @@
-const CACHE_NAME = "kh-hadou-v2";
+const CACHE_NAME = "kh-hadou-v3";
 const CORE_ASSETS = [
   "./",
   "./index.html",
   "./data.js",
   "./season3-data.js",
+  "./gacha-sim.js",
   "./app.js",
   "./army-builder.js",
   "./manifest.webmanifest",
+  "./assets/s3-eiketsu-summon.mov",
   "./icons/icon-192.svg",
   "./icons/icon-512.svg"
 ];
