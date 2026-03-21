@@ -1,7 +1,15 @@
-const CACHE_NAME = "kh-hadou-v6";
+const CACHE_NAME = "kh-hadou-v7";
 const CORE_ASSETS = [
   "./",
   "./index.html",
+  "./power.html",
+  "./character.html",
+  "./skill.html",
+  "./synergy.html",
+  "./builder.html",
+  "./army.html",
+  "./gacha.html",
+  "./board.html",
   "./data.js",
   "./season3-data.js",
   "./gacha-sim.js",
