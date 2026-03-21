@@ -25,7 +25,7 @@ const SEASON3 =
         sources: []
       };
 
-const VIEW_KEYS = ["power", "equipment", "character", "skill", "synergy", "builder", "army", "gacha", "board"];
+const VIEW_KEYS = ["power", "equipment", "character", "skill", "synergy", "builder", "army", "gacha", "ranking", "board"];
 const UI_STATE_STORAGE_KEY = "kh-site-ui-v1";
 const HERO_RECENT_STORAGE_KEY = "kh-hero-recent-v1";
 const FAVORITE_CHARACTERS_STORAGE_KEY = "kh-favorite-characters-v1";
@@ -44,6 +44,7 @@ const SHARE_VIEW_HINTS = {
   builder: "編成ツールの陣形、主将・副将・補佐、秒数プレビューをURLに含めます。",
   army: "軍勢の軸武将、コンセプト、レア条件、手持ち情報までURLに含めます。長い場合は JSON 共有も使ってください。",
   gacha: "ガチャシミュレーターの累計回数、直近結果、武将ごとの獲得回数をURLに含めます。",
+  ranking: "全サーバー個人ランキングの掲載先、サーバー絞り込み、検索条件をURLに含めます。",
   board: "S3ハブの目的と優先スロットをURLに含めます。"
 };
 
@@ -56,6 +57,7 @@ const VIEW_META = {
   builder: { label: "編成ツール", shortLabel: "編成", summary: "1部隊の主将・副将・補佐・9x9盤面を確認する" },
   army: { label: "軍勢自動編成", shortLabel: "軍勢", summary: "25体軍勢を自動提案する" },
   gacha: { label: "ガチャシミュ", shortLabel: "ガチャ", summary: "英傑登用の排出率、天井、累計回数を再現する" },
+  ranking: { label: "全鯖ランキング", shortLabel: "順位", summary: "全サーバー横断の個人戦闘力ランキングをまとめる" },
   board: { label: "S3ハブ", shortLabel: "S3", summary: "S3の採点軸と注目候補を見る" }
 };
 
@@ -117,6 +119,13 @@ const TOOL_PAGE_DEFS = [
     chips: ["10連共有", "天井再現", "累計SSR"]
   },
   {
+    key: "ranking",
+    path: "ranking.html",
+    category: "コミュニティ",
+    description: "前シーズン統合版と各シーズンごとに、全サーバー横断の個人ランキングをまとめます。",
+    chips: ["画像投稿", "シーズン切替", "全鯖比較"]
+  },
+  {
     key: "board",
     path: "board.html",
     category: "S3整理",
@@ -138,7 +147,8 @@ const HERO_SHORTCUT_DEFS = [
   { key: "skill-front", label: "前列技能", hint: "技能DB", description: "前列条件の技能だけを表示します。" },
   { key: "synergy-ouki", label: "王騎相性", hint: "相性検索", description: "王騎を主将にした副将候補を出します。" },
   { key: "army-siege", label: "対物軍勢", hint: "軍勢編成", description: "対物特化の軍勢コンセプトへ切り替えます。" },
-  { key: "gacha-s3", label: "S3ガチャ", hint: "ガチャシミュ", description: "シーズン3英傑登用の結果画面へ直接移動します。" }
+  { key: "gacha-s3", label: "S3ガチャ", hint: "ガチャシミュ", description: "シーズン3英傑登用の結果画面へ直接移動します。" },
+  { key: "ranking-prev", label: "戦力投稿", hint: "全鯖ランキング", description: "前シーズン統合版ランキングの投稿フォームへ移動します。" }
 ];
 
 const HERO_RESULT_TYPE_PRIORITY = {
@@ -2948,6 +2958,10 @@ function applyHeroShortcut(shortcutKey) {
       break;
     case "gacha-s3":
       setActiveView("gacha", { scrollToNav: true });
+      break;
+    case "ranking-prev":
+      window.KH_RANKING_BOARD_API?.applyShareState?.({ boardKey: "overall" });
+      setActiveView("ranking", { scrollToNav: true });
       break;
     default:
       return;
@@ -7774,6 +7788,9 @@ function collectCurrentSharePayload() {
     case "gacha":
       state = window.KH_GACHA_SIM_API?.collectShareState?.() ?? {};
       break;
+    case "ranking":
+      state = window.KH_RANKING_BOARD_API?.collectShareState?.() ?? {};
+      break;
     case "board":
       state = collectBoardShareState();
       break;
@@ -7958,6 +7975,15 @@ function applySharedPayload(payload, options = {}) {
     return false;
   }
 
+  if (payload.view === "ranking") {
+    if (window.KH_RANKING_BOARD_API?.applyShareState) {
+      window.KH_RANKING_BOARD_API.applyShareState(payload.state ?? {}, options);
+      return true;
+    }
+    window.__KH_PENDING_SHARE_PAYLOAD = payload;
+    return false;
+  }
+
   switch (payload.view) {
     case "power":
       applyPowerShareState(payload.state);
@@ -7976,6 +8002,9 @@ function applySharedPayload(payload, options = {}) {
       break;
     case "builder":
       applyBuilderShareState(payload.state);
+      break;
+    case "ranking":
+      window.KH_RANKING_BOARD_API?.applyShareState?.(payload.state);
       break;
     case "board":
       applyBoardShareState(payload.state);
@@ -7999,14 +8028,16 @@ function updateBackupMeta() {
   }
 
   const ownedCount = window.KH_ARMY_SHARE_API?.getOwnedCount?.() ?? 0;
+  const rankingCount = window.KH_RANKING_BOARD_API?.getEntryCount?.() ?? 0;
   elements.backupMeta.textContent = formatSummaryText(
     [
       `お気に入り ${getFavoriteCharacterNames().length + getFavoriteSkillNames().length}件`,
       `比較 ${getComparedCharacterNames().length}体`,
       `最近使った項目 ${getHeroRecentEntries().length}件`,
-      `手持ち ${ownedCount}体`
+      `手持ち ${ownedCount}体`,
+      `ランキング投稿 ${rankingCount}件`
     ],
-    "共有は現在のタブ条件、JSON はお気に入り・比較・最近使った項目・手持ち入力のバックアップに使えます。"
+    "共有は現在のタブ条件、JSON はお気に入り・比較・最近使った項目・手持ち入力・ランキング投稿のバックアップに使えます。"
   );
 }
 
@@ -8018,7 +8049,8 @@ function buildBackupPayload() {
     heroRecent: getHeroRecentEntries(),
     favoriteCharacters: getFavoriteCharacterNames(),
     favoriteSkills: getFavoriteSkillNames(),
-    armyRoster: window.KH_ARMY_SHARE_API?.exportState?.() ?? null
+    armyRoster: window.KH_ARMY_SHARE_API?.exportState?.() ?? null,
+    rankingBoard: window.KH_RANKING_BOARD_API?.exportState?.() ?? null
   };
 }
 
@@ -8033,6 +8065,7 @@ function refreshUiAfterExternalState(targetView) {
   renderSkillDb();
   renderSynergy();
   renderBuilderView();
+  window.KH_RANKING_BOARD_API?.refresh?.();
   renderFeatureBoard();
   setActiveView(targetView || getUiState().activeView || "power", { updateHash: true });
   updateTrustSnapshot();
@@ -8063,10 +8096,14 @@ function applyBackupPayload(payload) {
   writeStoredJson(FAVORITE_CHARACTERS_STORAGE_KEY, payload.favoriteCharacters ?? []);
   writeStoredJson(FAVORITE_SKILLS_STORAGE_KEY, payload.favoriteSkills ?? []);
   window.KH_ARMY_SHARE_API?.importState?.(payload.armyRoster ?? null, { rerender: false });
+  window.KH_RANKING_BOARD_API?.importState?.(payload.rankingBoard ?? null, { rerender: false });
 
   refreshUiAfterExternalState(payload.uiState?.activeView ?? "power");
   if ((payload.uiState?.activeView ?? "") === "army") {
     window.KH_ARMY_SHARE_API?.refresh?.();
+  }
+  if ((payload.uiState?.activeView ?? "") === "ranking") {
+    window.KH_RANKING_BOARD_API?.refresh?.();
   }
   showStatusToast("JSON バックアップを読み込みました。");
 }
@@ -8096,6 +8133,7 @@ function clearBrowserStoredData() {
   ].forEach((key) => window.localStorage.removeItem(key));
 
   window.KH_ARMY_SHARE_API?.importState?.(null, { rerender: false });
+  window.KH_RANKING_BOARD_API?.clearState?.({ rerender: false });
 
   resetPowerSearch();
   resetEquipmentMatch();
