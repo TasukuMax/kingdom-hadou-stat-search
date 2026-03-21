@@ -1,8 +1,9 @@
-const CACHE_NAME = "kh-hadou-v7";
+const CACHE_NAME = "kh-hadou-v8";
 const CORE_ASSETS = [
   "./",
   "./index.html",
   "./power.html",
+  "./equipment.html",
   "./character.html",
   "./skill.html",
   "./synergy.html",
