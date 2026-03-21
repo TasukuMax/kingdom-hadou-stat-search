@@ -1,0 +1,147 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900" role="img" aria-label="Gacha result stage background">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#654018"/>
+      <stop offset="38%" stop-color="#7f4519"/>
+      <stop offset="100%" stop-color="#34180d"/>
+    </linearGradient>
+    <radialGradient id="lightCore" cx="50%" cy="18%" r="48%">
+      <stop offset="0%" stop-color="#fff4bf" stop-opacity="0.95"/>
+      <stop offset="26%" stop-color="#ffd77c" stop-opacity="0.62"/>
+      <stop offset="100%" stop-color="#ffd77c" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="pillar" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#8d5816"/>
+      <stop offset="22%" stop-color="#ffdd74"/>
+      <stop offset="52%" stop-color="#b9741b"/>
+      <stop offset="100%" stop-color="#76450d"/>
+    </linearGradient>
+    <linearGradient id="pillarShadow" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#f5cf6c" stop-opacity="0.58"/>
+      <stop offset="100%" stop-color="#55300e" stop-opacity="0.12"/>
+    </linearGradient>
+    <linearGradient id="curtain" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#6d0f16"/>
+      <stop offset="100%" stop-color="#3d060d"/>
+    </linearGradient>
+    <linearGradient id="carpet" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#a62422"/>
+      <stop offset="100%" stop-color="#5a0d16"/>
+    </linearGradient>
+    <linearGradient id="stair" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#9b5a43"/>
+      <stop offset="100%" stop-color="#5c2a25"/>
+    </linearGradient>
+    <filter id="softBlur" x="-25%" y="-25%" width="150%" height="150%">
+      <feGaussianBlur stdDeviation="18"/>
+    </filter>
+    <filter id="beamBlur" x="-25%" y="-25%" width="150%" height="150%">
+      <feGaussianBlur stdDeviation="6"/>
+    </filter>
+  </defs>
+
+  <rect width="1600" height="900" fill="url(#bg)"/>
+  <rect width="1600" height="900" fill="url(#lightCore)"/>
+
+  <g opacity="0.2">
+    <rect x="0" y="0" width="1600" height="190" fill="#2b1708"/>
+    <path d="M0 190H1600" stroke="#d7b16b" stroke-opacity="0.18" stroke-width="3"/>
+    <g stroke="#d7b16b" stroke-opacity="0.13" stroke-width="2">
+      <path d="M0 96H1600"/>
+      <path d="M0 48H1600"/>
+      <path d="M200 0V190"/>
+      <path d="M400 0V190"/>
+      <path d="M600 0V190"/>
+      <path d="M800 0V190"/>
+      <path d="M1000 0V190"/>
+      <path d="M1200 0V190"/>
+      <path d="M1400 0V190"/>
+    </g>
+  </g>
+
+  <g opacity="0.5">
+    <path d="M340 136C460 44 1140 44 1260 136L1260 278C1120 206 480 206 340 278Z" fill="url(#curtain)"/>
+    <path d="M0 92C160 140 340 178 520 166C652 158 734 118 800 106C866 118 948 158 1080 166C1260 178 1440 140 1600 92V0H0Z" fill="url(#curtain)"/>
+  </g>
+
+  <g opacity="0.8">
+    <path d="M760 116L670 456L760 456L800 116Z" fill="#ffe7a7" fill-opacity="0.38" filter="url(#beamBlur)"/>
+    <path d="M840 116L930 456L840 456L800 116Z" fill="#ffe7a7" fill-opacity="0.38" filter="url(#beamBlur)"/>
+    <path d="M800 106L720 470L880 470Z" fill="#fff5c2" fill-opacity="0.34" filter="url(#softBlur)"/>
+  </g>
+
+  <g opacity="0.18" filter="url(#softBlur)">
+    <ellipse cx="170" cy="656" rx="150" ry="88" fill="#ffd998"/>
+    <ellipse cx="1430" cy="656" rx="150" ry="88" fill="#ffd998"/>
+    <ellipse cx="800" cy="560" rx="280" ry="120" fill="#ffd998"/>
+  </g>
+
+  <g>
+    <rect x="124" y="120" width="118" height="622" rx="54" fill="url(#pillar)"/>
+    <rect x="124" y="120" width="118" height="622" rx="54" fill="url(#pillarShadow)"/>
+    <ellipse cx="183" cy="164" rx="70" ry="28" fill="#f0c55c" fill-opacity="0.75"/>
+    <ellipse cx="183" cy="236" rx="64" ry="24" fill="#d5a545" fill-opacity="0.74"/>
+    <ellipse cx="183" cy="326" rx="64" ry="24" fill="#d5a545" fill-opacity="0.74"/>
+    <ellipse cx="183" cy="418" rx="64" ry="24" fill="#d5a545" fill-opacity="0.74"/>
+    <ellipse cx="183" cy="510" rx="64" ry="24" fill="#d5a545" fill-opacity="0.74"/>
+    <ellipse cx="183" cy="602" rx="64" ry="24" fill="#d5a545" fill-opacity="0.74"/>
+  </g>
+
+  <g>
+    <rect x="352" y="102" width="104" height="610" rx="50" fill="url(#pillar)"/>
+    <rect x="352" y="102" width="104" height="610" rx="50" fill="url(#pillarShadow)"/>
+    <ellipse cx="404" cy="142" rx="62" ry="24" fill="#f0c55c" fill-opacity="0.72"/>
+    <ellipse cx="404" cy="224" rx="56" ry="22" fill="#d5a545" fill-opacity="0.74"/>
+    <ellipse cx="404" cy="314" rx="56" ry="22" fill="#d5a545" fill-opacity="0.74"/>
+    <ellipse cx="404" cy="404" rx="56" ry="22" fill="#d5a545" fill-opacity="0.74"/>
+    <ellipse cx="404" cy="494" rx="56" ry="22" fill="#d5a545" fill-opacity="0.74"/>
+    <ellipse cx="404" cy="584" rx="56" ry="22" fill="#d5a545" fill-opacity="0.74"/>
+  </g>
+
+  <g>
+    <rect x="1144" y="102" width="104" height="610" rx="50" fill="url(#pillar)"/>
+    <rect x="1144" y="102" width="104" height="610" rx="50" fill="url(#pillarShadow)"/>
+    <ellipse cx="1196" cy="142" rx="62" ry="24" fill="#f0c55c" fill-opacity="0.72"/>
+    <ellipse cx="1196" cy="224" rx="56" ry="22" fill="#d5a545" fill-opacity="0.74"/>
+    <ellipse cx="1196" cy="314" rx="56" ry="22" fill="#d5a545" fill-opacity="0.74"/>
+    <ellipse cx="1196" cy="404" rx="56" ry="22" fill="#d5a545" fill-opacity="0.74"/>
+    <ellipse cx="1196" cy="494" rx="56" ry="22" fill="#d5a545" fill-opacity="0.74"/>
+    <ellipse cx="1196" cy="584" rx="56" ry="22" fill="#d5a545" fill-opacity="0.74"/>
+  </g>
+
+  <g>
+    <rect x="1360" y="120" width="118" height="622" rx="54" fill="url(#pillar)"/>
+    <rect x="1360" y="120" width="118" height="622" rx="54" fill="url(#pillarShadow)"/>
+    <ellipse cx="1419" cy="164" rx="70" ry="28" fill="#f0c55c" fill-opacity="0.75"/>
+    <ellipse cx="1419" cy="236" rx="64" ry="24" fill="#d5a545" fill-opacity="0.74"/>
+    <ellipse cx="1419" cy="326" rx="64" ry="24" fill="#d5a545" fill-opacity="0.74"/>
+    <ellipse cx="1419" cy="418" rx="64" ry="24" fill="#d5a545" fill-opacity="0.74"/>
+    <ellipse cx="1419" cy="510" rx="64" ry="24" fill="#d5a545" fill-opacity="0.74"/>
+    <ellipse cx="1419" cy="602" rx="64" ry="24" fill="#d5a545" fill-opacity="0.74"/>
+  </g>
+
+  <g opacity="0.3">
+    <rect x="544" y="320" width="512" height="232" rx="18" fill="#7f5323"/>
+    <rect x="576" y="352" width="448" height="176" rx="14" fill="#d8b16f" fill-opacity="0.18"/>
+  </g>
+
+  <g>
+    <polygon points="604,514 996,514 1106,604 494,604" fill="#7f4739" fill-opacity="0.74"/>
+    <polygon points="646,514 954,514 1018,570 582,570" fill="#be7a55" fill-opacity="0.54"/>
+    <rect x="640" y="540" width="320" height="26" fill="url(#stair)"/>
+    <rect x="620" y="566" width="360" height="30" fill="url(#stair)"/>
+    <rect x="596" y="596" width="408" height="34" fill="url(#stair)"/>
+  </g>
+
+  <g opacity="0.72">
+    <polygon points="0,900 480,900 700,646 900,646 1120,900 1600,900 1600,900 0,900" fill="#2e180e"/>
+    <path d="M566 900L742 634H858L1034 900Z" fill="url(#carpet)"/>
+    <path d="M632 900L767 692H833L968 900Z" fill="#c58a55" fill-opacity="0.3"/>
+    <path d="M744 734H856" stroke="#f3c56a" stroke-opacity="0.46" stroke-width="8" stroke-linecap="round"/>
+  </g>
+
+  <g opacity="0.32">
+    <path d="M88 712L356 712L302 760L54 760Z" fill="#ccae72"/>
+    <path d="M1244 712L1512 712L1546 760L1298 760Z" fill="#ccae72"/>
+  </g>
+</svg>
