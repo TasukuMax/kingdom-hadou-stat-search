@@ -25,7 +25,7 @@ const SEASON3 =
         sources: []
       };
 
-const VIEW_KEYS = ["power", "character", "skill", "synergy", "builder", "army", "gacha", "board"];
+const VIEW_KEYS = ["power", "equipment", "character", "skill", "synergy", "builder", "army", "gacha", "board"];
 const UI_STATE_STORAGE_KEY = "kh-site-ui-v1";
 const HERO_RECENT_STORAGE_KEY = "kh-hero-recent-v1";
 const FAVORITE_CHARACTERS_STORAGE_KEY = "kh-favorite-characters-v1";
@@ -37,6 +37,7 @@ const BACKUP_FILE_PREFIX = "kingdom-hadou-backup";
 
 const SHARE_VIEW_HINTS = {
   power: "戦力検索のステータス条件、連鎖基準、絞り込みをURLに入れて共有します。",
+  equipment: "装備検索の系統、装備種類、特性テンプレート、基礎値と補正値をURLに入れて共有します。",
   character: "武将DBの全文検索、並び順、絞り込み、比較候補までURLに含めます。",
   skill: "技能DBの全文検索、並び順、絞り込みをURLに含めます。",
   synergy: "相性検索の基準武将、候補条件、特徴フィルタをURLに含めます。",
@@ -48,6 +49,7 @@ const SHARE_VIEW_HINTS = {
 
 const VIEW_META = {
   power: { label: "戦力検索", shortLabel: "検索", summary: "上位2ステータス・技能条件・連鎖率から探す" },
+  equipment: { label: "装備検索", shortLabel: "装備", summary: "装備と特性から相性が良い武将候補を探す" },
   character: { label: "武将DB", shortLabel: "武将", summary: "武将名・技能・個性・特徴タグを横断検索する" },
   skill: { label: "技能DB", shortLabel: "技能", summary: "技能名・効果・所持武将から探す" },
   synergy: { label: "相性検索", shortLabel: "相性", summary: "主将基準の連鎖率と共通個性で並べる" },
@@ -62,8 +64,15 @@ const TOOL_PAGE_DEFS = [
     key: "power",
     path: "power.html",
     category: "検索 / 育成",
-    description: "上位2ステータス、装備相性、連鎖率をまとめて見て主将候補を絞ります。",
-    chips: ["上位2ステ", "装備相性", "連鎖率"]
+    description: "上位2ステータス、技能条件、連鎖率から主将候補を絞る基本の検索ページです。",
+    chips: ["上位2ステ", "技能条件", "連鎖率"]
+  },
+  {
+    key: "equipment",
+    path: "equipment.html",
+    category: "装備 / 相性",
+    description: "装備系統、基礎値、特性補正から相性がいい武将候補をまとめて出します。",
+    chips: ["装備系統", "特性補正", "相性候補"]
   },
   {
     key: "character",
@@ -856,10 +865,16 @@ const FORMATION_DEFS = [
     label: "基本陣",
     shortLabel: "基本",
     description: "8秒刻みで一定に回る基準陣形です。バフと攻撃を交互に重ねやすく、扱いが安定します。",
-    sourceSummary: "援タイプ3部隊以上で戦威+20%",
-    sourceDate: "GameWith 2026年3月14日",
+    sourceSummary: "闘 / 護 / 援 / 妨 3部隊以上で各主軸+20%、いずれか4部隊以上で最大兵力+20%",
+    sourceDate: "2026年3月21日更新",
     timings: [20, 8, 8, 8, 8, 8],
-    bonuses: [{ type: "援", minUnits: 3, stats: { war: 20 } }],
+    bonuses: [
+      { type: "闘", minUnits: 3, stats: { attack: 20 } },
+      { type: "援", minUnits: 3, stats: { war: 20 } },
+      { type: "護", minUnits: 3, stats: { defense: 20 } },
+      { type: "妨", minUnits: 3, stats: { strategy: 20 } },
+      { type: "any", minUnits: 4, maxTroopsRate: 20 }
+    ],
     slots: [
       { key: "first", label: "1st", rowKey: "middle", gridCol: 1, gridRow: 1 },
       { key: "second", label: "2nd", rowKey: "front", gridCol: 1, gridRow: 0 },
@@ -873,12 +888,15 @@ const FORMATION_DEFS = [
     label: "錐行陣",
     shortLabel: "錐行",
     description: "高い攻撃補正と左から右へ流れるテンポが特徴で、通常攻撃や対物寄りの軍勢と相性が良い陣形です。",
-    sourceSummary: "闘タイプ3部隊以上で攻撃+30%、援タイプ3部隊以上で攻撃+20%・戦威+10%",
-    sourceDate: "GameWith 2026年3月14日",
+    sourceSummary: "闘3で攻撃+30% / 戦威-10%、闘4で攻撃+30% / 防御-10%、援4・妨3・護3でも攻撃補正あり",
+    sourceDate: "2026年3月21日更新",
     timings: [20, 8, 6, 8, 6, 10],
     bonuses: [
-      { type: "闘", minUnits: 3, stats: { attack: 30 } },
-      { type: "援", minUnits: 3, stats: { attack: 20, war: 10 } }
+      { type: "援", minUnits: 4, stats: { attack: 20 }, demerits: { defense: 10 } },
+      { type: "闘", minUnits: 3, stats: { attack: 30 }, demerits: { war: 10 } },
+      { type: "闘", minUnits: 4, stats: { attack: 30 }, demerits: { defense: 10 } },
+      { type: "妨", minUnits: 3, stats: { attack: 20 }, demerits: { strategy: 10 } },
+      { type: "護", minUnits: 3, stats: { attack: 20 }, demerits: { strategy: 10 } }
     ],
     slots: [
       { key: "first", label: "1st", rowKey: "front", gridCol: 1, gridRow: 0 },
@@ -893,12 +911,15 @@ const FORMATION_DEFS = [
     label: "鶴翼陣",
     shortLabel: "鶴翼",
     description: "前列から中列へ噛ませる形で防御を積みやすく、反撃や耐久寄りの軍勢と噛み合う陣形です。",
-    sourceSummary: "闘タイプ3部隊以上で攻撃+10%・防御+30%、援タイプ3部隊以上で戦威+10%・防御+30%",
-    sourceDate: "GameWith 2026年3月14日",
+    sourceSummary: "護3 / 護4で防御+30%、闘3・援3・妨4で防御+20%と用途別デメリットが付きます。",
+    sourceDate: "2026年3月21日更新",
     timings: [20, 6, 8, 6, 10, 8],
     bonuses: [
-      { type: "闘", minUnits: 3, stats: { attack: 10, defense: 30 } },
-      { type: "援", minUnits: 3, stats: { war: 10, defense: 30 } }
+      { type: "護", minUnits: 3, stats: { defense: 30 }, demerits: { attack: 10 } },
+      { type: "護", minUnits: 4, stats: { defense: 30 }, demerits: { attack: 10 } },
+      { type: "闘", minUnits: 3, stats: { defense: 20 }, demerits: { war: 10 } },
+      { type: "援", minUnits: 3, stats: { defense: 20 }, demerits: { strategy: 10 } },
+      { type: "妨", minUnits: 4, stats: { defense: 20 }, demerits: { attack: 10 } }
     ],
     slots: [
       { key: "first", label: "1st", rowKey: "front", gridCol: 0, gridRow: 0 },
@@ -913,10 +934,16 @@ const FORMATION_DEFS = [
     label: "方陣",
     shortLabel: "方陣",
     description: "戦法火力に寄せやすく、中央を守って後列や外周の火力へ繋げる運用に向く陣形です。",
-    sourceSummary: "闘タイプ3部隊以上で攻撃+10%・戦威+20%",
-    sourceDate: "GameWith 2026年3月14日",
+    sourceSummary: "援3 / 援4で戦威+30%、闘3・妨4・護3で戦威+20%と用途別デメリットが付きます。",
+    sourceDate: "2026年3月21日更新",
     timings: [20, 8, 12, 8, 6, 6],
-    bonuses: [{ type: "闘", minUnits: 3, stats: { attack: 10, war: 20 } }],
+    bonuses: [
+      { type: "援", minUnits: 3, stats: { war: 30 }, demerits: { strategy: 10 } },
+      { type: "援", minUnits: 4, stats: { war: 30 }, demerits: { attack: 10 } },
+      { type: "闘", minUnits: 3, stats: { war: 20 }, demerits: { defense: 10 } },
+      { type: "妨", minUnits: 4, stats: { war: 20 }, demerits: { defense: 10 } },
+      { type: "護", minUnits: 3, stats: { war: 20 }, demerits: { attack: 10 } }
+    ],
     slots: [
       { key: "first", label: "1st", rowKey: "front", gridCol: 0, gridRow: 0 },
       { key: "second", label: "2nd", rowKey: "front", gridCol: 2, gridRow: 0 },
@@ -930,12 +957,15 @@ const FORMATION_DEFS = [
     label: "策謀陣",
     shortLabel: "策謀",
     description: "1st と 2nd がすぐ続くため、横列・縦列バフや弱化を重ねやすい妨害寄りの陣形です。",
-    sourceSummary: "闘タイプ4部隊以上で攻撃+20%・策略+40%、援タイプ4部隊以上で戦威+20%・策略+40%",
-    sourceDate: "GameWith 2026年3月14日",
+    sourceSummary: "妨3 / 妨4で策略+30%、闘4・援3・護3で策略+20%と用途別デメリットが付きます。",
+    sourceDate: "2026年3月21日更新",
     timings: [20, 6, 6, 8, 8, 8],
     bonuses: [
-      { type: "闘", minUnits: 4, stats: { attack: 20, strategy: 40 } },
-      { type: "援", minUnits: 4, stats: { war: 20, strategy: 40 } }
+      { type: "闘", minUnits: 4, stats: { strategy: 20 }, demerits: { attack: 10 } },
+      { type: "援", minUnits: 3, stats: { strategy: 20 }, demerits: { war: 10 } },
+      { type: "妨", minUnits: 3, stats: { strategy: 30 }, demerits: { defense: 10 } },
+      { type: "妨", minUnits: 4, stats: { strategy: 30 }, demerits: { attack: 10 } },
+      { type: "護", minUnits: 3, stats: { strategy: 20 }, demerits: { attack: 10 } }
     ],
     slots: [
       { key: "first", label: "1st", rowKey: "middle", gridCol: 1, gridRow: 1 },
@@ -983,6 +1013,14 @@ const LIVE_FEATURES = [
     view: "power"
   },
   {
+    title: "装備検索",
+    status: "LIVE",
+    statusClass: "is-live",
+    description: "装備系統、基礎値、特性補正から、相性が良いSSR武将候補を探す。",
+    actionLabel: "装備検索を開く",
+    view: "equipment"
+  },
+  {
     title: "武将DB",
     status: "LIVE",
     statusClass: "is-live",
@@ -1007,7 +1045,7 @@ const LIVE_FEATURES = [
     view: "synergy"
   },
   {
-    title: "編成ツールβ",
+    title: "編成ツール",
     status: "LIVE",
     statusClass: "is-live",
     description: "1部隊の主将・副将・補佐を置いて、連鎖順、技能条件、重複技能をまとめて確認する。",
@@ -1015,7 +1053,7 @@ const LIVE_FEATURES = [
     view: "builder"
   },
   {
-    title: "軍勢自動編成β",
+    title: "軍勢自動編成",
     status: "LIVE",
     statusClass: "is-live",
     description: "任意の武将と軍勢コンセプトを指定して、5部隊25体の候補を自動で組み上げる。",
@@ -2221,7 +2259,9 @@ const elements = {
   equipmentMatchCount: document.querySelector("#equipmentMatchCount"),
   equipmentMatchPair: document.querySelector("#equipmentMatchPair"),
   equipmentMatchPreview: document.querySelector("#equipmentMatchPreview"),
+  equipmentMatchApplyButton: document.querySelector("#equipmentMatchApplyButton"),
 
+  equipmentView: document.querySelector("#view-equipment"),
   characterView: document.querySelector("#view-character"),
   characterKeyword: document.querySelector("#characterKeyword"),
   characterSort: document.querySelector("#characterSort"),
@@ -6161,24 +6201,47 @@ function clearActiveEquipmentPowerFilter(options = {}) {
   }
 }
 
-function buildEquipmentPowerFilter(matchState) {
-  const names = (matchState.filteredNames ?? []).filter((name) => characterByName[name]);
+function createEquipmentPowerFilter(raw = {}) {
+  const names = [...new Set((raw.names ?? raw.nameList ?? []).filter((name) => characterByName[name]))];
   if (!names.length) {
     return null;
   }
   return {
+    familyKey: raw.familyKey ?? "all",
+    familyLabel: raw.familyLabel ?? "",
+    summaryLabel:
+      raw.summaryLabel ??
+      (raw.familyKey && raw.familyKey !== "all" ? `${raw.familyLabel ?? ""}を装備できるSSR` : "装備可能情報があるSSR"),
+    names: new Set(names)
+  };
+}
+
+function buildEquipmentPowerFilter(matchState) {
+  return createEquipmentPowerFilter({
     familyKey: matchState.familyKey ?? "all",
     familyLabel: matchState.familyLabel ?? "",
     summaryLabel:
       matchState.familyKey && matchState.familyKey !== "all"
         ? `${matchState.familyLabel}を装備できるSSR`
         : "装備可能情報があるSSR",
-    names: new Set(names)
-  };
+    names: matchState.filteredNames ?? []
+  });
 }
 
 function getActiveEquipmentPowerFilterLabel() {
   return activeEquipmentPowerFilter?.summaryLabel ?? "";
+}
+
+function serializeEquipmentPowerFilter(filter) {
+  if (!filter?.names?.size) {
+    return undefined;
+  }
+  return {
+    familyKey: filter.familyKey ?? "all",
+    familyLabel: filter.familyLabel ?? "",
+    summaryLabel: filter.summaryLabel ?? "",
+    names: [...filter.names]
+  };
 }
 
 function buildEquipmentPresetOptions() {
@@ -6400,10 +6463,32 @@ function renderEquipmentMatchPreview() {
     .join("");
 }
 
+function buildPowerShareStateFromEquipmentMatch(matchState) {
+  return {
+    primary: matchState.primary?.key ?? undefined,
+    secondary: matchState.secondary?.key ?? undefined,
+    rarities: ["SSR"],
+    equipmentFilter: serializeEquipmentPowerFilter(buildEquipmentPowerFilter(matchState))
+  };
+}
+
 function applyEquipmentMatchSearch() {
   const matchState = getEquipmentMatchState();
   if (!matchState.primary) {
     showStatusToast("装備の基礎値か特性補正を入力してください。");
+    return;
+  }
+
+  if (getCurrentViewKey() === "equipment") {
+    const payload = {
+      version: SHARE_PAYLOAD_VERSION,
+      view: "power",
+      state: buildPowerShareStateFromEquipmentMatch(matchState)
+    };
+    const targetUrl = new URL(getToolPageHref("power"), window.location.href);
+    targetUrl.searchParams.set(SHARE_PARAM_KEY, encodeJsonToBase64Url(payload));
+    targetUrl.hash = "power";
+    window.location.href = targetUrl.toString();
     return;
   }
 
@@ -7588,7 +7673,18 @@ function collectPowerShareState() {
     chainSortEnabled: elements.chainSortEnabled.checked || undefined,
     rarities: optionalSelection(readCheckedValuesIn(elements.powerForm, "power-rarity"), defaultRarities),
     conditions: arrayIfNonEmpty(readCheckedValuesIn(elements.powerForm, "power-condition")),
-    features: arrayIfNonEmpty(readCheckedValuesIn(elements.powerForm, "power-feature"))
+    features: arrayIfNonEmpty(readCheckedValuesIn(elements.powerForm, "power-feature")),
+    equipmentFilter: serializeEquipmentPowerFilter(activeEquipmentPowerFilter)
+  };
+}
+
+function collectEquipmentShareState() {
+  return {
+    family: elements.equipmentFamily?.value || undefined,
+    preset: elements.equipmentPreset?.value || undefined,
+    traitTemplate: elements.equipmentTraitTemplate?.value || undefined,
+    base: readEquipmentStatInputs("equipmentBase"),
+    trait: readEquipmentStatInputs("equipmentTrait")
   };
 }
 
@@ -7657,6 +7753,9 @@ function collectCurrentSharePayload() {
     case "power":
       state = collectPowerShareState();
       break;
+    case "equipment":
+      state = collectEquipmentShareState();
+      break;
     case "character":
       state = collectCharacterShareState();
       break;
@@ -7718,6 +7817,7 @@ function readSharedPayloadFromLocation() {
 function applyPowerShareState(state = {}) {
   resetPowerSearch();
   activeEquipmentPowerFilter = null;
+  activeEquipmentPowerFilter = createEquipmentPowerFilter(state.equipmentFilter);
   elements.primaryStat.value = state.primary ?? "";
   elements.secondaryStat.value = state.secondary ?? "";
   elements.chainCommander.value = state.chainCommander ?? "";
@@ -7726,6 +7826,26 @@ function applyPowerShareState(state = {}) {
   setCheckedValuesByName("power-condition", state.conditions ?? []);
   setCheckedValuesByName("power-feature", state.features ?? []);
   renderPowerResults();
+}
+
+function applyEquipmentShareState(state = {}) {
+  resetEquipmentMatch();
+  if (elements.equipmentFamily && state.family) {
+    elements.equipmentFamily.value = state.family;
+    renderEquipmentPresetOptions();
+  }
+  if (elements.equipmentPreset && state.preset) {
+    elements.equipmentPreset.value = state.preset;
+    applyEquipmentPresetFromSelection();
+  }
+  if (elements.equipmentTraitTemplate && state.traitTemplate) {
+    elements.equipmentTraitTemplate.value = state.traitTemplate;
+    applyEquipmentTraitTemplateFromSelection();
+  }
+  writeEquipmentStatInputs("equipmentBase", state.base ?? {});
+  writeEquipmentStatInputs("equipmentTrait", state.trait ?? {});
+  updateEquipmentPresetNote();
+  renderEquipmentMatchPreview();
 }
 
 function applyCharacterShareState(state = {}) {
@@ -7842,6 +7962,9 @@ function applySharedPayload(payload, options = {}) {
     case "power":
       applyPowerShareState(payload.state);
       break;
+    case "equipment":
+      applyEquipmentShareState(payload.state);
+      break;
     case "character":
       applyCharacterShareState(payload.state);
       break;
@@ -7905,6 +8028,7 @@ function refreshUiAfterExternalState(targetView) {
   setToggleButtonState(elements.skillFavoriteToggle, Boolean(getUiState().skillFavoritesOnly));
   updateFavoriteToggleLabels();
   renderPowerResults();
+  renderEquipmentMatchPreview();
   renderCharacterDb();
   renderSkillDb();
   renderSynergy();
@@ -7974,6 +8098,7 @@ function clearBrowserStoredData() {
   window.KH_ARMY_SHARE_API?.importState?.(null, { rerender: false });
 
   resetPowerSearch();
+  resetEquipmentMatch();
   resetCharacterDb();
   resetSkillDb();
   resetSynergy();
@@ -8354,7 +8479,8 @@ function boot() {
   elements.resetButton.addEventListener("click", resetPowerSearch);
   elements.equipmentMatchForm?.addEventListener("submit", (event) => {
     event.preventDefault();
-    applyEquipmentMatchSearch();
+    renderEquipmentMatchPreview();
+    elements.equipmentMatchPreview?.scrollIntoView?.({ behavior: "smooth", block: "start" });
   });
   elements.equipmentFamily?.addEventListener("change", () => {
     renderEquipmentPresetOptions();
@@ -8381,6 +8507,7 @@ function boot() {
     .filter(Boolean)
     .forEach((input) => input.addEventListener("input", renderEquipmentMatchPreview));
   elements.equipmentMatchResetButton?.addEventListener("click", resetEquipmentMatch);
+  elements.equipmentMatchApplyButton?.addEventListener("click", applyEquipmentMatchSearch);
 
   elements.characterKeyword.addEventListener("input", renderCharacterDb);
   elements.characterSort.addEventListener("change", renderCharacterDb);
