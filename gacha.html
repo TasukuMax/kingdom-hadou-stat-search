@@ -5957,6 +5957,7 @@
         <a class="site-tool-link" href="./synergy.html">相性検索</a>
         <a class="site-tool-link" href="./builder.html">編成ツール</a>
         <a class="site-tool-link" href="./army.html">軍勢自動編成</a>
+        <a class="site-tool-link" href="./advanced.html">上級編成研究所</a>
         <a class="site-tool-link" href="./gacha.html">ガチャシミュ</a>
         <a class="site-tool-link" href="./ranking.html">全鯖ランキング</a>
         <a class="site-tool-link" href="./board.html">S3ハブ</a>
@@ -6058,6 +6059,12 @@
             <span class="tool-link-card__category">25体軍勢</span>
             <h3>軍勢自動編成</h3>
             <p>25体軍勢の自動編成、手持ち入力、CSV反映をまとめて扱えます。</p>
+            <span class="tool-link-card__footer">このツールを開く</span>
+          </a>
+          <a class="tool-link-card" href="./advanced.html">
+            <span class="tool-link-card__category">超上級者向け</span>
+            <h3>上級編成研究所</h3>
+            <p>練達、将星凸、装備、技能Lv、戦法Lv、陣形相性まで入れて1部隊を深く検証できます。</p>
             <span class="tool-link-card__footer">このツールを開く</span>
           </a>
           <a class="tool-link-card" href="./gacha.html">
@@ -6397,6 +6404,7 @@
           <button class="tab-button" type="button" data-view-tab="synergy"><span class="tab-label-full">相性検索</span><span class="tab-label-short">相性</span></button>
           <button class="tab-button" type="button" data-view-tab="builder"><span class="tab-label-full">編成ツール</span><span class="tab-label-short">編成</span></button>
           <button class="tab-button" type="button" data-view-tab="army"><span class="tab-label-full">軍勢自動編成</span><span class="tab-label-short">軍勢</span></button>
+          <button class="tab-button" type="button" data-view-tab="advanced"><span class="tab-label-full">上級編成研究所</span><span class="tab-label-short">研究</span></button>
           <button class="tab-button" type="button" data-view-tab="gacha"><span class="tab-label-full">ガチャシミュ</span><span class="tab-label-short">ガチャ</span></button>
           <button class="tab-button" type="button" data-view-tab="ranking"><span class="tab-label-full">全鯖ランキング</span><span class="tab-label-short">順位</span></button>
           <button class="tab-button" type="button" data-view-tab="board"><span class="tab-label-full">S3ハブ</span><span class="tab-label-short">S3</span></button>
@@ -7364,6 +7372,27 @@
         </section>
       </section>
 
+      <section class="app-view view-stack" id="view-advanced" hidden>
+        <section class="panel">
+          <div class="panel-header">
+            <div>
+              <h2>上級編成研究所</h2>
+              <p>
+                練達、将星凸、装備、技能Lv、戦法Lv、軍勢内のタイプ配分まで入れて、
+                1部隊のバフ相性、陣形相性、差し替え候補を深く検証する超上級者向けの試算ツールです。
+              </p>
+            </div>
+            <div class="status-pills">
+              <span class="count-pill">練達 / 将星凸</span>
+              <span class="count-pill">装備補正</span>
+              <span class="count-pill">陣形比較</span>
+            </div>
+          </div>
+
+          <div id="advancedBuilderRoot"></div>
+        </section>
+      </section>
+
       <section class="app-view view-stack" id="view-gacha">
         <section class="panel">
           <div class="panel-header">
@@ -7592,6 +7621,7 @@
     <script src="./gacha-sim.js"></script>
     <script src="./ranking-board.js"></script>
     <script src="./app.js"></script>
+    <script src="./advanced-builder.js"></script>
     <script src="./army-builder.js"></script>
   </body>
 </html>
