@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://tasukumax.github.io/kingdom-hadou-stat-search/sitemap.xml
