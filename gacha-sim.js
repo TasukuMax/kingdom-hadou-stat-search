@@ -502,7 +502,24 @@
               </div>
             </div>
 
-            <div class="gacha-results-grid" id="gachaResultsGrid"></div>
+            <div class="gacha-stage__result-board">
+              <div class="gacha-results-grid" id="gachaResultsGrid"></div>
+            </div>
+
+            <div class="gacha-stage__cta-row" id="gachaStageCtaRow">
+              <button class="gacha-stage__draw-button gacha-stage__draw-button--single" id="gachaStageDrawOneButton" type="button">
+                <strong>1回引く</strong>
+                <span>単発の結果を見る</span>
+              </button>
+              <button class="gacha-stage__draw-button gacha-stage__draw-button--ten" id="gachaStageDrawTenButton" type="button">
+                <strong>もう10連する</strong>
+                <span>本家寄せの結果画面へ更新</span>
+              </button>
+              <button class="gacha-stage__draw-button gacha-stage__draw-button--history" id="gachaStageHistoryButton" type="button">
+                <strong>10連履歴</strong>
+                <span>過去の結果を見返す</span>
+              </button>
+            </div>
 
             <div class="gacha-stage__footer">
               <p class="gacha-stage__notice">所持中の武将を再獲得した場合は、シミュレーター上では回数に加算して集計します。</p>
@@ -619,6 +636,9 @@
     animationToggle: root.querySelector("#gachaAnimationToggle"),
     drawOneButton: root.querySelector("#gachaDrawOneButton"),
     drawTenButton: root.querySelector("#gachaDrawTenButton"),
+    stageDrawOneButton: root.querySelector("#gachaStageDrawOneButton"),
+    stageDrawTenButton: root.querySelector("#gachaStageDrawTenButton"),
+    stageHistoryButton: root.querySelector("#gachaStageHistoryButton"),
     resetButton: root.querySelector("#gachaResetButton"),
     resetStageButton: root.querySelector("#gachaResetStageButton"),
     exportImageButton: root.querySelector("#gachaExportImageButton"),
@@ -852,7 +872,7 @@
     return `<div class="${className} gacha-result-card__portrait--fallback${themeClass}" aria-label="${escapeHtml(record.name)}">${initial}</div>`;
   }
 
-  function buildResultCard(record) {
+  function buildResultCard(record, index) {
     const rarityClass = `is-${record.rarity.toLowerCase()}`;
     const guaranteeLabel =
       record.guaranteeKind === "ssr900"
@@ -864,7 +884,7 @@
     const typeClass = TYPE_THEME[record.type] ? ` is-${TYPE_THEME[record.type]}` : "";
 
     return `
-      <article class="gacha-result-card ${rarityClass}">
+      <article class="gacha-result-card ${rarityClass}" style="--gacha-card-delay:${index * 70}ms;">
         <div class="gacha-result-card__glow"></div>
         <div class="gacha-result-card__topline">
           <span class="gacha-result-card__rarity">${escapeHtml(record.rarity)}</span>
@@ -896,7 +916,7 @@
 
   function renderResultsGrid() {
     const batch = getDisplayBatch().slice(-10);
-    const filledCards = batch.map(buildResultCard);
+    const filledCards = batch.map((record, index) => buildResultCard(record, index));
     const emptyCount = Math.max(0, 10 - filledCards.length);
     const emptyCards = Array.from({ length: emptyCount }, () => buildEmptyResultCard());
     elements.resultsGrid.innerHTML = [...filledCards, ...emptyCards].join("");
@@ -1265,16 +1285,16 @@
   <g transform="translate(490 804)">
     <rect width="194" height="74" rx="16" fill="url(#gacha-share-button-green)" stroke="rgba(255,237,196,0.5)" />
     <text x="97" y="29" fill="#f7fff7" font-size="28" font-weight="800" text-anchor="middle">1回</text>
-    <text x="97" y="58" fill="#fff6e9" font-size="24" font-weight="700" text-anchor="middle">有償 150</text>
+    <text x="97" y="58" fill="#fff6e9" font-size="24" font-weight="700" text-anchor="middle">単発結果</text>
   </g>
   <g transform="translate(716 794)">
     <rect width="268" height="84" rx="18" fill="url(#gacha-share-button-green)" stroke="rgba(255,237,196,0.52)" />
-    <text x="134" y="34" fill="#f7fff7" font-size="34" font-weight="900" text-anchor="middle">10回</text>
-    <text x="134" y="67" fill="#fff6e9" font-size="28" font-weight="800" text-anchor="middle">有償 1400</text>
+    <text x="134" y="34" fill="#f7fff7" font-size="34" font-weight="900" text-anchor="middle">もう10連</text>
+    <text x="134" y="67" fill="#fff6e9" font-size="28" font-weight="800" text-anchor="middle">結果を更新</text>
   </g>
   <g transform="translate(1138 798)">
     <rect width="220" height="80" rx="18" fill="url(#gacha-share-button-gold)" stroke="rgba(255,237,196,0.6)" />
-    <text x="110" y="52" fill="#fff7ef" font-size="38" font-weight="900" text-anchor="middle">変換</text>
+    <text x="110" y="52" fill="#fff7ef" font-size="38" font-weight="900" text-anchor="middle">履歴</text>
   </g>
 </svg>`;
   }
@@ -1397,7 +1417,9 @@
     const hasShareableBatch = getShareableBatch().length === 10;
     const displayBatch = getDisplayBatch();
     const selectedEntry = getSelectedTenPullEntry();
+    const hasResults = displayBatch.length > 0;
     elements.animationToggle.checked = state.animationEnabled;
+    elements.stage.classList.toggle("is-result-view", hasResults);
     elements.totalPullsStat.textContent = formatCount(state.totalPulls);
     elements.approxSpendStat.textContent = formatCurrencyYen(getApproximateSpend(state.totalPulls));
     elements.latestSummary.textContent = summarizeBatch(
@@ -1409,6 +1431,9 @@
     elements.controlSummary.textContent = buildDrawControlSummary();
     elements.drawOneButton.disabled = isDrawing || shareActionBusy;
     elements.drawTenButton.disabled = isDrawing || shareActionBusy;
+    elements.stageDrawOneButton.disabled = isDrawing || shareActionBusy;
+    elements.stageDrawTenButton.disabled = isDrawing || shareActionBusy;
+    elements.stageHistoryButton.disabled = isDrawing || shareActionBusy || !state.tenPullHistory.length;
     elements.resetButton.disabled = isDrawing || shareActionBusy;
     elements.resetStageButton.disabled = isDrawing || shareActionBusy;
     elements.exportImageButton.disabled = isDrawing || shareActionBusy || !hasShareableBatch;
@@ -1479,6 +1504,18 @@
 
   elements.drawTenButton.addEventListener("click", () => {
     runDraw(10);
+  });
+
+  elements.stageDrawOneButton.addEventListener("click", () => {
+    runDraw(1);
+  });
+
+  elements.stageDrawTenButton.addEventListener("click", () => {
+    runDraw(10);
+  });
+
+  elements.stageHistoryButton.addEventListener("click", () => {
+    elements.historyList?.closest(".result-section")?.scrollIntoView?.({ behavior: "smooth", block: "start" });
   });
 
   elements.resetButton.addEventListener("click", () => {
