@@ -3533,7 +3533,9 @@ function formatArmyFormationBonusSummary(bonus) {
       const statText = Object.entries(entry.stats ?? {})
         .map(([statKey, value]) => `${statMap[statKey] ?? statKey}+${value}%`)
         .join(" / ");
-      return `${entry.type}タイプ${entry.minUnits}部隊以上: ${statText}`;
+      const typeLabel = entry.type === "any" ? "いずれか" : `${entry.type}タイプ`;
+      const troopText = entry.maxTroopsRate ? `${statText ? " / " : ""}最大兵力+${entry.maxTroopsRate}%` : "";
+      return `${typeLabel}${entry.minUnits}部隊以上: ${statText}${troopText}`;
     })
     .join(" + ");
   const extras = [];
@@ -3541,8 +3543,8 @@ function formatArmyFormationBonusSummary(bonus) {
   if (bonus.aliasCount) {
     extras.push(`タイプ追加判定 ${bonus.aliasCount}部隊`);
   }
-  if (bonus.maxTroops) {
-    extras.push(`最大兵力+${bonus.maxTroops}`);
+  if (bonus.maxTroopsRate) {
+    extras.push(`最大兵力+${bonus.maxTroopsRate}%`);
   }
   const demeritText = Object.entries(bonus.demerits ?? {})
     .filter(([, value]) => Number(value ?? 0) > 0)
@@ -3561,8 +3563,8 @@ function getArmyFormationActiveBonus(units, formation) {
   const activeBonuses = (formation.bonuses ?? [])
     .map((bonus) => ({
       ...bonus,
-      count: typeInfo.counts[bonus.type] ?? 0,
-      value: getArmyFormationBonusValue(bonus.stats)
+      count: bonus.type === "any" ? units.length : typeInfo.counts[bonus.type] ?? 0,
+      value: getArmyFormationBonusValue(bonus.stats) + (bonus.maxTroopsRate ?? 0) * 0.52
     }))
     .filter((bonus) => bonus.count >= bonus.minUnits)
     .sort((left, right) => right.value - left.value);
@@ -3573,19 +3575,19 @@ function getArmyFormationActiveBonus(units, formation) {
 
   const stats = activeBonuses.reduce((result, bonus) => mergeArmyStatMaps(result, bonus.stats), {});
   const demerits = activeBonuses.reduce((result, bonus) => mergeArmyStatMaps(result, bonus.demerits), {});
-  const maxTroops = Math.round(
-    sumArmyValues(activeBonuses.map((bonus) => bonus.maxTroops ?? bonus.maxSoldiers ?? bonus.troops ?? 0))
+  const maxTroopsRate = Math.round(
+    sumArmyValues(activeBonuses.map((bonus) => bonus.maxTroopsRate ?? bonus.maxTroops ?? bonus.maxSoldiers ?? bonus.troops ?? 0))
   );
   const value =
     sumArmyValues(activeBonuses.map((bonus) => getArmyFormationBonusValue(bonus.stats))) -
     getArmyFormationBonusValue(demerits) * 0.84 +
-    Math.min(18, maxTroops / 200);
+    Math.min(18, maxTroopsRate * 0.6);
 
   return {
     bonuses: activeBonuses,
     stats,
     demerits,
-    maxTroops,
+    maxTroopsRate,
     aliasCount: typeInfo.aliasCount,
     typeCounts: typeInfo.counts,
     value: clampArmyScore(value + Math.max(0, activeBonuses.length - 1) * 8)
