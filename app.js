@@ -25,7 +25,7 @@ const SEASON3 =
         sources: []
       };
 
-const VIEW_KEYS = ["power", "equipment", "character", "skill", "synergy", "builder", "army", "gacha", "ranking", "board"];
+const VIEW_KEYS = ["power", "equipment", "character", "skill", "synergy", "builder", "army", "advanced", "gacha", "ranking", "board"];
 const UI_STATE_STORAGE_KEY = "kh-site-ui-v1";
 const HERO_RECENT_STORAGE_KEY = "kh-hero-recent-v1";
 const FAVORITE_CHARACTERS_STORAGE_KEY = "kh-favorite-characters-v1";
@@ -43,6 +43,7 @@ const SHARE_VIEW_HINTS = {
   synergy: "相性検索の基準武将、候補条件、特徴フィルタをURLに含めます。",
   builder: "編成ツールの陣形、主将・副将・補佐、秒数プレビューをURLに含めます。",
   army: "軍勢の軸武将、コンセプト、レア条件、手持ち情報までURLに含めます。長い場合は JSON 共有も使ってください。",
+  advanced: "超上級者向け編成研究所の練達、将星凸、装備、技能Lv、戦法Lv、陣形比較条件をURLに含めます。",
   gacha: "ガチャシミュレーターの累計回数、直近結果、武将ごとの獲得回数をURLに含めます。",
   ranking: "全サーバー個人ランキングの掲載先、サーバー絞り込み、検索条件をURLに含めます。",
   board: "S3ハブの目的と優先スロットをURLに含めます。"
@@ -56,6 +57,7 @@ const VIEW_META = {
   synergy: { label: "相性検索", shortLabel: "相性", summary: "主将基準の連鎖率と共通個性で並べる" },
   builder: { label: "編成ツール", shortLabel: "編成", summary: "1部隊の主将・副将・補佐・9x9盤面を確認する" },
   army: { label: "軍勢自動編成", shortLabel: "軍勢", summary: "25体軍勢を自動提案する" },
+  advanced: { label: "上級編成研究所", shortLabel: "研究", summary: "練達・将星凸・装備・技能・戦法まで入れて相性を試算する" },
   gacha: { label: "ガチャシミュ", shortLabel: "ガチャ", summary: "英傑登用の排出率、天井、累計回数を再現する" },
   ranking: { label: "全鯖ランキング", shortLabel: "順位", summary: "全サーバー横断の個人戦闘力ランキングをまとめる" },
   board: { label: "S3ハブ", shortLabel: "S3", summary: "S3の採点軸と注目候補を見る" }
@@ -110,6 +112,13 @@ const TOOL_PAGE_DEFS = [
     category: "25体軍勢",
     description: "最適化方針ごとの自動編成、手持ち制約、CSV反映をまとめて扱います。",
     chips: ["自動編成", "手持ち反映", "CSV対応"]
+  },
+  {
+    key: "advanced",
+    path: "advanced.html",
+    category: "超上級者向け",
+    description: "練達、将星凸、装備、技能Lv、戦法Lv、陣形相性まで入れて1部隊を深く検証します。",
+    chips: ["練達入力", "将星凸", "装備補正"]
   },
   {
     key: "gacha",
@@ -7785,6 +7794,9 @@ function collectCurrentSharePayload() {
     case "army":
       state = window.KH_ARMY_SHARE_API?.collectShareState?.() ?? {};
       break;
+    case "advanced":
+      state = window.KH_ADVANCED_BUILDER_API?.collectShareState?.() ?? {};
+      break;
     case "gacha":
       state = window.KH_GACHA_SIM_API?.collectShareState?.() ?? {};
       break;
@@ -7966,6 +7978,15 @@ function applySharedPayload(payload, options = {}) {
     return false;
   }
 
+  if (payload.view === "advanced") {
+    if (window.KH_ADVANCED_BUILDER_API?.applyShareState) {
+      window.KH_ADVANCED_BUILDER_API.applyShareState(payload.state ?? {}, options);
+      return true;
+    }
+    window.__KH_PENDING_SHARE_PAYLOAD = payload;
+    return false;
+  }
+
   if (payload.view === "gacha") {
     if (window.KH_GACHA_SIM_API?.applyShareState) {
       window.KH_GACHA_SIM_API.applyShareState(payload.state ?? {}, options);
@@ -8133,6 +8154,7 @@ function clearBrowserStoredData() {
   ].forEach((key) => window.localStorage.removeItem(key));
 
   window.KH_ARMY_SHARE_API?.importState?.(null, { rerender: false });
+  window.KH_ADVANCED_BUILDER_API?.clearState?.({ rerender: false, removeStorage: true });
   window.KH_RANKING_BOARD_API?.clearState?.({ rerender: false });
 
   resetPowerSearch();
@@ -8179,7 +8201,22 @@ window.KH_APP_API = {
   updateBackupMeta,
   showStatusToast,
   downloadBlobFile,
-  applySharedPayload
+  applySharedPayload,
+  dataContext: {
+    preparedCharacters,
+    preparedSkills,
+    statDefs: STAT_DEFS,
+    slotDefs: BUILDER_SLOT_DEFS,
+    rowDefs: BUILDER_ROW_DEFS,
+    formationDefs: FORMATION_DEFS,
+    formationSlotOrder: FORMATION_SLOT_KEY_ORDER,
+    formationSlotLabels: FORMATION_SLOT_LABELS,
+    objectiveDefs: OBJECTIVE_FILTER_DEFS,
+    equipmentPresets: EQUIPMENT_PRESET_DEFS,
+    equipmentFamilies: EQUIPMENT_FAMILY_DEFS,
+    equipmentCompatibilityByName: EQUIPMENT_COMPATIBILITY_BY_NAME,
+    season3: SEASON3
+  }
 };
 
 function openSkillDialog(skillName) {
@@ -8621,7 +8658,10 @@ function boot() {
   setActiveView(initialView, { updateHash: false });
   window.setTimeout(updateBackupMeta, 0);
 
-  if (window.__KH_PENDING_SHARE_PAYLOAD && window.__KH_PENDING_SHARE_PAYLOAD.view !== "army") {
+  if (
+    window.__KH_PENDING_SHARE_PAYLOAD &&
+    !["army", "advanced"].includes(window.__KH_PENDING_SHARE_PAYLOAD.view)
+  ) {
     applySharedPayload(window.__KH_PENDING_SHARE_PAYLOAD, { showToast: true });
     window.__KH_PENDING_SHARE_PAYLOAD = null;
   }
