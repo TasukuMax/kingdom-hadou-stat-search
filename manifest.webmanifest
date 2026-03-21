@@ -1,12 +1,12 @@
 {
   "name": "キングダム覇道 戦力・DB・相性検索",
   "short_name": "覇道DB",
-  "start_url": "./index.html#power",
+  "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#1a130f",
-  "theme_color": "#1a130f",
-  "description": "キングダム覇道の戦力検索、武将DB、技能DB、編成ツール、軍勢自動編成をまとめたモバイル優先ツール。",
+  "background_color": "#f8fafc",
+  "theme_color": "#f8fafc",
+  "description": "キングダム覇道の戦力検索、武将DB、技能DB、編成、軍勢、ガチャをページ別に使える攻略ツール集。",
   "icons": [
     {
       "src": "./icons/icon-192.svg",
