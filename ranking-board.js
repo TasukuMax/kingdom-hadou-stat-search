@@ -95,6 +95,13 @@
     };
   }
 
+  function createEmptyAuthDraft() {
+    return {
+      loginName: "",
+      password: ""
+    };
+  }
+
   function sanitizeTokenMap(rawValue) {
     if (!rawValue || typeof rawValue !== "object") {
       return {};
@@ -127,7 +134,8 @@
       proofImageUrl: String(rawEntry.proofImageUrl || ""),
       proofFileName: String(rawEntry.proofFileName || ""),
       postedAt: String(rawEntry.postedAt || new Date().toISOString()),
-      source: rawEntry.source === "remote" ? "remote" : fallbackSource
+      source: rawEntry.source === "remote" ? "remote" : fallbackSource,
+      isMine: Boolean(rawEntry.isMine)
     };
   }
 
@@ -179,6 +187,13 @@
     remoteEntries: defaultRemoteEntries
       .map((entry) => sanitizeEntry({ ...entry, source: "remote" }, "remote"))
       .filter(Boolean)
+  };
+  const authState = {
+    checked: false,
+    authenticated: false,
+    user: null,
+    ownedEntries: [],
+    draft: createEmptyAuthDraft()
   };
 
   function saveState() {
@@ -249,7 +264,7 @@
   }
 
   function canDeleteEntry(entry) {
-    return Boolean(entry && (entry.source === "local" || state.manageTokens[entry.id]));
+    return Boolean(entry && (entry.source === "local" || entry.isMine || state.manageTokens[entry.id]));
   }
 
   async function requestJson(path, options = {}) {
@@ -262,7 +277,8 @@
       method: options.method || "GET",
       headers,
       body: options.body,
-      cache: "no-store"
+      cache: "no-store",
+      credentials: "same-origin"
     });
 
     if (!response.ok) {
@@ -320,18 +336,48 @@
     }
   }
 
+  function applyAuthPayload(payload) {
+    authState.checked = true;
+    authState.authenticated = Boolean(payload?.authenticated);
+    authState.user = payload?.user ?? null;
+    authState.ownedEntries = Array.isArray(payload?.ownedEntries)
+      ? payload.ownedEntries.map((entry) => sanitizeEntry({ ...entry, source: "remote" }, "remote")).filter(Boolean)
+      : [];
+  }
+
+  async function refreshAuthSession() {
+    if (!apiState.available) {
+      authState.checked = true;
+      authState.authenticated = false;
+      authState.user = null;
+      authState.ownedEntries = [];
+      return;
+    }
+    const payload = await requestJson(`${API_BASE}/auth/session`);
+    applyAuthPayload(payload);
+  }
+
+  function ownedEntryForServer(server) {
+    return authState.ownedEntries.find((entry) => entry.server === server) ?? null;
+  }
+
   async function probeApiAvailability() {
     try {
       const payload = await requestJson(`${API_BASE}/health`);
       apiState.available = Boolean(payload?.ok);
       if (apiState.available) {
         await refreshRemoteEntries();
+        await refreshAuthSession();
       } else {
         await refreshSharedEntries();
       }
     } catch (error) {
       apiState.available = false;
       await refreshSharedEntries();
+      authState.checked = true;
+      authState.authenticated = false;
+      authState.user = null;
+      authState.ownedEntries = [];
     } finally {
       apiState.checked = true;
       renderAll();
@@ -399,7 +445,9 @@
             </div>
             <div class="ranking-chip-row">
               ${
-                state.manageTokens[entry.id]
+                entry.isMine
+                  ? '<span class="ranking-chip is-accent">自分の投稿</span>'
+                  : state.manageTokens[entry.id]
                   ? '<span class="ranking-chip is-accent">自分の投稿</span>'
                   : entry.source === "local"
                     ? '<span class="ranking-chip is-accent">この端末</span>'
@@ -479,6 +527,7 @@
   }
 
   function buildDraftPreview() {
+    const ownedEntry = ownedEntryForServer(state.draft.server);
     return `
       <div class="ranking-draft-card">
         <div>
@@ -493,6 +542,11 @@
                 ? `<span class="ranking-chip is-accent">${escapeHtml(state.draft.proofFileName)}</span>`
                 : '<span class="ranking-chip">証明画像を追加</span>'
             }
+            ${
+              authState.authenticated && ownedEntry
+                ? `<span class="ranking-chip">この投稿はサーバー${escapeHtml(state.draft.server)}の既存データを更新します</span>`
+                : ""
+            }
           </div>
         </div>
         ${
@@ -501,6 +555,57 @@
             : '<div class="ranking-draft-card__image ranking-draft-card__image--empty">画像プレビュー</div>'
         }
       </div>
+    `;
+  }
+
+  function buildAuthPanel() {
+    const canUseAuth = apiState.available;
+    const ownedSummary = authState.authenticated
+      ? authState.ownedEntries.length
+        ? authState.ownedEntries
+            .map((entry) => `サーバー${entry.server}: ${entry.playerName} / ${formatCount(entry.powerValue)}`)
+            .join(" | ")
+        : "まだ自分の投稿はありません。"
+      : canUseAuth
+        ? "ログインすると、自分の戦闘力だけ更新できるようになります。"
+        : "このページは閲覧専用です。ログインは動的URL側で使えます。";
+
+    return `
+      <section class="result-section partial-section">
+        <div class="result-header">
+          <div>
+            <h2>ログイン</h2>
+            <p>同じアカウントでログインすると、自分のサーバー投稿を更新できます。</p>
+          </div>
+        </div>
+        <div class="ranking-form-grid">
+          <div class="field">
+            <label for="rankingAuthLoginName">ログインID</label>
+            <input id="rankingAuthLoginName" type="text" placeholder="英小文字・数字・_">
+          </div>
+          <div class="field">
+            <label for="rankingAuthPassword">パスワード</label>
+            <input id="rankingAuthPassword" type="password" placeholder="8文字以上">
+          </div>
+        </div>
+        <div class="button-row">
+          <button class="primary-button" id="rankingLoginButton" type="button" ${canUseAuth ? "" : "disabled"}>ログイン</button>
+          <button class="secondary-button" id="rankingRegisterButton" type="button" ${canUseAuth ? "" : "disabled"}>新規登録</button>
+          <button class="secondary-button" id="rankingLogoutButton" type="button" ${
+            canUseAuth && authState.authenticated ? "" : "disabled"
+          }>ログアウト</button>
+        </div>
+        <div class="toolbar-summary" id="rankingAuthSummary">${
+          authState.checked
+            ? authState.authenticated
+              ? `ログイン中: ${escapeHtml(authState.user?.loginName || "")}`
+              : canUseAuth
+                ? "未ログインです。"
+                : "閲覧専用モードです。"
+            : "ログイン状態を確認しています。"
+        }</div>
+        <div class="toolbar-summary" id="rankingOwnedSummary">${escapeHtml(ownedSummary)}</div>
+      </section>
     `;
   }
 
@@ -535,6 +640,7 @@
       </div>
 
       <aside class="ranking-form-panel">
+        ${buildAuthPanel()}
         <section class="result-section exact-section">
           <div class="result-header">
             <div>
@@ -584,6 +690,13 @@
     restSummary: root.querySelector("#rankingRestSummary"),
     restTable: root.querySelector("#rankingRestTable"),
     proofViewer: root.querySelector("#rankingProofViewer"),
+    authLoginNameInput: root.querySelector("#rankingAuthLoginName"),
+    authPasswordInput: root.querySelector("#rankingAuthPassword"),
+    loginButton: root.querySelector("#rankingLoginButton"),
+    registerButton: root.querySelector("#rankingRegisterButton"),
+    logoutButton: root.querySelector("#rankingLogoutButton"),
+    authSummary: root.querySelector("#rankingAuthSummary"),
+    ownedSummary: root.querySelector("#rankingOwnedSummary"),
     serverInput: root.querySelector("#rankingServerInput"),
     nameInput: root.querySelector("#rankingNameInput"),
     powerInput: root.querySelector("#rankingPowerInput"),
@@ -608,11 +721,23 @@
       : "画像は自動で圧縮して保存します。";
   }
 
+  function syncAuthInputs() {
+    if (elements.authLoginNameInput) {
+      elements.authLoginNameInput.value = authState.draft.loginName;
+    }
+    if (elements.authPasswordInput) {
+      elements.authPasswordInput.value = authState.draft.password;
+    }
+  }
+
   function buildSourceLabel() {
     if (!apiState.checked) {
       return "共有APIの接続状態を確認しています。";
     }
     if (apiState.available) {
+      if (!authState.authenticated) {
+        return "共有ランキング接続中です。投稿と更新にはログインが必要です。";
+      }
       return apiState.syncing
         ? "共有ランキングへ同期中です。"
         : "共有ランキング接続中です。投稿は全ユーザーに公開されます。";
@@ -628,6 +753,7 @@
     const visibleEntries = scopedEntries.slice(0, 100);
     const topTenEntries = visibleEntries.slice(0, 10);
     const restEntries = visibleEntries.slice(10);
+    const ownedEntry = ownedEntryForServer(state.draft.server);
 
     ensureSelectedEntry(visibleEntries);
     const selectedEntry = visibleEntries.find((entry) => entry.id === state.selectedId) ?? null;
@@ -647,7 +773,39 @@
     elements.draftPreview.innerHTML = buildDraftPreview();
     elements.formSummary.textContent = buildSourceLabel();
     elements.deleteButton.disabled = !canDeleteEntry(selectedEntry);
+    elements.submitButton.disabled = !apiState.available || !authState.authenticated;
+    elements.submitButton.textContent = authState.authenticated && ownedEntry ? "自分の戦闘力を更新" : "投稿する";
+    if (elements.authSummary) {
+      elements.authSummary.textContent = authState.checked
+        ? authState.authenticated
+          ? `ログイン中: ${authState.user?.loginName || ""}`
+          : apiState.available
+            ? "未ログインです。"
+            : "閲覧専用モードです。"
+        : "ログイン状態を確認しています。";
+    }
+    if (elements.ownedSummary) {
+      elements.ownedSummary.textContent = authState.authenticated
+        ? authState.ownedEntries.length
+          ? authState.ownedEntries
+              .map((entry) => `サーバー${entry.server}: ${entry.playerName} / ${formatCount(entry.powerValue)}`)
+              .join(" | ")
+          : "まだ自分の投稿はありません。"
+        : apiState.available
+          ? "ログインすると、自分の戦闘力だけ更新できるようになります。"
+          : "このページは閲覧専用です。ログインは動的URL側で使えます。";
+    }
+    if (elements.loginButton) {
+      elements.loginButton.disabled = !apiState.available;
+    }
+    if (elements.registerButton) {
+      elements.registerButton.disabled = !apiState.available;
+    }
+    if (elements.logoutButton) {
+      elements.logoutButton.disabled = !apiState.available || !authState.authenticated;
+    }
     syncFormInputsFromDraft();
+    syncAuthInputs();
   }
 
   function updateDraft(patch) {
@@ -682,6 +840,55 @@
     return errors;
   }
 
+  function updateAuthDraft(patch) {
+    authState.draft = {
+      ...authState.draft,
+      ...patch
+    };
+    syncAuthInputs();
+  }
+
+  function collectAuthErrors() {
+    const errors = [];
+    if (!authState.draft.loginName.trim()) {
+      errors.push("ログインID");
+    }
+    if (!authState.draft.password) {
+      errors.push("パスワード");
+    }
+    return errors;
+  }
+
+  async function submitAuth(path) {
+    const errors = collectAuthErrors();
+    if (errors.length) {
+      showToast(`${errors.join(" / ")} を入力してください。`);
+      return;
+    }
+    const payload = await requestJson(path, {
+      method: "POST",
+      body: JSON.stringify({
+        loginName: authState.draft.loginName.trim(),
+        password: authState.draft.password
+      })
+    });
+    applyAuthPayload(payload);
+    authState.draft.password = "";
+    await refreshRemoteEntries();
+    renderAll();
+  }
+
+  async function logoutAuth() {
+    const payload = await requestJson(`${API_BASE}/auth/logout`, {
+      method: "POST",
+      body: JSON.stringify({})
+    });
+    applyAuthPayload(payload);
+    authState.draft.password = "";
+    await refreshRemoteEntries();
+    renderAll();
+  }
+
   function buildRemotePayload() {
     return {
       boardKey: "overall",
@@ -702,6 +909,16 @@
       return;
     }
 
+    if (!apiState.available) {
+      showToast("投稿は動的URL側から行ってください。");
+      return;
+    }
+
+    if (!authState.authenticated) {
+      showToast("ログインしてから投稿してください。");
+      return;
+    }
+
     elements.submitButton.disabled = true;
     try {
       if (apiState.available) {
@@ -709,9 +926,6 @@
           method: "POST",
           body: JSON.stringify(buildRemotePayload())
         });
-        if (payload?.manageToken && payload?.entry?.id) {
-          state.manageTokens[payload.entry.id] = payload.manageToken;
-        }
         state.filters.viewKey = serverToViewKey(state.draft.server);
         state.selectedId = payload?.entry?.id || "";
         state.draft = createEmptyDraft();
@@ -720,8 +934,9 @@
         }
         saveState();
         await refreshRemoteEntries();
+        await refreshAuthSession();
         renderAll();
-        showToast("共有ランキングに投稿しました。");
+        showToast(payload?.mode === "updated" ? "自分の戦闘力を更新しました。" : "共有ランキングに投稿しました。");
         return;
       }
 
@@ -772,21 +987,23 @@
       }
 
       const token = state.manageTokens[entry.id];
-      if (!token || !apiState.available) {
+      if (!apiState.available || (!entry.isMine && !token)) {
         showToast("この投稿は削除できません。");
         return;
       }
 
+      const headers = token ? { "X-Entry-Token": token } : {};
       await requestJson(`${API_BASE}/rankings/${encodeURIComponent(entry.id)}`, {
         method: "DELETE",
-        headers: {
-          "X-Entry-Token": token
-        }
+        headers
       });
-      delete state.manageTokens[entry.id];
+      if (token) {
+        delete state.manageTokens[entry.id];
+      }
       state.selectedId = "";
       saveState();
       await refreshRemoteEntries();
+      await refreshAuthSession();
       renderAll();
       showToast("共有ランキングから削除しました。");
     } finally {
@@ -852,6 +1069,36 @@
         saveState();
         renderAll();
       }
+    });
+
+    elements.authLoginNameInput.addEventListener("input", () => updateAuthDraft({ loginName: elements.authLoginNameInput.value }));
+    elements.authPasswordInput.addEventListener("input", () => updateAuthDraft({ password: elements.authPasswordInput.value }));
+    elements.loginButton.addEventListener("click", () => {
+      submitAuth(`${API_BASE}/auth/login`).then(
+        () => showToast("ログインしました。"),
+        (error) => {
+          console.error(error);
+          showToast(error?.message || "ログインに失敗しました。");
+        }
+      );
+    });
+    elements.registerButton.addEventListener("click", () => {
+      submitAuth(`${API_BASE}/auth/register`).then(
+        () => showToast("アカウントを作成してログインしました。"),
+        (error) => {
+          console.error(error);
+          showToast(error?.message || "アカウント作成に失敗しました。");
+        }
+      );
+    });
+    elements.logoutButton.addEventListener("click", () => {
+      logoutAuth().then(
+        () => showToast("ログアウトしました。"),
+        (error) => {
+          console.error(error);
+          showToast(error?.message || "ログアウトに失敗しました。");
+        }
+      );
     });
 
     elements.serverInput.addEventListener("change", () => updateDraft({ server: elements.serverInput.value }));
