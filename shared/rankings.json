@@ -1,18 +1,4 @@
 {
-  "updatedAt": "2026-03-21T13:33:15Z",
-  "entries": [
-    {
-      "id": "rk-178ea353e627",
-      "boardKey": "overall",
-      "server": "1",
-      "playerName": "更新確認",
-      "powerType": "戦闘力",
-      "powerValue": 223456789,
-      "comment": "",
-      "proofImageUrl": "shared/uploads/08aa85b1c570477bad839cf438caca06.png",
-      "proofFileName": "proof2.png",
-      "postedAt": "2026-03-21T13:33:15Z",
-      "isMine": false
-    }
-  ]
+  "updatedAt": "2026-03-21T13:34:00Z",
+  "entries": []
 }
