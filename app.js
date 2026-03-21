@@ -51,11 +51,76 @@ const VIEW_META = {
   character: { label: "武将DB", shortLabel: "武将", summary: "武将名・技能・個性・特徴タグを横断検索する" },
   skill: { label: "技能DB", shortLabel: "技能", summary: "技能名・効果・所持武将から探す" },
   synergy: { label: "相性検索", shortLabel: "相性", summary: "主将基準の連鎖率と共通個性で並べる" },
-  builder: { label: "編成ツールβ", shortLabel: "編成", summary: "1部隊の主将・副将・補佐・9x9盤面を確認する" },
-  army: { label: "軍勢自動編成β", shortLabel: "軍勢", summary: "25体軍勢を自動提案する" },
+  builder: { label: "編成ツール", shortLabel: "編成", summary: "1部隊の主将・副将・補佐・9x9盤面を確認する" },
+  army: { label: "軍勢自動編成", shortLabel: "軍勢", summary: "25体軍勢を自動提案する" },
   gacha: { label: "ガチャシミュ", shortLabel: "ガチャ", summary: "英傑登用の排出率、天井、累計回数を再現する" },
   board: { label: "S3ハブ", shortLabel: "S3", summary: "S3の採点軸と注目候補を見る" }
 };
+
+const TOOL_PAGE_DEFS = [
+  {
+    key: "power",
+    path: "power.html",
+    category: "検索 / 育成",
+    description: "上位2ステータス、装備相性、連鎖率をまとめて見て主将候補を絞ります。",
+    chips: ["上位2ステ", "装備相性", "連鎖率"]
+  },
+  {
+    key: "character",
+    path: "character.html",
+    category: "武将DB",
+    description: "武将ごとの性能、技能、特徴タグ、最大3体比較を1ページで確認します。",
+    chips: ["武将比較", "特徴タグ", "全文検索"]
+  },
+  {
+    key: "skill",
+    path: "skill.html",
+    category: "技能DB",
+    description: "技能名、効果、所持武将から横断検索して、技能軸で候補を洗います。",
+    chips: ["技能名", "効果検索", "所持武将"]
+  },
+  {
+    key: "synergy",
+    path: "synergy.html",
+    category: "相性 / 連鎖",
+    description: "主将基準で副将候補を並べて、連鎖率と共通個性から噛み合いを見ます。",
+    chips: ["主将基準", "連鎖率", "共通個性"]
+  },
+  {
+    key: "builder",
+    path: "builder.html",
+    category: "1部隊編成",
+    description: "1部隊の盤面、戦法順、効果帯を確認して、戦法の通り方まで見ます。",
+    chips: ["盤面表示", "戦法順", "効果帯"]
+  },
+  {
+    key: "army",
+    path: "army.html",
+    category: "25体軍勢",
+    description: "最適化方針ごとの自動編成、手持ち制約、CSV反映をまとめて扱います。",
+    chips: ["自動編成", "手持ち反映", "CSV対応"]
+  },
+  {
+    key: "gacha",
+    path: "gacha.html",
+    category: "ガチャ",
+    description: "S3英傑登用の排出率、天井、10連結果共有、累計SSRを確認できます。",
+    chips: ["10連共有", "天井再現", "累計SSR"]
+  },
+  {
+    key: "board",
+    path: "board.html",
+    category: "S3整理",
+    description: "S3の注目候補、評価軸、更新履歴を一覧で確認できる整理ページです。",
+    chips: ["採点軸", "更新履歴", "注目候補"]
+  }
+];
+
+const TOOL_PAGE_BY_KEY = Object.fromEntries(TOOL_PAGE_DEFS.map((entry) => [entry.key, entry]));
+const PAGE_MODE = document.body?.dataset.pageMode ?? "hub";
+const PAGE_TOOL_VIEW = VIEW_KEYS.includes(document.body?.dataset.toolView ?? "")
+  ? document.body.dataset.toolView
+  : "";
 
 const HERO_SHORTCUT_DEFS = [
   { key: "power-attack-defense", label: "攻撃→防御", hint: "戦力検索", description: "王騎型のような攻撃1位・防御2位をすぐ探します。" },
@@ -1351,6 +1416,38 @@ function renderVisualBadge(kind, key, label = key, options = {}) {
   `;
 }
 
+function getToolPageHref(viewKey) {
+  return `./${TOOL_PAGE_BY_KEY[viewKey]?.path ?? "index.html"}`;
+}
+
+function buildToolPageUrl(viewKey, options = {}) {
+  const url = new URL(getToolPageHref(viewKey), window.location.href);
+  if (options.search !== undefined) {
+    url.search = options.search;
+  }
+  if (options.hash !== undefined) {
+    url.hash = options.hash;
+  } else if (VIEW_KEYS.includes(viewKey)) {
+    url.hash = viewKey;
+  }
+  return url.toString();
+}
+
+function buildToolDirectoryCard(entry) {
+  const meta = VIEW_META[entry.key] ?? { label: entry.key, summary: "" };
+  return `
+    <a class="tool-link-card" href="${escapeHtml(getToolPageHref(entry.key))}">
+      <span class="tool-link-card__category">${escapeHtml(entry.category)}</span>
+      <h3>${escapeHtml(meta.label)}</h3>
+      <p>${escapeHtml(entry.description)}</p>
+      <div class="meta-chip-list">
+        ${entry.chips.map((chip) => `<span class="meta-chip">${escapeHtml(chip)}</span>`).join("")}
+      </div>
+      <span class="tool-link-card__footer">このツールを開く</span>
+    </a>
+  `;
+}
+
 function tokenizeRawSearchTerms(query) {
   return uniqueValues(
     String(query ?? "")
@@ -2039,6 +2136,13 @@ const season3FeaturedCharacters = preparedCharacters.filter((character) => chara
 const season3FeaturedSkills = preparedSkills.filter((skill) => skill.season3);
 
 const elements = {
+  siteToolNav: document.querySelector("#siteToolNav"),
+  siteShellModeLabel: document.querySelector("#siteShellModeLabel"),
+  toolDirectoryGrid: document.querySelector("#toolDirectoryGrid"),
+  toolPageBanner: document.querySelector("#toolPageBanner"),
+  toolPageEyebrow: document.querySelector("#toolPageEyebrow"),
+  toolPageTitle: document.querySelector("#toolPageTitle"),
+  toolPageSummary: document.querySelector("#toolPageSummary"),
   viewButtons: Array.from(document.querySelectorAll("[data-view-tab]")),
   viewPanels: Array.from(document.querySelectorAll(".app-view")),
   viewNav: document.querySelector(".view-nav"),
@@ -2966,6 +3070,14 @@ function syncSecondaryOptions() {
 
 function setActiveView(viewKey, options = {}) {
   const nextView = VIEW_KEYS.includes(viewKey) ? viewKey : "power";
+  if (PAGE_MODE === "tool" && PAGE_TOOL_VIEW && nextView !== PAGE_TOOL_VIEW) {
+    window.location.href = buildToolPageUrl(nextView, {
+      search: window.location.search,
+      hash: nextView
+    });
+    return;
+  }
+
   const updateHash = options.updateHash !== false;
   const scrollToNav = options.scrollToNav === true;
 
@@ -2980,6 +3092,7 @@ function setActiveView(viewKey, options = {}) {
   });
 
   saveUiState({ activeView: nextView });
+  updateSiteShell(nextView);
   updateShareScopeNote(nextView);
 
   if (updateHash) {
@@ -7313,6 +7426,59 @@ function updateTrustSnapshot() {
   elements.trustSnapshot.textContent = parts.join(" / ");
 }
 
+function renderSiteToolNav(activeView = getCurrentViewKey()) {
+  if (!elements.siteToolNav) {
+    return;
+  }
+
+  const links = [
+    `<a class="site-tool-link ${PAGE_MODE === "hub" ? "is-active" : ""}" href="./index.html">ツール一覧</a>`,
+    ...TOOL_PAGE_DEFS.map((entry) => {
+      const meta = VIEW_META[entry.key] ?? { label: entry.key };
+      const isActive = PAGE_MODE === "tool" && activeView === entry.key;
+      return `<a class="site-tool-link ${isActive ? "is-active" : ""}" href="${escapeHtml(getToolPageHref(entry.key))}">${escapeHtml(
+        meta.label
+      )}</a>`;
+    })
+  ];
+  elements.siteToolNav.innerHTML = links.join("");
+}
+
+function renderToolDirectory() {
+  if (!elements.toolDirectoryGrid) {
+    return;
+  }
+
+  elements.toolDirectoryGrid.innerHTML = TOOL_PAGE_DEFS.map((entry) => buildToolDirectoryCard(entry)).join("");
+}
+
+function updateSiteShell(activeView = getCurrentViewKey()) {
+  renderSiteToolNav(activeView);
+
+  if (elements.siteShellModeLabel) {
+    elements.siteShellModeLabel.textContent =
+      PAGE_MODE === "tool"
+        ? `専用ページ / ${VIEW_META[activeView]?.label ?? activeView}`
+        : "ツール一覧";
+  }
+
+  if (!elements.toolPageBanner || !elements.toolPageTitle || !elements.toolPageSummary) {
+    return;
+  }
+
+  if (PAGE_MODE !== "tool") {
+    elements.toolPageBanner.hidden = true;
+    return;
+  }
+
+  const entry = TOOL_PAGE_BY_KEY[activeView] ?? TOOL_PAGE_BY_KEY[PAGE_TOOL_VIEW] ?? TOOL_PAGE_DEFS[0];
+  const meta = VIEW_META[activeView] ?? VIEW_META[PAGE_TOOL_VIEW] ?? VIEW_META.power;
+  elements.toolPageBanner.hidden = false;
+  elements.toolPageEyebrow.textContent = entry?.category ?? "攻略ツール";
+  elements.toolPageTitle.textContent = meta.label;
+  elements.toolPageSummary.textContent = entry?.description ?? meta.summary ?? "";
+}
+
 function updateShareScopeNote(viewKey = getCurrentViewKey()) {
   if (!elements.shareScopeNote) {
     return;
@@ -7959,6 +8125,25 @@ function runHeroAction(actionType, value) {
 
 function bindGlobalActions() {
   document.addEventListener("click", (event) => {
+    const pageActionButton = event.target.closest("[data-page-action]");
+    if (pageActionButton) {
+      const action = pageActionButton.dataset.pageAction;
+      if (action === "share") {
+        copyCurrentStateLink().catch(() => {
+          showStatusToast("共有リンクのコピーに失敗しました。");
+        });
+        return;
+      }
+      if (action === "backup") {
+        downloadBackup();
+        return;
+      }
+      if (action === "import") {
+        elements.backupImportInput?.click();
+        return;
+      }
+    }
+
     const skillButton = event.target.closest("[data-skill-name]");
     if (skillButton) {
       openSkillDialog(skillButton.dataset.skillName);
@@ -7968,6 +8153,14 @@ function bindGlobalActions() {
     const viewButton = event.target.closest("[data-switch-view]");
     if (viewButton) {
       const targetView = viewButton.dataset.switchView;
+      const currentView = getCurrentViewKey();
+      if (PAGE_MODE === "hub" || (PAGE_MODE === "tool" && targetView !== currentView)) {
+        window.location.href = buildToolPageUrl(targetView, {
+          search: window.location.search,
+          hash: targetView
+        });
+        return;
+      }
       setActiveView(targetView, { scrollToNav: true });
       pushHeroRecentEntry({
         type: "view",
@@ -8143,6 +8336,7 @@ function boot() {
   bindViewTabs();
   bindGlobalActions();
   bindHeroCommand();
+  renderToolDirectory();
   bindUtilityActions();
   registerPwa();
   setToggleButtonState(elements.characterFavoriteToggle, Boolean(getUiState().characterFavoritesOnly));
@@ -8240,9 +8434,23 @@ function boot() {
   renderBuilderView();
   renderFeatureBoard();
 
+  const requestedHubView =
+    window.__KH_PENDING_SHARE_PAYLOAD?.view ||
+    window.location.hash.replace(/^#/, "");
+  if (PAGE_MODE === "hub" && VIEW_KEYS.includes(requestedHubView)) {
+    window.location.replace(
+      buildToolPageUrl(requestedHubView, {
+        search: window.location.search,
+        hash: requestedHubView
+      })
+    );
+    return;
+  }
+
   const initialView =
     window.__KH_PENDING_SHARE_PAYLOAD?.view ||
     window.location.hash.replace(/^#/, "") ||
+    PAGE_TOOL_VIEW ||
     getUiState().activeView ||
     "power";
   setActiveView(initialView, { updateHash: false });
