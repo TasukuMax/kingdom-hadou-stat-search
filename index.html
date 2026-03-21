@@ -120,6 +120,44 @@
         "url": "https://tasukumax.github.io/kingdom-hadou-stat-search/board.html"
       }
     ]
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "キングダム覇道の戦力検索では何ができますか？",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "戦力検索ページでは、武将の上位2ステータス、技能条件、連鎖率をもとに主将候補を絞り込めます。"
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "キングダム覇道のガチャシミュレーターはどんな内容ですか？",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "ガチャシミュレーターでは、シーズン3英傑登用の10連結果、SSR排出、天井、累計回数を確認できます。"
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "キングダム覇道のランキングは何が見られますか？",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "ランキングページでは、サーバー1・2・3の個別ランキングと、3サーバー統合の全体ランキングを確認できます。"
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "このサイトは公式サイトですか？",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "このサイトはキングダム覇道ユーザー向けの非公式攻略ツールサイトです。"
+        }
+      }
+    ]
   }
 ]
     </script>
@@ -6000,7 +6038,19 @@
         <a class="site-brand" href="./index.html">キングダム覇道 攻略ツール</a>
         <span class="site-shell__mode" id="siteShellModeLabel">ツール一覧</span>
       </div>
-      <nav class="site-tool-nav" id="siteToolNav" aria-label="ツール一覧ナビ"></nav>
+      <nav class="site-tool-nav" id="siteToolNav" aria-label="ツール一覧ナビ">
+        <a class="site-tool-link" href="./index.html">ツール一覧</a>
+        <a class="site-tool-link" href="./power.html">戦力検索</a>
+        <a class="site-tool-link" href="./equipment.html">装備検索</a>
+        <a class="site-tool-link" href="./character.html">武将DB</a>
+        <a class="site-tool-link" href="./skill.html">技能DB</a>
+        <a class="site-tool-link" href="./synergy.html">相性検索</a>
+        <a class="site-tool-link" href="./builder.html">編成ツール</a>
+        <a class="site-tool-link" href="./army.html">軍勢自動編成</a>
+        <a class="site-tool-link" href="./gacha.html">ガチャシミュ</a>
+        <a class="site-tool-link" href="./ranking.html">全鯖ランキング</a>
+        <a class="site-tool-link" href="./board.html">S3ハブ</a>
+      </nav>
     </header>
     <div class="status-toast" id="statusToast" role="status" aria-live="polite" aria-atomic="true"></div>
     <main class="page" id="mainContent">
@@ -6008,8 +6058,9 @@
         <p class="eyebrow">キングダム覇道 / 攻略ツールポータル</p>
         <h1>使いたいツールを、すぐ開ける形に整理しました</h1>
         <p>
-          GameWith や Game8 系の攻略サイトのように、まずツール一覧から選び、必要な画面だけ専用ページで開く構成に切り替えています。
-          ひとつの長いページをスクロールする代わりに、戦力検索、武将DB、編成、軍勢、ガチャを個別ページで使えるようにしています。
+          キングダム覇道の戦力検索、武将DB、技能DB、編成、軍勢自動編成、ガチャシミュレーター、全鯖ランキングを、
+          GameWith や Game8 系の攻略サイトのように用途別ページでまとめた非公式ツール集です。
+          ひとつの長いページをスクロールする代わりに、必要な画面だけ専用ページで開けます。
         </p>
         <div class="hero-command">
           <div class="hero-command-head">
@@ -6056,7 +6107,103 @@
             <p>用途ごとにページを分けています。開きたい機能を押すと、そのツール専用ページへ移動します。</p>
           </div>
         </div>
-        <div class="tool-directory-grid" id="toolDirectoryGrid"></div>
+        <div class="tool-directory-grid" id="toolDirectoryGrid">
+          <a class="tool-link-card" href="./power.html">
+            <span class="tool-link-card__category">検索 / 育成</span>
+            <h3>戦力検索</h3>
+            <p>上位2ステータス、技能条件、連鎖率から主将候補を探すページです。</p>
+            <span class="tool-link-card__footer">このツールを開く</span>
+          </a>
+          <a class="tool-link-card" href="./equipment.html">
+            <span class="tool-link-card__category">装備 / 相性</span>
+            <h3>装備検索</h3>
+            <p>装備系統、基礎値、特性補正から相性が良い武将候補を探せます。</p>
+            <span class="tool-link-card__footer">このツールを開く</span>
+          </a>
+          <a class="tool-link-card" href="./character.html">
+            <span class="tool-link-card__category">武将DB</span>
+            <h3>武将DB</h3>
+            <p>武将ごとの性能、技能、特徴タグ、比較表示をまとめて確認できます。</p>
+            <span class="tool-link-card__footer">このツールを開く</span>
+          </a>
+          <a class="tool-link-card" href="./skill.html">
+            <span class="tool-link-card__category">技能DB</span>
+            <h3>技能DB</h3>
+            <p>技能名、効果、所持武将から横断検索できる技能データベースです。</p>
+            <span class="tool-link-card__footer">このツールを開く</span>
+          </a>
+          <a class="tool-link-card" href="./synergy.html">
+            <span class="tool-link-card__category">相性 / 連鎖</span>
+            <h3>相性検索</h3>
+            <p>主将基準の連鎖率と共通個性から、副将候補を探すページです。</p>
+            <span class="tool-link-card__footer">このツールを開く</span>
+          </a>
+          <a class="tool-link-card" href="./builder.html">
+            <span class="tool-link-card__category">1部隊編成</span>
+            <h3>編成ツール</h3>
+            <p>1部隊の盤面、戦法順、効果帯を確認する編成ページです。</p>
+            <span class="tool-link-card__footer">このツールを開く</span>
+          </a>
+          <a class="tool-link-card" href="./army.html">
+            <span class="tool-link-card__category">25体軍勢</span>
+            <h3>軍勢自動編成</h3>
+            <p>25体軍勢の自動編成、手持ち入力、CSV反映をまとめて扱えます。</p>
+            <span class="tool-link-card__footer">このツールを開く</span>
+          </a>
+          <a class="tool-link-card" href="./gacha.html">
+            <span class="tool-link-card__category">ガチャ</span>
+            <h3>ガチャシミュレーター</h3>
+            <p>シーズン3英傑登用の10連結果、天井、累計SSRを確認できます。</p>
+            <span class="tool-link-card__footer">このツールを開く</span>
+          </a>
+          <a class="tool-link-card" href="./ranking.html">
+            <span class="tool-link-card__category">コミュニティ</span>
+            <h3>全鯖ランキング</h3>
+            <p>全体ランキングとサーバー1〜3の戦闘力ランキングを見られます。</p>
+            <span class="tool-link-card__footer">このツールを開く</span>
+          </a>
+          <a class="tool-link-card" href="./board.html">
+            <span class="tool-link-card__category">S3整理</span>
+            <h3>S3ハブ</h3>
+            <p>シーズン3の評価軸、注目候補、更新履歴を追える整理ページです。</p>
+            <span class="tool-link-card__footer">このツールを開く</span>
+          </a>
+        </div>
+      </section>
+
+      <section class="panel" data-home-only="true">
+        <div class="panel-header">
+          <div>
+            <h2>検索されやすい主要ページ</h2>
+            <p>キングダム覇道で検索されやすい用途ごとに、直接開ける固定ページをまとめています。</p>
+          </div>
+        </div>
+        <div class="info-grid">
+          <article class="info-card">
+            <p class="service-kicker">キングダム覇道 戦力検索</p>
+            <h2>主将候補を探すなら戦力検索</h2>
+            <p>上位2ステータス、技能条件、連鎖率から主将候補を絞り込みたい人向けのページです。</p>
+            <div class="service-actions">
+              <a class="button-link secondary-button" href="./power.html">戦力検索ページへ</a>
+            </div>
+          </article>
+          <article class="info-card">
+            <p class="service-kicker">キングダム覇道 ガチャシミュレーター</p>
+            <h2>10連結果を見たいならガチャシミュ</h2>
+            <p>本家寄せの結果画面で、シーズン3英傑登用の10連結果、天井、累計SSRを確認できます。</p>
+            <div class="service-actions">
+              <a class="button-link secondary-button" href="./gacha.html">ガチャシミュページへ</a>
+            </div>
+          </article>
+          <article class="info-card">
+            <p class="service-kicker">キングダム覇道 ランキング</p>
+            <h2>戦闘力比較なら全鯖ランキング</h2>
+            <p>全体ランキングとサーバー1〜3のランキングを切り替えながら、戦闘力上位100人を確認できます。</p>
+            <div class="service-actions">
+              <a class="button-link secondary-button" href="./ranking.html">全鯖ランキングページへ</a>
+            </div>
+          </article>
+        </div>
       </section>
 
       <section class="panel" data-home-only="true">
@@ -6197,6 +6344,7 @@
           </div>
           <div class="featured-tool-actions">
             <p>最新の10連結果、累計SSR、天井までの残り回数をすぐ見返せます。</p>
+            <a class="button-link primary-button" href="./gacha.html">ガチャシミュページへ</a>
             <button class="primary-button" type="button" data-switch-view="gacha">ガチャシミュを開く</button>
             <button class="secondary-button" type="button" data-hero-shortcut="gacha-s3">ガチャ導線を上に出す</button>
           </div>
@@ -6218,10 +6366,56 @@
           </div>
           <div class="featured-tool-actions">
             <p>戦闘力の投稿、シーズン切替、証明画像の確認までまとめて扱えます。</p>
+            <a class="button-link primary-button" href="./ranking.html">全鯖ランキングページへ</a>
             <button class="primary-button" type="button" data-switch-view="ranking">全鯖ランキングを開く</button>
             <button class="secondary-button" type="button" data-hero-shortcut="ranking-prev">前シーズン統合へ移動</button>
           </div>
         </article>
+      </section>
+
+      <section class="panel" data-home-only="true">
+        <div class="panel-header">
+          <div>
+            <h2>よくある質問</h2>
+            <p>検索されやすい内容を、ページの目的ごとに短くまとめています。</p>
+          </div>
+        </div>
+        <details class="section-details" open>
+          <summary>キングダム覇道の戦力検索では何ができますか？</summary>
+          <div class="details-body">
+            <p>
+              戦力検索ページでは、武将の上位2ステータス、技能条件、連鎖率をもとに主将候補を絞り込めます。
+              育てたい武将を探す時や、主将適性を比較したい時に使いやすい構成です。
+            </p>
+          </div>
+        </details>
+        <details class="section-details">
+          <summary>キングダム覇道のガチャシミュレーターはどんな内容ですか？</summary>
+          <div class="details-body">
+            <p>
+              ガチャシミュレーターでは、シーズン3英傑登用の10連結果、SSR排出、天井、累計回数を確認できます。
+              本家寄せの結果画面と「もう10連する」導線を入れているので、結果確認も直感的です。
+            </p>
+          </div>
+        </details>
+        <details class="section-details">
+          <summary>キングダム覇道のランキングは何が見られますか？</summary>
+          <div class="details-body">
+            <p>
+              ランキングページでは、サーバー1・2・3の個別ランキングと、3サーバー統合の全体ランキングを見られます。
+              まずは戦闘力に絞って、上位1〜100人の名前と戦闘力を確認できる構成です。
+            </p>
+          </div>
+        </details>
+        <details class="section-details">
+          <summary>このサイトは公式サイトですか？</summary>
+          <div class="details-body">
+            <p>
+              このサイトはキングダム覇道ユーザー向けの非公式攻略ツールサイトです。
+              ゲーム・画像・名称などの権利は各権利者に帰属し、実際のゲーム内数値や仕様変更が入った場合は追って更新します。
+            </p>
+          </div>
+        </details>
       </section>
 
       <section class="panel preset-panel" data-home-only="true">
