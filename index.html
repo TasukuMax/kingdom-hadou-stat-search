@@ -7,7 +7,7 @@
       name="description"
       content="キングダム覇道の戦力検索、武将DB、技能DB、相性検索、編成ツール、軍勢自動編成、ガチャシミュレーターをまとめた非公式のブラウザ完結ツールです。"
     >
-    <meta name="theme-color" content="#1a130f">
+    <meta name="theme-color" content="#f8fafc">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-title" content="覇道DB">
     <meta property="og:title" content="キングダム覇道 戦力・武将DB・相性検索・ガチャシミュレーター">
@@ -98,6 +98,146 @@
         width: min(1220px, calc(100% - 28px));
         margin: 0 auto;
         padding: 26px 0 64px;
+      }
+
+      .site-shell {
+        position: sticky;
+        top: 0;
+        z-index: 60;
+        border-bottom: 1px solid rgba(22, 30, 42, 0.08);
+        background: rgba(248, 250, 252, 0.94);
+        backdrop-filter: blur(10px);
+      }
+
+      .site-shell__inner {
+        width: min(1220px, calc(100% - 28px));
+        margin: 0 auto;
+        padding: 14px 0 10px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+      }
+
+      .site-brand {
+        color: var(--ink);
+        text-decoration: none;
+        font-family: "Noto Serif JP", serif;
+        font-size: 1.1rem;
+        font-weight: 700;
+      }
+
+      .site-shell__mode {
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+
+      .site-tool-nav {
+        width: min(1220px, calc(100% - 28px));
+        margin: 0 auto;
+        padding: 0 0 12px;
+        display: flex;
+        flex-wrap: nowrap;
+        gap: 8px;
+        overflow-x: auto;
+        scrollbar-width: none;
+      }
+
+      .site-tool-nav::-webkit-scrollbar {
+        display: none;
+      }
+
+      .site-tool-link {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 42px;
+        padding: 0 14px;
+        border-radius: 999px;
+        border: 1px solid rgba(22, 30, 42, 0.08);
+        background: #ffffff;
+        color: var(--muted);
+        text-decoration: none;
+        white-space: nowrap;
+        font-size: 0.88rem;
+      }
+
+      .site-tool-link.is-active {
+        background: #1f2937;
+        border-color: #1f2937;
+        color: #ffffff;
+      }
+
+      .tool-directory-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 14px;
+      }
+
+      .tool-link-card {
+        display: grid;
+        gap: 10px;
+        padding: 18px;
+        border-radius: 20px;
+        border: 1px solid rgba(22, 30, 42, 0.08);
+        background: #ffffff;
+        text-decoration: none;
+        color: var(--ink);
+        box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+      }
+
+      .tool-link-card__category {
+        display: inline-flex;
+        align-items: center;
+        width: fit-content;
+        padding: 5px 10px;
+        border-radius: 999px;
+        background: rgba(148, 163, 184, 0.12);
+        color: #475569;
+        font-size: 0.78rem;
+      }
+
+      .tool-link-card h3 {
+        font-size: 1.1rem;
+      }
+
+      .tool-link-card p {
+        color: var(--muted);
+        line-height: 1.65;
+      }
+
+      .tool-link-card__footer {
+        color: var(--gold-deep);
+        font-size: 0.88rem;
+        font-weight: 700;
+      }
+
+      .tool-page-banner {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 18px;
+        align-items: end;
+      }
+
+      .tool-page-banner__copy {
+        display: grid;
+        gap: 8px;
+      }
+
+      .tool-page-banner__copy h1 {
+        font-size: clamp(1.6rem, 2.6vw, 2.2rem);
+      }
+
+      .tool-page-banner__copy p {
+        color: var(--muted);
+        line-height: 1.7;
+      }
+
+      .tool-page-banner__actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        justify-content: flex-end;
       }
 
       .hero,
@@ -684,6 +824,16 @@
 
       button:hover {
         transform: translateY(-1px);
+      }
+
+      .button-link {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 56px;
+        padding: 0 18px;
+        border-radius: 16px;
+        text-decoration: none;
       }
 
       .hero .mini-button,
@@ -1774,6 +1924,106 @@
       }
 
       .app-view[hidden] {
+        display: none !important;
+      }
+
+      body[data-page-mode="hub"] {
+        background: linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%);
+      }
+
+      body[data-page-mode="hub"]::before {
+        opacity: 0.3;
+        background-image:
+          linear-gradient(rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0.2)),
+          repeating-linear-gradient(
+            125deg,
+            rgba(148, 163, 184, 0.04) 0,
+            rgba(148, 163, 184, 0.04) 10px,
+            transparent 10px,
+            transparent 20px
+          );
+      }
+
+      body[data-page-mode="hub"]::after {
+        display: none;
+      }
+
+      body[data-page-mode="hub"] .hero,
+      body[data-page-mode="hub"] .panel,
+      body[data-page-mode="hub"] .result-section,
+      body[data-page-mode="tool"] .panel,
+      body[data-page-mode="tool"] .result-section {
+        background: #ffffff;
+        border-color: rgba(22, 30, 42, 0.08);
+        box-shadow: 0 14px 32px rgba(15, 23, 42, 0.07);
+        backdrop-filter: none;
+      }
+
+      body[data-page-mode="hub"] .hero::before,
+      body[data-page-mode="hub"] .panel::before,
+      body[data-page-mode="hub"] .result-section::before,
+      body[data-page-mode="tool"] .panel::before,
+      body[data-page-mode="tool"] .result-section::before {
+        background: none;
+        box-shadow: none;
+      }
+
+      body[data-page-mode="hub"] .hero {
+        background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+        border-color: rgba(22, 30, 42, 0.08);
+        box-shadow: 0 16px 34px rgba(15, 23, 42, 0.08);
+      }
+
+      body[data-page-mode="hub"] .hero::after {
+        display: none;
+      }
+
+      body[data-page-mode="hub"] .eyebrow,
+      body[data-page-mode="hub"] .hero h1,
+      body[data-page-mode="hub"] .hero p {
+        color: var(--ink);
+        text-shadow: none;
+      }
+
+      body[data-page-mode="hub"] .hero h1 {
+        max-width: none;
+      }
+
+      body[data-page-mode="hub"] .hero p {
+        color: var(--muted);
+      }
+
+      body[data-page-mode="hub"] .hero-meta span {
+        background: #f8fafc;
+        border-color: rgba(22, 30, 42, 0.08);
+        color: var(--muted);
+        box-shadow: none;
+      }
+
+      body[data-page-mode="hub"] .hero-command,
+      body[data-page-mode="hub"] .hero-actions,
+      body[data-page-mode="hub"] .journey-panel,
+      body[data-page-mode="hub"] .featured-tool-panel,
+      body[data-page-mode="hub"] .preset-panel,
+      body[data-page-mode="hub"] .view-nav,
+      body[data-page-mode="hub"] .mobile-dock,
+      body[data-page-mode="hub"] .app-view,
+      body[data-page-mode="hub"] [data-tool-only="true"] {
+        display: none !important;
+      }
+
+      body[data-page-mode="tool"] {
+        background: linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%);
+      }
+
+      body[data-page-mode="tool"]::before,
+      body[data-page-mode="tool"]::after {
+        display: none;
+      }
+
+      body[data-page-mode="tool"] [data-home-only="true"],
+      body[data-page-mode="tool"] .view-nav,
+      body[data-page-mode="tool"] .mobile-dock {
         display: none !important;
       }
 
@@ -4816,17 +5066,23 @@
       }
     </style>
   </head>
-  <body>
-    <a class="skip-link" href="#viewNavAnchor">機能ナビへ移動</a>
+  <body data-page-mode="hub">
+    <a class="skip-link" href="#mainContent">メインコンテンツへ移動</a>
+    <header class="site-shell">
+      <div class="site-shell__inner">
+        <a class="site-brand" href="./index.html">キングダム覇道 攻略ツール</a>
+        <span class="site-shell__mode" id="siteShellModeLabel">ツール一覧</span>
+      </div>
+      <nav class="site-tool-nav" id="siteToolNav" aria-label="ツール一覧ナビ"></nav>
+    </header>
     <div class="status-toast" id="statusToast" role="status" aria-live="polite" aria-atomic="true"></div>
-    <main class="page">
-      <section class="hero">
-        <p class="eyebrow">キングダム覇道 / 戦力・DB・相性検索</p>
-        <h1>キングダム覇道 戦力・DB・相性検索</h1>
+    <main class="page" id="mainContent">
+      <section class="hero" data-home-only="true">
+        <p class="eyebrow">キングダム覇道 / 攻略ツールポータル</p>
+        <h1>使いたいツールを、すぐ開ける形に整理しました</h1>
         <p>
-          まず使いたい機能にすぐ入れて、必要な説明だけ後から開ける形に整理したモバイル優先版です。
-          SSR / SR の武将・技能データを横断して、戦力検索、武将DB、技能DB、相性検索、編成ツール、
-          軍勢自動編成を一つにまとめています。
+          GameWith や Game8 系の攻略サイトのように、まずツール一覧から選び、必要な画面だけ専用ページで開く構成に切り替えています。
+          ひとつの長いページをスクロールする代わりに、戦力検索、武将DB、編成、軍勢、ガチャを個別ページで使えるようにしています。
         </p>
         <div class="hero-command">
           <div class="hero-command-head">
@@ -4865,47 +5121,62 @@
         </div>
       </section>
 
-      <section class="panel">
+      <section class="panel tool-directory-panel" data-home-only="true">
         <div class="panel-header">
           <div>
-            <h2>目的・共有・安心ガイド</h2>
-            <p>初見で迷わない入口、同じ条件を再現しやすい共有、非公式ツールとしての前提をまとめました。</p>
+            <h2>ツール一覧</h2>
+            <p>用途ごとにページを分けています。開きたい機能を押すと、そのツール専用ページへ移動します。</p>
+          </div>
+        </div>
+        <div class="tool-directory-grid" id="toolDirectoryGrid"></div>
+      </section>
+
+      <section class="panel" data-home-only="true">
+        <div class="panel-header">
+          <div>
+            <h2>使い方と共有</h2>
+            <p>トップは入口だけに絞り、各ツールページでは共有・保存・入力をすぐ触れるようにしています。</p>
           </div>
         </div>
         <div class="info-grid">
           <article class="info-card">
-            <p class="service-kicker">目的から選ぶ</p>
-            <h2>いまやりたいことに合わせる</h2>
+            <p class="service-kicker">使い分け</p>
+            <h2>目的ごとにページを分けています</h2>
             <ul class="bullet-list">
               <li>調べる: 戦力検索 / 武将DB / 技能DB</li>
-              <li>組む: 相性検索 / 編成ツールβ</li>
-              <li>軍勢: 軍勢自動編成β / S3ハブ</li>
+              <li>組む: 相性検索 / 編成ツール / 軍勢自動編成</li>
+              <li>補助: ガチャシミュ / S3ハブ</li>
             </ul>
             <div class="service-actions">
               <button class="mini-button" type="button" data-switch-view="power">戦力検索</button>
-              <button class="mini-button" type="button" data-switch-view="synergy">相性検索</button>
+              <button class="mini-button" type="button" data-switch-view="builder">編成ツール</button>
               <button class="mini-button" type="button" data-switch-view="army">軍勢自動編成</button>
-              <button class="mini-button" type="button" data-switch-view="board">S3ハブ</button>
+              <button class="mini-button" type="button" data-switch-view="gacha">ガチャシミュ</button>
             </div>
           </article>
           <article class="info-card">
-            <p class="service-kicker">安心して使う</p>
-            <h2>非公式 / ローカル保存 / 推定値の扱い</h2>
+            <p class="service-kicker">保存と再現</p>
+            <h2>今の状態をそのまま残せます</h2>
             <ul class="trust-list">
-              <li>本サイトは非公式ツールです。ゲーム・画像・名称などの権利は各権利者に帰属します。</li>
-              <li>お気に入り、比較、手持ち入力はブラウザ内に保存し、共有ボタンを押さない限り外部へ送りません。</li>
-              <li>編成ツールの秒数には確定値と推定値が混在するため、画面内の前提と根拠表示を確認して使ってください。</li>
-              <li>シーズン / データ版 / 更新基準は上部メタと S3ハブで追えるようにしています。</li>
+              <li>お気に入り、比較、手持ち入力はブラウザ保存が基本です。</li>
+              <li>共有リンクで、今見ている条件をそのまま再現できます。</li>
+              <li>CSV や JSON を使う画面は、ページ内で保存と読み込みを完結できます。</li>
+              <li>シーズン / データ版 / 更新基準はトップと S3ハブで追えます。</li>
             </ul>
             <p class="service-meta" id="trustSnapshot"></p>
             <div class="service-actions">
-              <button class="mini-button" type="button" data-switch-view="board">更新履歴とソースを見る</button>
+              <button class="mini-button" type="button" data-switch-view="board">S3ハブを見る</button>
             </div>
           </article>
           <article class="info-card">
-            <p class="service-kicker">共有・再現性</p>
-            <h2>今の条件をそのまま渡す</h2>
+            <p class="service-kicker">前提</p>
+            <h2>非公式ツールとしての扱い</h2>
             <p class="field-note" id="shareScopeNote"></p>
+            <ul class="trust-list">
+              <li>本サイトは非公式ツールです。ゲーム・画像・名称などの権利は各権利者に帰属します。</li>
+              <li>編成ツールや戦法秒数には、公開根拠ベースの推定値を含む箇所があります。</li>
+              <li>気になる箇所は、S3ハブや注記の根拠リンクから前提を確認してください。</li>
+            </ul>
             <div class="service-actions">
               <button class="mini-button" id="copyStateLinkButton" type="button">現在のタブを共有</button>
               <button class="mini-button" id="downloadBackupButton" type="button">JSONを書き出す</button>
@@ -4920,7 +5191,7 @@
         </div>
       </section>
 
-      <section class="panel journey-panel">
+      <section class="panel journey-panel" data-home-only="true">
         <div class="panel-header">
           <div>
             <h2>プレイヤー別スタート</h2>
@@ -4970,7 +5241,7 @@
         </div>
       </section>
 
-      <section class="panel featured-tool-panel">
+      <section class="panel featured-tool-panel" data-home-only="true">
         <div class="panel-header">
           <div>
             <h2>すぐ使う機能</h2>
@@ -5000,7 +5271,7 @@
         </article>
       </section>
 
-      <section class="panel preset-panel">
+      <section class="panel preset-panel" data-home-only="true">
         <div class="panel-header">
           <div>
             <h2>研究ベース攻略プリセット</h2>
@@ -5046,14 +5317,28 @@
         </details>
       </section>
 
+      <section class="panel tool-page-banner" id="toolPageBanner" data-tool-only="true" hidden>
+        <div class="tool-page-banner__copy">
+          <p class="eyebrow" id="toolPageEyebrow">専用ページ</p>
+          <h1 id="toolPageTitle">ツール専用ページ</h1>
+          <p id="toolPageSummary"></p>
+        </div>
+        <div class="tool-page-banner__actions">
+          <a class="button-link secondary-button" href="./index.html">一覧へ戻る</a>
+          <button class="secondary-button" type="button" data-page-action="share">このページを共有</button>
+          <button class="secondary-button" type="button" data-page-action="backup">JSONを書き出す</button>
+          <button class="secondary-button" type="button" data-page-action="import">JSONを読み込む</button>
+        </div>
+      </section>
+
       <section class="panel view-nav" id="viewNavAnchor">
         <div class="tab-list">
           <button class="tab-button" type="button" data-view-tab="power"><span class="tab-label-full">戦力検索</span><span class="tab-label-short">検索</span></button>
           <button class="tab-button" type="button" data-view-tab="character"><span class="tab-label-full">武将DB</span><span class="tab-label-short">武将</span></button>
           <button class="tab-button" type="button" data-view-tab="skill"><span class="tab-label-full">技能DB</span><span class="tab-label-short">技能</span></button>
           <button class="tab-button" type="button" data-view-tab="synergy"><span class="tab-label-full">相性検索</span><span class="tab-label-short">相性</span></button>
-          <button class="tab-button" type="button" data-view-tab="builder"><span class="tab-label-full">編成ツールβ</span><span class="tab-label-short">編成</span></button>
-          <button class="tab-button" type="button" data-view-tab="army"><span class="tab-label-full">軍勢自動編成β</span><span class="tab-label-short">軍勢</span></button>
+          <button class="tab-button" type="button" data-view-tab="builder"><span class="tab-label-full">編成ツール</span><span class="tab-label-short">編成</span></button>
+          <button class="tab-button" type="button" data-view-tab="army"><span class="tab-label-full">軍勢自動編成</span><span class="tab-label-short">軍勢</span></button>
           <button class="tab-button" type="button" data-view-tab="gacha"><span class="tab-label-full">ガチャシミュ</span><span class="tab-label-short">ガチャ</span></button>
           <button class="tab-button" type="button" data-view-tab="board"><span class="tab-label-full">S3ハブ</span><span class="tab-label-short">S3</span></button>
         </div>
@@ -5545,7 +5830,7 @@
         <section class="panel">
           <div class="panel-header">
             <div>
-              <h2>編成ツールβ</h2>
+              <h2>編成ツール</h2>
               <p>
                 1部隊の噛み合いを見るための簡易編成ツールです。主将・副将・補佐と前中後列を置くと、
                 連鎖順、連鎖率、技能条件、重複技能、列依存をまとめて確認できます。
@@ -5724,7 +6009,7 @@
         <section class="panel">
           <div class="panel-header">
             <div>
-              <h2>軍勢自動編成β</h2>
+              <h2>軍勢自動編成</h2>
               <p>
                 1人の武将を軸に、5部隊 × 5人の25体を自動で提案します。主将適性、副将連鎖率、補佐補完、
                 列条件、役割カバー、最適化方針をまとめて見て、今のデータで最も噛み合う軍勢を返します。
