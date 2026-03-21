@@ -1,6 +1,19 @@
 {
-  "updatedAt": "2026-03-21T14:09:39Z",
+  "updatedAt": "2026-03-21T16:36:37Z",
   "entries": [
+    {
+      "id": "rk-58004fb76d26",
+      "boardKey": "overall",
+      "server": "2",
+      "playerName": "暴走機関車チュパ",
+      "powerType": "戦闘力",
+      "powerValue": 94013,
+      "comment": "",
+      "proofImageUrl": "shared/uploads/4003ef7488e141cf81c936da21656110.jpg",
+      "proofFileName": "IMG_4459.jpeg",
+      "postedAt": "2026-03-21T16:36:37Z",
+      "isMine": false
+    },
     {
       "id": "rk-869876a8d527",
       "boardKey": "overall",
