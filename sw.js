@@ -1,4 +1,4 @@
-const CACHE_NAME = "kh-hadou-v8";
+const CACHE_NAME = "kh-hadou-v11";
 const CORE_ASSETS = [
   "./",
   "./index.html",
@@ -10,14 +10,17 @@ const CORE_ASSETS = [
   "./builder.html",
   "./army.html",
   "./gacha.html",
+  "./ranking.html",
   "./board.html",
   "./data.js",
   "./season3-data.js",
   "./gacha-sim.js",
+  "./ranking-board.js",
   "./app.js",
   "./army-builder.js",
   "./manifest.webmanifest",
   "./assets/s3-eiketsu-summon.mov",
+  "./assets/gacha-result-stage.svg",
   "./icons/icon-192.svg",
   "./icons/icon-512.svg"
 ];
@@ -44,6 +47,14 @@ self.addEventListener("fetch", (event) => {
 
   const requestUrl = new URL(event.request.url);
   if (requestUrl.origin !== self.location.origin) {
+    return;
+  }
+
+  if (
+    requestUrl.pathname.startsWith("/api/") ||
+    requestUrl.pathname.startsWith("/runtime/") ||
+    requestUrl.pathname.includes("/shared/")
+  ) {
     return;
   }
 
