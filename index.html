@@ -4613,6 +4613,537 @@
         margin-top: 0;
       }
 
+      .gacha-stage {
+        min-height: 840px;
+        background:
+          linear-gradient(180deg, rgba(32, 10, 8, 0.18), rgba(18, 7, 6, 0.82)),
+          radial-gradient(circle at 50% 16%, rgba(255, 238, 179, 0.28), transparent 26%),
+          url("./assets/gacha-result-stage.svg") center / cover no-repeat;
+      }
+
+      .gacha-stage::before {
+        background:
+          radial-gradient(circle at 50% 14%, rgba(255, 233, 164, 0.34), transparent 24%),
+          linear-gradient(90deg, rgba(255, 221, 163, 0.16), transparent 17%, transparent 83%, rgba(255, 221, 163, 0.16)),
+          linear-gradient(180deg, rgba(0, 0, 0, 0.06), rgba(0, 0, 0, 0.28));
+      }
+
+      .gacha-stage__header,
+      .gacha-stage__subhead,
+      .gacha-stage__footer,
+      .gacha-stage__result-board,
+      .gacha-stage__cta-row {
+        position: relative;
+        z-index: 1;
+      }
+
+      .gacha-stage__subhead {
+        margin-top: 18px;
+        padding: 16px 18px;
+        border-radius: 18px;
+        background: linear-gradient(180deg, rgba(27, 9, 7, 0.72), rgba(15, 6, 6, 0.54));
+        border: 1px solid rgba(255, 226, 174, 0.12);
+        backdrop-filter: blur(8px);
+      }
+
+      .gacha-stage__result-board {
+        margin-top: 22px;
+        padding: 16px 14px 22px;
+        border-radius: 24px;
+        background:
+          linear-gradient(180deg, rgba(86, 18, 16, 0.22), rgba(25, 8, 8, 0.12)),
+          radial-gradient(circle at 50% 18%, rgba(255, 214, 125, 0.14), transparent 34%);
+      }
+
+      .gacha-stage__cta-row {
+        display: none;
+        justify-content: center;
+        align-items: flex-end;
+        gap: 14px;
+        margin-top: 16px;
+      }
+
+      .gacha-stage.is-result-view .gacha-stage__cta-row {
+        display: flex;
+      }
+
+      .gacha-stage__draw-button {
+        display: grid;
+        gap: 4px;
+        min-width: 170px;
+        padding: 12px 18px 14px;
+        border-radius: 18px;
+        border: 2px solid rgba(255, 232, 189, 0.44);
+        color: #fff8ee;
+        box-shadow:
+          0 18px 34px rgba(15, 6, 6, 0.3),
+          inset 0 1px 0 rgba(255, 248, 228, 0.26);
+      }
+
+      .gacha-stage__draw-button strong {
+        font-size: 1.16rem;
+        font-weight: 900;
+        line-height: 1;
+      }
+
+      .gacha-stage__draw-button span {
+        font-size: 0.76rem;
+        color: rgba(255, 244, 225, 0.88);
+      }
+
+      .gacha-stage__draw-button--single {
+        background: linear-gradient(180deg, rgba(111, 70, 58, 0.98), rgba(66, 32, 28, 0.98));
+      }
+
+      .gacha-stage__draw-button--ten {
+        min-width: 250px;
+        background: linear-gradient(180deg, rgba(122, 223, 201, 0.96), rgba(38, 144, 121, 0.96));
+      }
+
+      .gacha-stage__draw-button--history {
+        background: linear-gradient(180deg, rgba(238, 197, 116, 0.96), rgba(173, 112, 29, 0.96));
+      }
+
+      .gacha-stage.is-result-view .gacha-result-card {
+        opacity: 0;
+        transform: translateY(24px) scale(0.92);
+        animation: gachaCardReveal 0.56s cubic-bezier(0.18, 0.84, 0.32, 1) forwards;
+        animation-delay: var(--gacha-card-delay, 0ms);
+      }
+
+      .gacha-stage__footer {
+        margin-top: 16px;
+      }
+
+      .gacha-stage__notice,
+      .gacha-stage__actionbar {
+        backdrop-filter: blur(7px);
+      }
+
+      .ranking-shell {
+        margin-top: 18px;
+        display: grid;
+        grid-template-columns: minmax(0, 1.3fr) 380px;
+        gap: 18px;
+        align-items: start;
+      }
+
+      .ranking-main-column,
+      .ranking-side-column {
+        display: grid;
+        gap: 18px;
+      }
+
+      .ranking-header-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        justify-content: flex-end;
+      }
+
+      .ranking-board-tablist {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        gap: 10px;
+        margin-top: 18px;
+      }
+
+      .ranking-board-tab {
+        display: grid;
+        gap: 4px;
+        padding: 14px 16px;
+        text-align: left;
+        border-radius: 18px;
+        border: 1px solid rgba(201, 154, 95, 0.16);
+        background: rgba(255, 248, 235, 0.7);
+        color: var(--ink);
+      }
+
+      .ranking-board-tab strong {
+        font-size: 0.94rem;
+      }
+
+      .ranking-board-tab span {
+        color: var(--muted);
+        font-size: 0.78rem;
+      }
+
+      .ranking-board-tab.is-active {
+        border-color: rgba(166, 85, 41, 0.32);
+        background: linear-gradient(135deg, rgba(255, 230, 182, 0.96), rgba(228, 193, 123, 0.84));
+        box-shadow: 0 14px 28px rgba(92, 38, 17, 0.12);
+      }
+
+      .ranking-filter-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+        margin-top: 16px;
+      }
+
+      .ranking-summary-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+        margin-top: 16px;
+      }
+
+      .ranking-stat-card {
+        padding: 16px 14px;
+        border-radius: 18px;
+        border: 1px solid rgba(201, 154, 95, 0.16);
+        background: rgba(255, 248, 238, 0.76);
+      }
+
+      .ranking-stat-card.is-gold {
+        background: linear-gradient(135deg, rgba(255, 232, 181, 0.94), rgba(233, 200, 124, 0.74));
+      }
+
+      .ranking-stat-card.is-bronze {
+        background: linear-gradient(135deg, rgba(247, 220, 183, 0.96), rgba(202, 144, 84, 0.7));
+      }
+
+      .ranking-stat-card span {
+        display: block;
+        color: var(--muted);
+        font-size: 0.8rem;
+      }
+
+      .ranking-stat-card strong {
+        display: block;
+        margin-top: 6px;
+        font-size: 1.12rem;
+      }
+
+      .ranking-entry-list {
+        display: grid;
+        gap: 12px;
+        margin-top: 14px;
+      }
+
+      .ranking-hero-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+        margin-top: 16px;
+      }
+
+      .ranking-hero-card {
+        display: grid;
+        gap: 14px;
+        padding: 18px;
+        border-radius: 24px;
+        border: 1px solid rgba(198, 152, 92, 0.18);
+        background:
+          linear-gradient(135deg, rgba(255, 240, 208, 0.98), rgba(248, 228, 190, 0.78)),
+          rgba(255, 249, 239, 0.78);
+        box-shadow: 0 18px 30px rgba(111, 45, 20, 0.08);
+        cursor: pointer;
+      }
+
+      .ranking-hero-card.is-selected {
+        border-color: rgba(183, 92, 46, 0.32);
+        box-shadow: 0 22px 34px rgba(111, 45, 20, 0.12);
+      }
+
+      .ranking-hero-card__head {
+        display: flex;
+        justify-content: space-between;
+        gap: 14px;
+        align-items: start;
+      }
+
+      .ranking-hero-card__head h3,
+      .ranking-hero-card__head p {
+        margin: 0;
+      }
+
+      .ranking-hero-card__head h3 {
+        margin-top: 6px;
+        font-size: 1.24rem;
+      }
+
+      .ranking-hero-card__rank {
+        color: var(--gold-deep);
+        font-size: 1.7rem;
+        font-weight: 900;
+        line-height: 1;
+      }
+
+      .ranking-hero-card__power {
+        display: grid;
+        gap: 4px;
+      }
+
+      .ranking-hero-card__power span {
+        color: var(--muted);
+        font-size: 0.78rem;
+      }
+
+      .ranking-hero-card__power strong {
+        color: var(--gold-deep);
+        font-size: 1.5rem;
+      }
+
+      .ranking-compact-list {
+        display: grid;
+        gap: 8px;
+        margin-top: 14px;
+      }
+
+      .ranking-compact-entry {
+        display: grid;
+        grid-template-columns: 54px minmax(0, 1fr) auto auto;
+        gap: 12px;
+        align-items: center;
+        padding: 12px 14px;
+        border-radius: 18px;
+        border: 1px solid rgba(198, 152, 92, 0.12);
+        background: rgba(255, 249, 239, 0.72);
+        cursor: pointer;
+      }
+
+      .ranking-compact-entry.is-selected {
+        border-color: rgba(183, 92, 46, 0.24);
+        box-shadow: 0 12px 22px rgba(111, 45, 20, 0.08);
+      }
+
+      .ranking-compact-entry__rank {
+        display: grid;
+        place-items: center;
+        width: 46px;
+        height: 46px;
+        border-radius: 14px;
+        color: var(--gold-deep);
+        font-size: 1rem;
+        font-weight: 800;
+        background: linear-gradient(135deg, rgba(255, 233, 184, 0.96), rgba(225, 184, 111, 0.72));
+      }
+
+      .ranking-compact-entry__body {
+        display: grid;
+        gap: 4px;
+      }
+
+      .ranking-compact-entry__body strong,
+      .ranking-compact-entry__body span {
+        margin: 0;
+      }
+
+      .ranking-compact-entry__body span {
+        color: var(--muted);
+        font-size: 0.78rem;
+      }
+
+      .ranking-compact-entry__power {
+        color: var(--gold-deep);
+        font-size: 1rem;
+        font-weight: 800;
+      }
+
+      .ranking-entry {
+        display: grid;
+        grid-template-columns: 70px minmax(0, 1fr) auto auto;
+        gap: 14px;
+        align-items: center;
+        padding: 16px;
+        border-radius: 22px;
+        border: 1px solid rgba(198, 152, 92, 0.12);
+        background: rgba(255, 249, 239, 0.74);
+      }
+
+      .ranking-entry.is-selected {
+        border-color: rgba(183, 92, 46, 0.28);
+        box-shadow: 0 18px 30px rgba(111, 45, 20, 0.08);
+      }
+
+      .ranking-entry.is-top-1,
+      .ranking-entry.is-top-2,
+      .ranking-entry.is-top-3 {
+        background:
+          linear-gradient(135deg, rgba(255, 237, 200, 0.98), rgba(247, 227, 188, 0.72)),
+          rgba(255, 249, 239, 0.74);
+      }
+
+      .ranking-entry__rank {
+        display: grid;
+        place-items: center;
+        width: 64px;
+        height: 64px;
+        border-radius: 18px;
+        color: var(--gold-deep);
+        font-size: 1.45rem;
+        font-weight: 900;
+        background: linear-gradient(135deg, rgba(255, 233, 184, 0.96), rgba(225, 184, 111, 0.72));
+      }
+
+      .ranking-entry__body {
+        display: grid;
+        gap: 8px;
+      }
+
+      .ranking-entry__title-row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+      }
+
+      .ranking-entry__title-row strong {
+        font-size: 1.04rem;
+      }
+
+      .ranking-entry__body p {
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.55;
+      }
+
+      .ranking-entry__power {
+        display: grid;
+        gap: 4px;
+        text-align: right;
+      }
+
+      .ranking-entry__power span {
+        color: var(--muted);
+        font-size: 0.76rem;
+      }
+
+      .ranking-entry__power strong {
+        color: var(--gold-deep);
+        font-size: 1.16rem;
+      }
+
+      .ranking-chip-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .ranking-chip {
+        display: inline-flex;
+        align-items: center;
+        padding: 5px 10px;
+        border-radius: 999px;
+        color: var(--muted);
+        font-size: 0.74rem;
+        font-weight: 700;
+        background: rgba(255, 244, 220, 0.88);
+      }
+
+      .ranking-chip.is-accent {
+        color: #fff8f0;
+        background: linear-gradient(135deg, rgba(176, 72, 40, 0.92), rgba(120, 36, 18, 0.92));
+      }
+
+      .ranking-empty-state,
+      .ranking-proof-empty {
+        display: grid;
+        gap: 10px;
+        padding: 24px;
+        border-radius: 22px;
+        background: rgba(255, 249, 239, 0.74);
+        border: 1px dashed rgba(198, 152, 92, 0.18);
+      }
+
+      .ranking-empty-state p,
+      .ranking-proof-empty p {
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.6;
+      }
+
+      .ranking-proof-panel {
+        display: grid;
+        gap: 14px;
+      }
+
+      .ranking-proof-panel__meta {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        gap: 12px;
+        align-items: start;
+      }
+
+      .ranking-proof-panel__meta h3,
+      .ranking-proof-panel__meta p {
+        margin: 0;
+      }
+
+      .ranking-proof-panel__meta p + p {
+        margin-top: 6px;
+      }
+
+      .ranking-proof-image,
+      .ranking-draft-card__image {
+        width: 100%;
+        border-radius: 22px;
+        border: 1px solid rgba(198, 152, 92, 0.16);
+        background: rgba(255, 248, 236, 0.82);
+        object-fit: cover;
+      }
+
+      .ranking-proof-image {
+        max-height: 560px;
+      }
+
+      .ranking-proof-image--empty,
+      .ranking-draft-card__image--empty {
+        display: grid;
+        place-items: center;
+        min-height: 220px;
+        color: var(--muted);
+      }
+
+      .ranking-proof-caption {
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.6;
+      }
+
+      .ranking-form-panel {
+        position: sticky;
+        top: 106px;
+      }
+
+      .ranking-draft-card {
+        display: grid;
+        gap: 12px;
+        margin-top: 16px;
+        padding: 16px;
+        border-radius: 22px;
+        background: rgba(255, 249, 239, 0.74);
+        border: 1px solid rgba(198, 152, 92, 0.12);
+      }
+
+      .ranking-draft-card h3,
+      .ranking-draft-card p {
+        margin: 0;
+      }
+
+      .ranking-draft-card p + .ranking-chip-row {
+        margin-top: 10px;
+      }
+
+      .ranking-draft-card__image {
+        max-height: 220px;
+      }
+
+      @keyframes gachaCardReveal {
+        0% {
+          opacity: 0;
+          transform: translateY(24px) scale(0.92);
+        }
+
+        100% {
+          opacity: 1;
+          transform: translateY(0) scale(1);
+        }
+      }
+
       @keyframes gachaFallbackPulse {
         0%,
         100% {
@@ -4627,6 +5158,14 @@
       @media (max-width: 1080px) {
         .gacha-shell {
           grid-template-columns: 1fr;
+        }
+
+        .ranking-shell {
+          grid-template-columns: 1fr;
+        }
+
+        .ranking-form-panel {
+          position: static;
         }
 
         .gacha-side-column {
@@ -4644,6 +5183,10 @@
 
         .gacha-count-card {
           grid-column: 1 / -1;
+        }
+
+        .ranking-summary-grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
         }
 
         .gacha-probability-grid {
@@ -4688,10 +5231,24 @@
           padding: 16px 14px 18px;
         }
 
+        .gacha-stage__result-board {
+          padding: 12px 8px 16px;
+        }
+
         .gacha-stage__header,
         .gacha-stage__subhead {
           flex-direction: column;
           align-items: stretch;
+        }
+
+        .gacha-stage__cta-row {
+          flex-direction: column;
+        }
+
+        .gacha-stage__draw-button,
+        .gacha-stage__draw-button--ten {
+          min-width: 0;
+          width: 100%;
         }
 
         .gacha-stage__meta {
@@ -4706,6 +5263,36 @@
 
         .gacha-results-grid {
           gap: 12px 8px;
+        }
+
+        .ranking-filter-grid,
+        .ranking-summary-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .ranking-hero-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .ranking-compact-entry {
+          grid-template-columns: 46px minmax(0, 1fr);
+        }
+
+        .ranking-compact-entry__power,
+        .ranking-compact-entry .mini-button {
+          grid-column: 2;
+          justify-self: start;
+        }
+
+        .ranking-entry {
+          grid-template-columns: 60px 1fr;
+        }
+
+        .ranking-entry__power,
+        .ranking-entry .mini-button {
+          grid-column: 2;
+          justify-self: start;
+          text-align: left;
         }
 
         .gacha-result-card {
@@ -5386,7 +5973,7 @@
             <ul class="bullet-list">
               <li>調べる: 戦力検索 / 武将DB / 技能DB</li>
               <li>組む: 相性検索 / 編成ツール / 軍勢自動編成</li>
-              <li>補助: ガチャシミュ / S3ハブ</li>
+              <li>補助: ガチャシミュ / 全鯖ランキング / S3ハブ</li>
             </ul>
             <div class="service-actions">
               <button class="mini-button" type="button" data-switch-view="power">戦力検索</button>
@@ -5394,6 +5981,7 @@
               <button class="mini-button" type="button" data-switch-view="builder">編成ツール</button>
               <button class="mini-button" type="button" data-switch-view="army">軍勢自動編成</button>
               <button class="mini-button" type="button" data-switch-view="gacha">ガチャシミュ</button>
+              <button class="mini-button" type="button" data-switch-view="ranking">全鯖ランキング</button>
             </div>
           </article>
           <article class="info-card">
@@ -5497,11 +6085,11 @@
             <p class="featured-tool-kicker">Pickup Simulator</p>
             <h2>シーズン3 英傑登用ガチャシミュレーター</h2>
             <p>
-              10連結果の共有、20回ごとのSSR確定、100回ごとの天賦900確定、概算課金額までまとめて確認できます。
-              まずガチャから触りたい時は、ここから入るのが最短です。
+              本家寄せの10連結果画面、20回ごとのSSR確定、100回ごとの天賦900確定、概算課金額までまとめて確認できます。
+              まずガチャから触りたい時の最短導線です。
             </p>
             <div class="featured-tool-badges meta-chip-list">
-              <span class="meta-chip">10連結果共有</span>
+              <span class="meta-chip">本家寄せ結果画面</span>
               <span class="meta-chip">SSR履歴つき</span>
               <span class="meta-chip">概算課金額</span>
               <span class="meta-chip">シーズン3英傑登用</span>
@@ -5511,6 +6099,27 @@
             <p>最新の10連結果、累計SSR、天井までの残り回数をすぐ見返せます。</p>
             <button class="primary-button" type="button" data-switch-view="gacha">ガチャシミュを開く</button>
             <button class="secondary-button" type="button" data-hero-shortcut="gacha-s3">ガチャ導線を上に出す</button>
+          </div>
+        </article>
+        <article class="featured-tool-card">
+          <div class="featured-tool-copy">
+            <p class="featured-tool-kicker">Community Ranking</p>
+            <h2>全体・各サーバー戦闘力ランキング</h2>
+            <p>
+              サーバー1〜3の個別ランキングと、3サーバー統合の全体ランキングをこのサイト内で見られます。
+              証明画像つきの戦闘力投稿フォームもまとめています。
+            </p>
+            <div class="featured-tool-badges meta-chip-list">
+              <span class="meta-chip">画像投稿</span>
+              <span class="meta-chip">全鯖比較</span>
+              <span class="meta-chip">シーズン切替</span>
+              <span class="meta-chip">JSON入出力</span>
+            </div>
+          </div>
+          <div class="featured-tool-actions">
+            <p>戦闘力の投稿、シーズン切替、証明画像の確認までまとめて扱えます。</p>
+            <button class="primary-button" type="button" data-switch-view="ranking">全鯖ランキングを開く</button>
+            <button class="secondary-button" type="button" data-hero-shortcut="ranking-prev">前シーズン統合へ移動</button>
           </div>
         </article>
       </section>
@@ -5585,6 +6194,7 @@
           <button class="tab-button" type="button" data-view-tab="builder"><span class="tab-label-full">編成ツール</span><span class="tab-label-short">編成</span></button>
           <button class="tab-button" type="button" data-view-tab="army"><span class="tab-label-full">軍勢自動編成</span><span class="tab-label-short">軍勢</span></button>
           <button class="tab-button" type="button" data-view-tab="gacha"><span class="tab-label-full">ガチャシミュ</span><span class="tab-label-short">ガチャ</span></button>
+          <button class="tab-button" type="button" data-view-tab="ranking"><span class="tab-label-full">全鯖ランキング</span><span class="tab-label-short">順位</span></button>
           <button class="tab-button" type="button" data-view-tab="board"><span class="tab-label-full">S3ハブ</span><span class="tab-label-short">S3</span></button>
         </div>
       </section>
@@ -5596,6 +6206,7 @@
         <button class="dock-button" type="button" data-view-tab="army">軍勢</button>
         <button class="dock-button" type="button" data-view-tab="builder">編成</button>
         <button class="dock-button" type="button" data-view-tab="gacha">ガチャ</button>
+        <button class="dock-button" type="button" data-view-tab="ranking">順位</button>
         <button class="dock-button dock-button-top" type="button" data-scroll-top="true">Top</button>
       </div>
 
@@ -6571,6 +7182,27 @@
         </section>
       </section>
 
+      <section class="app-view view-stack" id="view-ranking" hidden>
+        <section class="panel">
+          <div class="panel-header">
+            <div>
+              <h2>全体・各サーバー戦闘力ランキング</h2>
+              <p>
+                サーバー1〜3と全体ランキングを切り替えながら、上位100人の名前と戦闘力を見られるページです。
+                投稿フォームも同じ画面にまとめています。
+              </p>
+            </div>
+            <div class="status-pills">
+              <span class="count-pill">個人ランキング</span>
+              <span class="count-pill">証明画像つき投稿</span>
+              <span class="count-pill">前シーズン統合 + 各シーズン</span>
+            </div>
+          </div>
+
+          <div id="rankingBoardRoot"></div>
+        </section>
+      </section>
+
       <section class="app-view view-stack" id="view-board" hidden>
         <section class="panel">
           <div class="panel-header">
@@ -6754,6 +7386,7 @@
     <script src="./data.js"></script>
     <script src="./season3-data.js"></script>
     <script src="./gacha-sim.js"></script>
+    <script src="./ranking-board.js"></script>
     <script src="./app.js"></script>
     <script src="./army-builder.js"></script>
   </body>
