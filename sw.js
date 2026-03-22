@@ -1,4 +1,4 @@
-const CACHE_NAME = "kh-hadou-v11";
+const CACHE_NAME = "kh-hadou-v12";
 const CORE_ASSETS = [
   "./",
   "./index.html",
@@ -9,8 +9,10 @@ const CORE_ASSETS = [
   "./synergy.html",
   "./builder.html",
   "./army.html",
+  "./advanced.html",
   "./gacha.html",
   "./ranking.html",
+  "./community.html",
   "./board.html",
   "./data.js",
   "./season3-data.js",
@@ -18,6 +20,8 @@ const CORE_ASSETS = [
   "./ranking-board.js",
   "./app.js",
   "./army-builder.js",
+  "./advanced-builder.js",
+  "./community-board.js",
   "./manifest.webmanifest",
   "./assets/s3-eiketsu-summon.mov",
   "./assets/gacha-result-stage.svg",
