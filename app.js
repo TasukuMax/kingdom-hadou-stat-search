@@ -25,7 +25,7 @@ const SEASON3 =
         sources: []
       };
 
-const VIEW_KEYS = ["power", "equipment", "character", "skill", "synergy", "builder", "army", "advanced", "gacha", "ranking", "board"];
+const VIEW_KEYS = ["power", "equipment", "character", "skill", "synergy", "builder", "army", "advanced", "gacha", "ranking", "community", "board"];
 const UI_STATE_STORAGE_KEY = "kh-site-ui-v1";
 const HERO_RECENT_STORAGE_KEY = "kh-hero-recent-v1";
 const FAVORITE_CHARACTERS_STORAGE_KEY = "kh-favorite-characters-v1";
@@ -142,6 +142,20 @@ const TOOL_PAGE_DEFS = [
     chips: ["採点軸", "更新履歴", "注目候補"]
   }
 ];
+
+SHARE_VIEW_HINTS.community = "掲示板のカテゴリとスレッド表示状態を共有リンクに含めます。";
+VIEW_META.community = {
+  label: "攻略掲示板",
+  shortLabel: "掲示板",
+  summary: "攻略情報、称号、育成保存をひとまとめに扱う"
+};
+TOOL_PAGE_DEFS.splice(TOOL_PAGE_DEFS.length - 1, 0, {
+  key: "community",
+  path: "community.html",
+  category: "コミュニティ / 掲示板",
+  description: "攻略情報の共有掲示板と、称号表示、ログイン連動の育成保存をまとめたページです。",
+  chips: ["掲示板", "称号", "育成保存"]
+});
 
 const TOOL_PAGE_BY_KEY = Object.fromEntries(TOOL_PAGE_DEFS.map((entry) => [entry.key, entry]));
 const PAGE_MODE = document.body?.dataset.pageMode ?? "hub";
@@ -7803,6 +7817,9 @@ function collectCurrentSharePayload() {
     case "ranking":
       state = window.KH_RANKING_BOARD_API?.collectShareState?.() ?? {};
       break;
+    case "community":
+      state = window.KH_COMMUNITY_BOARD_API?.collectShareState?.() ?? {};
+      break;
     case "board":
       state = collectBoardShareState();
       break;
@@ -8005,6 +8022,15 @@ function applySharedPayload(payload, options = {}) {
     return false;
   }
 
+  if (payload.view === "community") {
+    if (window.KH_COMMUNITY_BOARD_API?.applyShareState) {
+      window.KH_COMMUNITY_BOARD_API.applyShareState(payload.state ?? {}, options);
+      return true;
+    }
+    window.__KH_PENDING_SHARE_PAYLOAD = payload;
+    return false;
+  }
+
   switch (payload.view) {
     case "power":
       applyPowerShareState(payload.state);
@@ -8026,6 +8052,9 @@ function applySharedPayload(payload, options = {}) {
       break;
     case "ranking":
       window.KH_RANKING_BOARD_API?.applyShareState?.(payload.state);
+      break;
+    case "community":
+      window.KH_COMMUNITY_BOARD_API?.applyShareState?.(payload.state);
       break;
     case "board":
       applyBoardShareState(payload.state);
@@ -8071,6 +8100,7 @@ function buildBackupPayload() {
     favoriteCharacters: getFavoriteCharacterNames(),
     favoriteSkills: getFavoriteSkillNames(),
     armyRoster: window.KH_ARMY_SHARE_API?.exportState?.() ?? null,
+    advancedBuilder: window.KH_ADVANCED_BUILDER_API?.exportState?.() ?? null,
     rankingBoard: window.KH_RANKING_BOARD_API?.exportState?.() ?? null
   };
 }
@@ -8087,6 +8117,7 @@ function refreshUiAfterExternalState(targetView) {
   renderSynergy();
   renderBuilderView();
   window.KH_RANKING_BOARD_API?.refresh?.();
+  window.KH_COMMUNITY_BOARD_API?.refresh?.();
   renderFeatureBoard();
   setActiveView(targetView || getUiState().activeView || "power", { updateHash: true });
   updateTrustSnapshot();
@@ -8117,11 +8148,15 @@ function applyBackupPayload(payload) {
   writeStoredJson(FAVORITE_CHARACTERS_STORAGE_KEY, payload.favoriteCharacters ?? []);
   writeStoredJson(FAVORITE_SKILLS_STORAGE_KEY, payload.favoriteSkills ?? []);
   window.KH_ARMY_SHARE_API?.importState?.(payload.armyRoster ?? null, { rerender: false });
+  window.KH_ADVANCED_BUILDER_API?.importState?.(payload.advancedBuilder ?? null, { rerender: false });
   window.KH_RANKING_BOARD_API?.importState?.(payload.rankingBoard ?? null, { rerender: false });
 
   refreshUiAfterExternalState(payload.uiState?.activeView ?? "power");
   if ((payload.uiState?.activeView ?? "") === "army") {
     window.KH_ARMY_SHARE_API?.refresh?.();
+  }
+  if ((payload.uiState?.activeView ?? "") === "advanced") {
+    window.KH_ADVANCED_BUILDER_API?.refresh?.();
   }
   if ((payload.uiState?.activeView ?? "") === "ranking") {
     window.KH_RANKING_BOARD_API?.refresh?.();
@@ -8156,6 +8191,7 @@ function clearBrowserStoredData() {
   window.KH_ARMY_SHARE_API?.importState?.(null, { rerender: false });
   window.KH_ADVANCED_BUILDER_API?.clearState?.({ rerender: false, removeStorage: true });
   window.KH_RANKING_BOARD_API?.clearState?.({ rerender: false });
+  window.KH_COMMUNITY_BOARD_API?.clearState?.({ rerender: false });
 
   resetPowerSearch();
   resetEquipmentMatch();
@@ -8660,7 +8696,7 @@ function boot() {
 
   if (
     window.__KH_PENDING_SHARE_PAYLOAD &&
-    !["army", "advanced"].includes(window.__KH_PENDING_SHARE_PAYLOAD.view)
+    !["army", "advanced", "community"].includes(window.__KH_PENDING_SHARE_PAYLOAD.view)
   ) {
     applySharedPayload(window.__KH_PENDING_SHARE_PAYLOAD, { showToast: true });
     window.__KH_PENDING_SHARE_PAYLOAD = null;
