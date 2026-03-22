@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="25体軍勢の自動編成、手持ち入力、CSV反映をまとめて扱う専用ページです。">
+    <meta name="description" content="主将候補を5体選び、その主将を軸に残り20枠を組む軍勢編成専用ページです。">
     <meta name="google-site-verification" content="1HmgVEWIznrMTWK_b8rZkJqh9iWbi3EdtrKgyZRcVlI">
     <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">
     <meta name="theme-color" content="#f8fafc">
@@ -14,7 +14,7 @@
     <meta property="og:site_name" content="キングダム覇道 攻略ツール集">
     <meta property="og:locale" content="ja_JP">
     <meta property="og:title" content="キングダム覇道 軍勢自動編成 | 攻略ツール">
-    <meta property="og:description" content="25体軍勢の自動編成、手持ち入力、CSV反映をまとめて扱う専用ページです。">
+    <meta property="og:description" content="主将候補を5体選び、その主将を軸に残り20枠を組む軍勢編成専用ページです。">
     <meta property="og:url" content="https://tasukumax.github.io/kingdom-hadou-stat-search/army.html">
     <meta property="og:image" content="https://tasukumax.github.io/kingdom-hadou-stat-search/assets/og-image.svg">
     <meta property="og:image:width" content="1200">
@@ -22,7 +22,7 @@
     <meta property="og:image:alt" content="軍勢自動編成 を含むキングダム覇道 攻略ツール集のページ画像">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="キングダム覇道 軍勢自動編成 | 攻略ツール">
-    <meta name="twitter:description" content="25体軍勢の自動編成、手持ち入力、CSV反映をまとめて扱う専用ページです。">
+    <meta name="twitter:description" content="主将候補を5体選び、その主将を軸に残り20枠を組む軍勢編成専用ページです。">
     <meta name="twitter:image" content="https://tasukumax.github.io/kingdom-hadou-stat-search/assets/og-image.svg">
     <link rel="icon" href="data:,">
     <link rel="manifest" href="./manifest.webmanifest">
@@ -39,7 +39,7 @@
     "@type": "WebPage",
     "name": "キングダム覇道 軍勢自動編成 | 攻略ツール",
     "url": "https://tasukumax.github.io/kingdom-hadou-stat-search/army.html",
-    "description": "25体軍勢の自動編成、手持ち入力、CSV反映をまとめて扱う専用ページです。",
+    "description": "主将候補を5体選び、その主将を軸に残り20枠を組む軍勢編成専用ページです。",
     "inLanguage": "ja",
     "isPartOf": {
       "@type": "WebSite",
@@ -6688,6 +6688,80 @@
       <section class="panel tool-jump-panel">
         <div class="panel-header">
           <div>
+            <h2>S3 部隊戦力算出</h2>
+            <p>
+              シーズン3の動画と編成画像で見えた部隊戦力を元に、兵力・攻撃・防御・戦威・策略から
+              部隊戦力を見積もる簡易算出です。陣形バフやデバフも割合で直接かけられます。
+            </p>
+          </div>
+        </div>
+        <details class="section-details" open>
+          <summary>算出の前提</summary>
+          <div class="details-body">
+            <ul class="bullet-list">
+              <li>シーズン3の動画・編成画面サンプルから、部隊戦力と表示ステータスの関係を回帰しています。</li>
+              <li>この算出は「最終的に画面へ出る兵力 / 攻撃 / 防御 / 戦威 / 策略」を使う簡易式です。</li>
+              <li>兵力3000前後の通常部隊で精度が高く、編成比較や陣形比較の目安として使いやすい形に寄せています。</li>
+            </ul>
+          </div>
+        </details>
+        <div class="builder-select-grid">
+          <div class="field">
+            <label for="powerCalcSoldier">兵力</label>
+            <input id="powerCalcSoldier" type="number" min="0" step="1" value="3000" inputmode="numeric">
+            <p class="field-note">編成画面に出る兵力を入力します。通常は 3000 か 3090 / 3180 / 3300 付近です。</p>
+          </div>
+          <div class="field">
+            <label for="powerCalcAttack">攻撃</label>
+            <input id="powerCalcAttack" type="number" min="0" step="1" value="800" inputmode="numeric">
+          </div>
+          <div class="field">
+            <label for="powerCalcDefense">防御</label>
+            <input id="powerCalcDefense" type="number" min="0" step="1" value="700" inputmode="numeric">
+          </div>
+          <div class="field">
+            <label for="powerCalcWar">戦威</label>
+            <input id="powerCalcWar" type="number" min="0" step="1" value="700" inputmode="numeric">
+          </div>
+          <div class="field">
+            <label for="powerCalcStrategy">策略</label>
+            <input id="powerCalcStrategy" type="number" min="0" step="1" value="500" inputmode="numeric">
+          </div>
+        </div>
+        <div class="builder-select-grid">
+          <div class="field">
+            <label for="powerCalcSoldierBuff">兵力補正 %</label>
+            <input id="powerCalcSoldierBuff" type="number" step="0.1" value="0" inputmode="decimal">
+            <p class="field-note">陣形や技能で兵力が伸びる時は、ここへ割合で入れます。減少はマイナスです。</p>
+          </div>
+          <div class="field">
+            <label for="powerCalcAttackBuff">攻撃補正 %</label>
+            <input id="powerCalcAttackBuff" type="number" step="0.1" value="0" inputmode="decimal">
+          </div>
+          <div class="field">
+            <label for="powerCalcDefenseBuff">防御補正 %</label>
+            <input id="powerCalcDefenseBuff" type="number" step="0.1" value="0" inputmode="decimal">
+          </div>
+          <div class="field">
+            <label for="powerCalcWarBuff">戦威補正 %</label>
+            <input id="powerCalcWarBuff" type="number" step="0.1" value="0" inputmode="decimal">
+          </div>
+          <div class="field">
+            <label for="powerCalcStrategyBuff">策略補正 %</label>
+            <input id="powerCalcStrategyBuff" type="number" step="0.1" value="0" inputmode="decimal">
+          </div>
+        </div>
+        <div class="button-row">
+          <button class="secondary-button" id="powerCalcResetButton" type="button">初期値に戻す</button>
+        </div>
+        <div class="builder-overview-grid" id="powerCalcSummaryGrid"></div>
+        <p class="field-note" id="powerCalcFormula"></p>
+        <p class="field-note" id="powerCalcSampleMeta"></p>
+      </section>
+
+      <section class="panel tool-jump-panel">
+        <div class="panel-header">
+          <div>
             <h2>装備検索は専用ページに分けています</h2>
             <p>装備系統、基礎値、特性補正から相性武将を探す機能は、独立した装備検索ページへ移しました。</p>
           </div>
@@ -7299,7 +7373,7 @@
             </div>
           </details>
 
-          <details class="section-details" open>
+          <details class="section-details">
             <summary>実測戦力CSVと公開根拠</summary>
             <div class="details-body army-roster-shell">
               <div class="builder-select-grid">
@@ -7341,33 +7415,38 @@
             </div>
           </details>
 
-          <div class="builder-select-grid">
-            <div class="field">
-              <label for="armySeedCharacter">軸にする武将</label>
-              <select id="armySeedCharacter" aria-label="軸にする武将"></select>
-              <p class="field-note">選んだ武将を必ず軍勢に含めます。空欄なら完全自動で組みます。</p>
-            </div>
+          <details class="section-details">
+            <summary>詳細設定（陣形 / 方針 / 軸固定）</summary>
+            <div class="details-body">
+              <div class="builder-select-grid">
+                <div class="field">
+                  <label for="armySeedCharacter">軸にする武将</label>
+                  <select id="armySeedCharacter" aria-label="軸にする武将"></select>
+                  <p class="field-note">選んだ武将を必ず軍勢に含めます。空欄なら完全自動で組みます。</p>
+                </div>
 
-            <div class="field">
-              <label for="armySeedMode">固定する役割</label>
-              <select id="armySeedMode" aria-label="固定する役割"></select>
-              <p class="field-note">主将固定、副将固定、補佐固定、または最適な役割に自動配置できます。</p>
-            </div>
+                <div class="field">
+                  <label for="armySeedMode">固定する役割</label>
+                  <select id="armySeedMode" aria-label="固定する役割"></select>
+                  <p class="field-note">主将固定、副将固定、補佐固定、または最適な役割に自動配置できます。</p>
+                </div>
 
-            <div class="field">
-              <label for="armyConcept">最適化方針</label>
-              <select id="armyConcept" aria-label="最適化方針"></select>
-              <p class="field-note">対人勝率、攻城DPS、防衛安定、妨害先手、現在戦力最大、最大見込み戦力、育成効率、世間採用寄りを切り替えます。</p>
-            </div>
+                <div class="field">
+                  <label for="armyConcept">最適化方針</label>
+                  <select id="armyConcept" aria-label="最適化方針"></select>
+                  <p class="field-note">対人勝率、攻城DPS、防衛安定、妨害先手、現在戦力最大、最大見込み戦力、育成効率、世間採用寄りを切り替えます。</p>
+                </div>
 
-            <div class="field">
-              <label for="armyFormation">陣形</label>
-              <select id="armyFormation" aria-label="陣形"></select>
-              <p class="field-note">自動選択も可能です。指定すると、その陣形の能力補正と発動間隔を採点へ反映します。</p>
-            </div>
-          </div>
+                <div class="field">
+                  <label for="armyFormation">陣形</label>
+                  <select id="armyFormation" aria-label="陣形"></select>
+                  <p class="field-note">自動選択も可能です。指定すると、その陣形の能力補正と発動間隔を採点へ反映します。</p>
+                </div>
+              </div>
 
-          <div class="formation-card-grid" id="armyFormationInfoGrid"></div>
+              <div class="formation-card-grid" id="armyFormationInfoGrid"></div>
+            </div>
+          </details>
 
           <details class="section-details" open>
             <summary>手持ち武将と育成状況</summary>
@@ -7418,8 +7497,8 @@
             </div>
           </details>
 
-          <details class="section-details">
-            <summary>レアリティと実行</summary>
+          <details class="section-details" open>
+            <summary>STEP 1: 主将候補を選ぶ</summary>
             <div class="details-body">
               <div class="builder-select-grid">
                 <fieldset class="chip-fieldset">
@@ -7428,17 +7507,33 @@
                 </fieldset>
 
                 <div class="field army-summary-card">
-                  <strong>自動編成の出し方</strong>
+                  <strong>いまの流れ</strong>
                   <p class="field-note">
-                    まず 1部隊候補を大量に採点し、そのあと重複なしで 5部隊に束ねています。25体未満になる条件では作れません。
+                    手持ちを選ぶ → 主将候補を出す → 主将5体を選ぶ → 残りの副将 / 補佐を組む、の順で進めます。
                   </p>
                 </div>
-
-                <div class="button-row">
-                  <button class="primary-button" id="armyBuildButton" type="button">軍勢を自動編成する</button>
-                  <button class="secondary-button" id="armyResetButton" type="button">条件をリセット</button>
-                </div>
               </div>
+
+              <div class="button-row">
+                <button class="primary-button" id="armySuggestCommandersButton" type="button">主将候補を出す</button>
+                <button class="secondary-button" id="armyAutoSelectCommandersButton" type="button">上位5体を自動採用</button>
+                <button class="secondary-button" id="armyClearCommanderSelectionButton" type="button">主将選択をクリア</button>
+                <button class="secondary-button" id="armyResetButton" type="button">条件をリセット</button>
+              </div>
+
+              <div class="builder-overview-grid" id="armyCommanderWizardSummaryGrid"></div>
+              <div class="button-row" id="armySelectedCommanderStrip"></div>
+              <p class="field-note" id="armyCommanderHelp">まずは主将候補を出して、採用したい主将を5体選んでください。</p>
+            </div>
+          </details>
+
+          <details class="section-details" open>
+            <summary>STEP 2: 選んだ主将で残りを組む</summary>
+            <div class="details-body">
+              <div class="button-row">
+                <button class="primary-button" id="armyFinalizeButton" type="button">副将・補佐を組む</button>
+              </div>
+              <p class="field-note">陣形バフ / デバフ、列適性、役割カバーを反映しながら、選んだ主将5体の残り20枠を提案します。</p>
             </div>
           </details>
 
