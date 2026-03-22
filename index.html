@@ -2160,9 +2160,10 @@
       }
 
       body[data-page-mode="hub"] .hero-command,
-      body[data-page-mode="hub"] .hero-actions,
+      body[data-page-mode="hub"] .home-seo-panel,
+      body[data-page-mode="hub"] .home-guide-panel,
+      body[data-page-mode="hub"] .home-faq-panel,
       body[data-page-mode="hub"] .journey-panel,
-      body[data-page-mode="hub"] .featured-tool-panel,
       body[data-page-mode="hub"] .preset-panel,
       body[data-page-mode="hub"] .view-nav,
       body[data-page-mode="hub"] .mobile-dock,
@@ -5331,7 +5332,7 @@
           grid-template-columns: repeat(2, minmax(0, 1fr));
         }
 
-        .featured-tool-card,
+        .featured-tool-grid,
         .equipment-stat-shell {
           grid-template-columns: 1fr;
         }
@@ -5688,6 +5689,7 @@
           gap: 10px;
         }
 
+        .featured-tool-grid,
         .journey-grid,
         .preset-grid,
         .toolbar-grid,
@@ -5838,6 +5840,10 @@
         padding: 22px 0 76px;
       }
 
+      .site-shell {
+        box-shadow: 0 8px 18px rgba(15, 23, 42, 0.04);
+      }
+
       .hero,
       .panel,
       .result-section,
@@ -5864,6 +5870,10 @@
       .hero {
         gap: 16px;
         padding: 24px;
+      }
+
+      .hero-actions {
+        gap: 10px;
       }
 
       .hero::after {
@@ -5949,6 +5959,13 @@
         border-color: #111f38;
       }
 
+      .hero .mini-button,
+      .hero .secondary-button {
+        background: #ffffff;
+        border: 1px solid rgba(148, 163, 184, 0.24);
+        color: #334155;
+      }
+
       .secondary-button,
       .mini-button,
       .tab-button,
@@ -6032,20 +6049,121 @@
         align-items: end;
       }
 
+      .featured-tool-panel {
+        overflow: visible;
+      }
+
+      .featured-tool-grid {
+        margin-top: 18px;
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 14px;
+      }
+
+      .featured-tool-card {
+        display: grid;
+        gap: 14px;
+        margin-top: 0;
+        padding: 20px;
+        border-radius: 20px;
+        color: var(--ink);
+        border: 1px solid rgba(148, 163, 184, 0.18);
+        background: #f8fafc;
+        box-shadow: none;
+      }
+
+      .featured-tool-card h2,
+      .featured-tool-card h3 {
+        margin: 0;
+        font-family: "Noto Serif JP", serif;
+        font-size: 1.2rem;
+        line-height: 1.45;
+        color: #0f172a;
+      }
+
+      .featured-tool-card p {
+        color: #64748b;
+      }
+
+      .featured-tool-kicker {
+        color: #475569;
+        letter-spacing: 0.08em;
+      }
+
+      .featured-tool-kicker::before {
+        display: none;
+      }
+
+      .featured-tool-badges .meta-chip {
+        color: #334155;
+        border-color: rgba(99, 102, 241, 0.12);
+        background: #eef2ff;
+      }
+
+      .featured-tool-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        padding: 0;
+        border: 0;
+        background: transparent;
+      }
+
+      .featured-tool-actions p {
+        display: none;
+      }
+
+      .home-utility-grid {
+        margin-top: 18px;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 16px;
+        align-items: start;
+      }
+
+      .home-utility-copy {
+        display: grid;
+        gap: 10px;
+      }
+
+      .home-utility-note {
+        margin: 0;
+        padding: 12px 14px;
+        border-radius: 14px;
+        border: 1px solid rgba(148, 163, 184, 0.18);
+        background: #f8fafc;
+        color: #64748b;
+        line-height: 1.65;
+      }
+
+      .home-utility-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        justify-content: flex-end;
+      }
+
+      .home-utility-actions .secondary-button {
+        min-width: 148px;
+      }
+
       @media (max-width: 720px) {
         .tool-jump-card,
-        .tool-page-banner {
+        .tool-page-banner,
+        .home-utility-grid {
           grid-template-columns: 1fr;
         }
 
         .tool-jump-card__actions,
-        .tool-page-banner__actions {
+        .tool-page-banner__actions,
+        .home-utility-actions {
           justify-content: stretch;
         }
 
         .tool-jump-card__actions .primary-button,
         .tool-jump-card__actions .source-link,
-        .tool-page-banner__actions > * {
+        .tool-page-banner__actions > *,
+        .home-utility-actions > * {
           width: 100%;
           justify-content: center;
         }
@@ -6078,12 +6196,11 @@
     <div class="status-toast" id="statusToast" role="status" aria-live="polite" aria-atomic="true"></div>
     <main class="page" id="mainContent">
       <section class="hero" data-home-only="true">
-        <p class="eyebrow">キングダム覇道 / 攻略ツールポータル</p>
-        <h1>使いたいツールを、すぐ開ける形に整理しました</h1>
+        <p class="eyebrow">キングダム覇道 / 非公式攻略ツール</p>
+        <h1>必要な画面だけ、すぐ開ける攻略ツール集</h1>
         <p>
-          キングダム覇道の戦力検索、武将DB、技能DB、編成、軍勢自動編成、ガチャシミュレーター、全鯖ランキング、攻略掲示板を、
-          GameWith や Game8 系の攻略サイトのように用途別ページでまとめた非公式ツール集です。
-          ひとつの長いページをスクロールする代わりに、必要な画面だけ専用ページで開けます。
+          戦力検索、編成、ガチャ、ランキング、掲示板を用途別の専用ページに整理しています。
+          まずはよく使う画面を開いて、必要になった時だけ他のツールへ広げられる構成です。
         </p>
         <div class="hero-command">
           <div class="hero-command-head">
@@ -6107,9 +6224,10 @@
         </div>
         <div class="hero-actions">
           <button class="mini-button" type="button" data-switch-view="power">戦力検索を開く</button>
-          <button class="mini-button" type="button" data-switch-view="equipment">装備検索を開く</button>
-          <button class="mini-button" type="button" data-switch-view="army">軍勢自動編成を開く</button>
           <button class="mini-button" type="button" data-switch-view="builder">編成ツールを開く</button>
+          <button class="mini-button" type="button" data-switch-view="gacha">ガチャシミュを開く</button>
+          <button class="mini-button" type="button" data-switch-view="ranking">全鯖ランキングを開く</button>
+          <button class="mini-button" type="button" data-switch-view="community">攻略掲示板を開く</button>
         </div>
         <div class="hero-meta">
           <span>総数 <strong id="datasetCount"></strong></span>
@@ -6206,7 +6324,7 @@
         </div>
       </section>
 
-      <section class="panel" data-home-only="true">
+      <section class="panel home-seo-panel" data-home-only="true">
         <div class="panel-header">
           <div>
             <h2>検索されやすい主要ページ</h2>
@@ -6241,7 +6359,7 @@
         </div>
       </section>
 
-      <section class="panel" data-home-only="true">
+      <section class="panel home-guide-panel" data-home-only="true">
         <div class="panel-header">
           <div>
             <h2>使い方と共有</h2>
@@ -6275,7 +6393,7 @@
               <li>CSV や JSON を使う画面は、ページ内で保存と読み込みを完結できます。</li>
               <li>シーズン / データ版 / 更新基準はトップと S3ハブで追えます。</li>
             </ul>
-            <p class="service-meta" id="trustSnapshot"></p>
+            <p class="service-meta" id="trustSnapshotLegacy"></p>
             <div class="service-actions">
               <button class="mini-button" type="button" data-switch-view="board">S3ハブを見る</button>
             </div>
@@ -6283,21 +6401,21 @@
           <article class="info-card">
             <p class="service-kicker">前提</p>
             <h2>非公式ツールとしての扱い</h2>
-            <p class="field-note" id="shareScopeNote"></p>
+            <p class="field-note" id="shareScopeNoteLegacy"></p>
             <ul class="trust-list">
               <li>本サイトは非公式ツールです。ゲーム・画像・名称などの権利は各権利者に帰属します。</li>
               <li>編成ツールや戦法秒数には、公開根拠ベースの推定値を含む箇所があります。</li>
               <li>気になる箇所は、S3ハブや注記の根拠リンクから前提を確認してください。</li>
             </ul>
             <div class="service-actions">
-              <button class="mini-button" id="copyStateLinkButton" type="button">現在のタブを共有</button>
-              <button class="mini-button" id="downloadBackupButton" type="button">JSONを書き出す</button>
-              <button class="mini-button" id="importBackupButton" type="button">JSONを読み込む</button>
+              <button class="mini-button" id="copyStateLinkButtonLegacy" type="button">現在のタブを共有</button>
+              <button class="mini-button" id="downloadBackupButtonLegacy" type="button">JSONを書き出す</button>
+              <button class="mini-button" id="importBackupButtonLegacy" type="button">JSONを読み込む</button>
             </div>
-            <input class="backup-input" id="backupImportInput" type="file" accept="application/json,.json">
-            <p class="service-meta" id="backupMeta"></p>
+            <input class="backup-input" id="backupImportInputLegacy" type="file" accept="application/json,.json">
+            <p class="service-meta" id="backupMetaLegacy"></p>
             <div class="service-actions">
-              <button class="secondary-button" id="clearBrowserDataButton" type="button">ブラウザ保存を初期化</button>
+              <button class="secondary-button" id="clearBrowserDataButtonLegacy" type="button">ブラウザ保存を初期化</button>
             </div>
           </article>
         </div>
@@ -6362,6 +6480,7 @@
             <p>他のゲーム攻略サイトの導線を参考に、いま触る頻度が高い機能をホームから直接開ける形にしています。</p>
           </div>
         </div>
+        <div class="featured-tool-grid">
         <article class="featured-tool-card">
           <div class="featured-tool-copy">
             <p class="featured-tool-kicker">Pickup Simulator</p>
@@ -6380,8 +6499,7 @@
           <div class="featured-tool-actions">
             <p>最新の10連結果、累計SSR、天井までの残り回数をすぐ見返せます。</p>
             <a class="button-link primary-button" href="./gacha.html">ガチャシミュページへ</a>
-            <button class="primary-button" type="button" data-switch-view="gacha">ガチャシミュを開く</button>
-            <button class="secondary-button" type="button" data-hero-shortcut="gacha-s3">ガチャ導線を上に出す</button>
+            <button class="secondary-button" type="button" data-switch-view="gacha">この場で開く</button>
           </div>
         </article>
         <article class="featured-tool-card">
@@ -6402,8 +6520,7 @@
           <div class="featured-tool-actions">
             <p>戦闘力の投稿、シーズン切替、証明画像の確認までまとめて扱えます。</p>
             <a class="button-link primary-button" href="./ranking.html">全鯖ランキングページへ</a>
-            <button class="primary-button" type="button" data-switch-view="ranking">全鯖ランキングを開く</button>
-            <button class="secondary-button" type="button" data-hero-shortcut="ranking-prev">前シーズン統合へ移動</button>
+            <button class="secondary-button" type="button" data-switch-view="ranking">この場で開く</button>
           </div>
         </article>
         <article class="featured-tool-card">
@@ -6424,12 +6541,36 @@
           <div class="featured-tool-actions">
             <p>攻略メモ、質問、募集、保存した育成状況の読み込みまでひとつのページで扱えます。</p>
             <a class="button-link primary-button" href="./community.html">攻略掲示板ページへ</a>
-            <button class="primary-button" type="button" data-switch-view="community">攻略掲示板を開く</button>
+            <button class="secondary-button" type="button" data-switch-view="community">この場で開く</button>
           </div>
         </article>
+        </div>
       </section>
 
-      <section class="panel" data-home-only="true">
+      <section class="panel home-utility-panel" data-home-only="true">
+        <div class="panel-header">
+          <div>
+            <h2>保存と共有</h2>
+            <p>共有リンク、JSON保存、読み込み、ブラウザ保存の初期化だけをまとめた最小メニューです。</p>
+          </div>
+        </div>
+        <div class="home-utility-grid">
+          <div class="home-utility-copy">
+            <p class="home-utility-note" id="shareScopeNote"></p>
+            <p class="home-utility-note" id="trustSnapshot"></p>
+            <p class="home-utility-note" id="backupMeta"></p>
+          </div>
+          <div class="home-utility-actions">
+            <button class="secondary-button" id="copyStateLinkButton" type="button">現在のページを共有</button>
+            <button class="secondary-button" id="downloadBackupButton" type="button">JSONを書き出す</button>
+            <button class="secondary-button" id="importBackupButton" type="button">JSONを読み込む</button>
+            <button class="secondary-button" id="clearBrowserDataButton" type="button">ブラウザ保存を初期化</button>
+          </div>
+        </div>
+        <input class="backup-input" id="backupImportInput" type="file" accept="application/json,.json">
+      </section>
+
+      <section class="panel home-faq-panel" data-home-only="true">
         <div class="panel-header">
           <div>
             <h2>よくある質問</h2>
