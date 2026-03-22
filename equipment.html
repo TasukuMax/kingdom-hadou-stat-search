@@ -6407,6 +6407,7 @@
           <button class="tab-button" type="button" data-view-tab="advanced"><span class="tab-label-full">上級編成研究所</span><span class="tab-label-short">研究</span></button>
           <button class="tab-button" type="button" data-view-tab="gacha"><span class="tab-label-full">ガチャシミュ</span><span class="tab-label-short">ガチャ</span></button>
           <button class="tab-button" type="button" data-view-tab="ranking"><span class="tab-label-full">全鯖ランキング</span><span class="tab-label-short">順位</span></button>
+          <button class="tab-button" type="button" data-view-tab="community"><span class="tab-label-full">攻略掲示板</span><span class="tab-label-short">掲示板</span></button>
           <button class="tab-button" type="button" data-view-tab="board"><span class="tab-label-full">S3ハブ</span><span class="tab-label-short">S3</span></button>
         </div>
       </section>
@@ -7436,6 +7437,27 @@
         </section>
       </section>
 
+      <section class="app-view view-stack" id="view-community" hidden>
+        <section class="panel">
+          <div class="panel-header">
+            <div>
+              <h2>攻略掲示板</h2>
+              <p>
+                キングダム覇道の攻略情報を共有する掲示板です。ログインすると称号の表示、育成状況の保存、
+                上級編成研究所や部隊所持状況の読み込みまでまとめて扱えます。
+              </p>
+            </div>
+            <div class="status-pills">
+              <span class="count-pill">攻略共有</span>
+              <span class="count-pill">称号表示</span>
+              <span class="count-pill">育成保存</span>
+            </div>
+          </div>
+
+          <div id="communityBoardRoot"></div>
+        </section>
+      </section>
+
       <section class="app-view view-stack" id="view-board" hidden>
         <section class="panel">
           <div class="panel-header">
@@ -7623,5 +7645,6 @@
     <script src="./app.js"></script>
     <script src="./advanced-builder.js"></script>
     <script src="./army-builder.js"></script>
+    <script src="./community-board.js"></script>
   </body>
 </html>
