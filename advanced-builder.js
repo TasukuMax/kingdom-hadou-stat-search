@@ -1674,6 +1674,22 @@
     }
   }
 
+  function exportState() {
+    return cloneState(state);
+  }
+
+  function importState(nextState, options = {}) {
+    if (!nextState || typeof nextState !== "object") {
+      resetBuilder(options);
+      return;
+    }
+    applyShareState(nextState, options);
+  }
+
+  function refresh() {
+    render();
+  }
+
   function handleClick(event) {
     const button = event.target.closest("[data-action]");
     if (!button) {
@@ -1704,6 +1720,9 @@
   window.KH_ADVANCED_BUILDER_API = {
     collectShareState,
     applyShareState,
+    exportState,
+    importState,
+    refresh,
     clearState: resetBuilder
   };
 
