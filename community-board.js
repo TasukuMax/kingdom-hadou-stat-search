@@ -344,8 +344,8 @@
         <section class="cb-hero">
           <div>
             <p class="cb-kicker">Kingdom Hadou Community</p>
-            <h2>掲示板、称号、育成保存を1か所に集約</h2>
-            <p class="cb-muted">攻略情報を共有しながら、戦闘力ランキング由来の称号と自分の育成状況を同じログインで管理できます。</p>
+            <h2>攻略掲示板</h2>
+            <p class="cb-muted">攻略共有、称号表示、育成保存をひとつのログインでまとめて扱えます。</p>
           </div>
           <div class="cb-row">${badge(`スレッド ${state.posts.length}`)}${badge(`返信 ${state.replies.length}`)}${badge(state.readOnly ? "閲覧専用" : state.authenticated ? "ログイン中" : "未ログイン")}</div>
         </section>
@@ -429,7 +429,315 @@
     if (document.querySelector("#community-board-style")) return;
     const style = document.createElement("style");
     style.id = "community-board-style";
-    style.textContent = ".cb-root,.cb-side,.cb-main,.cb-detail,.cb-form,.cb-posts,.cb-replies,.cb-cats,.cb-save-grid{display:grid;gap:14px}.cb-hero,.cb-card,.cb-save-card{padding:20px 22px;border:1px solid rgba(127,92,45,.18);border-radius:24px;background:linear-gradient(180deg,rgba(255,251,244,.96),rgba(245,235,219,.88));box-shadow:0 18px 40px rgba(36,24,16,.08)}.cb-grid{display:grid;grid-template-columns:minmax(260px,300px) minmax(320px,1fr) minmax(320px,1.05fr);gap:18px}.cb-grid.is-loading{opacity:.72}.cb-head,.cb-row,.cb-two,.cb-toggle{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}.cb-kicker{margin:0 0 8px;color:var(--gold-deep);font-size:.78rem;letter-spacing:.14em;text-transform:uppercase}.cb-hero h2,.cb-card h3{margin:0 0 10px}.cb-muted,.cb-post p,.cb-reply p,.cb-body{margin:0;color:var(--muted);line-height:1.7}.cb-loading,.cb-error{margin:0;padding:12px 14px;border-radius:14px}.cb-loading{background:rgba(244,232,212,.72);color:var(--gold-deep);font-weight:700}.cb-error{background:rgba(164,63,36,.12);color:#7d2e20}.cb-badge{display:inline-flex;align-items:center;padding:6px 10px;border-radius:999px;background:rgba(208,176,112,.18);color:var(--gold-deep);font-size:.82rem;font-weight:700}.cb-badge-title{background:linear-gradient(135deg,rgba(210,170,88,.22),rgba(250,232,177,.38))}.cb-form label,.cb-form span{display:grid;gap:6px}.cb-form input,.cb-form select,.cb-form textarea{width:100%;padding:12px 14px;border:1px solid rgba(127,92,45,.24);border-radius:14px;background:rgba(255,255,255,.85);font:inherit;color:var(--ink)}.cb-form textarea{resize:vertical}.cb-toggle{padding:4px;border-radius:16px;background:rgba(123,84,38,.08)}.cb-toggle button,.cb-cat,.cb-post,.cb-text{border:0;background:transparent;color:inherit;font:inherit}.cb-toggle button{flex:1;padding:10px 12px;border-radius:12px;cursor:pointer;font-weight:700;color:var(--gold-deep)}.cb-toggle .is-active{background:linear-gradient(135deg,#d1a45a,#f0d7a7);color:#2d1b0f}.cb-cats{gap:10px}.cb-cat{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-radius:14px;background:rgba(255,255,255,.72);cursor:pointer}.cb-cat.is-active{background:linear-gradient(135deg,rgba(214,175,102,.32),rgba(249,233,186,.46));color:var(--gold-deep)}.cb-scroll{max-height:760px;overflow:auto}.cb-post{display:grid;gap:10px;width:100%;padding:16px;border-radius:18px;text-align:left;background:rgba(255,255,255,.78);cursor:pointer;transition:transform .16s ease,box-shadow .16s ease,background .16s ease}.cb-post:hover,.cb-post.is-active{transform:translateY(-1px);background:rgba(255,251,240,.98);box-shadow:0 14px 28px rgba(54,32,14,.08)}.cb-post strong{font-size:1rem}.cb-post small{color:var(--muted)}.cb-reply{display:grid;gap:8px;padding:14px 0;border-top:1px solid rgba(127,92,45,.14)}.cb-reply:first-child{padding-top:0;border-top:0}.cb-save-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.cb-save-card{padding:16px}.cb-text{cursor:pointer;color:var(--gold-deep);font-weight:700}@media (max-width:1100px){.cb-grid,.cb-save-grid{grid-template-columns:1fr}.cb-scroll{max-height:none}}";
+    style.textContent = `
+      .cb-root,
+      .cb-side,
+      .cb-main,
+      .cb-detail,
+      .cb-form,
+      .cb-posts,
+      .cb-replies,
+      .cb-cats,
+      .cb-save-grid {
+        display: grid;
+        gap: 14px;
+      }
+
+      .cb-root {
+        gap: 16px;
+      }
+
+      .cb-grid {
+        display: grid;
+        grid-template-columns: minmax(260px, 300px) minmax(0, 1fr);
+        gap: 16px;
+        align-items: start;
+      }
+
+      .cb-grid.is-loading {
+        opacity: 0.72;
+      }
+
+      .cb-side {
+        grid-column: 1;
+        grid-row: 1 / span 2;
+        position: sticky;
+        top: 88px;
+      }
+
+      .cb-main,
+      .cb-detail {
+        grid-column: 2;
+      }
+
+      .cb-hero,
+      .cb-card,
+      .cb-save-card {
+        padding: 18px;
+        border: 1px solid rgba(148, 163, 184, 0.18);
+        border-radius: 18px;
+        background: #ffffff;
+        box-shadow: 0 12px 28px rgba(15, 23, 42, 0.06);
+      }
+
+      .cb-hero {
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+        align-items: flex-start;
+      }
+
+      .cb-head,
+      .cb-row,
+      .cb-two,
+      .cb-toggle {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+      }
+
+      .cb-kicker {
+        margin: 0 0 6px;
+        color: #475569;
+        font-size: 0.76rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .cb-hero h2,
+      .cb-card h3 {
+        margin: 0;
+      }
+
+      .cb-hero h2 + .cb-muted,
+      .cb-card > h3 + *,
+      .cb-card > .cb-head + * {
+        margin-top: 10px;
+      }
+
+      .cb-muted,
+      .cb-post p,
+      .cb-reply p,
+      .cb-body,
+      .cb-save-card p,
+      .cb-save-card small {
+        margin: 0;
+        color: #64748b;
+        line-height: 1.7;
+      }
+
+      .cb-loading,
+      .cb-error {
+        margin: 0;
+        padding: 12px 14px;
+        border-radius: 14px;
+      }
+
+      .cb-loading {
+        background: #eff6ff;
+        color: #1d4ed8;
+        font-weight: 700;
+      }
+
+      .cb-error {
+        background: #fef2f2;
+        color: #b91c1c;
+      }
+
+      .cb-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 6px 10px;
+        border-radius: 999px;
+        border: 1px solid rgba(148, 163, 184, 0.18);
+        background: #f8fafc;
+        color: #334155;
+        font-size: 0.8rem;
+        font-weight: 700;
+      }
+
+      .cb-badge-title {
+        background: #eef2ff;
+        border-color: rgba(99, 102, 241, 0.12);
+      }
+
+      .cb-form label,
+      .cb-form span {
+        display: grid;
+        gap: 6px;
+      }
+
+      .cb-form input,
+      .cb-form select,
+      .cb-form textarea {
+        width: 100%;
+        padding: 11px 13px;
+        border: 1px solid rgba(148, 163, 184, 0.26);
+        border-radius: 12px;
+        background: #ffffff;
+        font: inherit;
+        color: #0f172a;
+      }
+
+      .cb-form textarea {
+        min-height: 140px;
+        resize: vertical;
+      }
+
+      .cb-form input:focus,
+      .cb-form select:focus,
+      .cb-form textarea:focus {
+        outline: none;
+        border-color: rgba(37, 99, 235, 0.5);
+        box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.08);
+      }
+
+      .cb-toggle {
+        padding: 4px;
+        border-radius: 14px;
+        border: 1px solid rgba(148, 163, 184, 0.18);
+        background: #f8fafc;
+      }
+
+      .cb-toggle button,
+      .cb-cat,
+      .cb-post,
+      .cb-text {
+        border: 0;
+        background: transparent;
+        color: inherit;
+        font: inherit;
+      }
+
+      .cb-toggle button {
+        flex: 1;
+        padding: 9px 12px;
+        border-radius: 10px;
+        cursor: pointer;
+        font-weight: 700;
+        color: #475569;
+      }
+
+      .cb-toggle .is-active {
+        background: #0f172a;
+        color: #ffffff;
+      }
+
+      .cb-cats {
+        gap: 10px;
+      }
+
+      .cb-cat {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px 14px;
+        border-radius: 14px;
+        border: 1px solid rgba(148, 163, 184, 0.18);
+        background: #ffffff;
+        cursor: pointer;
+      }
+
+      .cb-cat.is-active {
+        background: #0f172a;
+        border-color: #0f172a;
+        color: #ffffff;
+      }
+
+      .cb-scroll {
+        max-height: 520px;
+        overflow: auto;
+      }
+
+      .cb-post {
+        display: grid;
+        gap: 10px;
+        width: 100%;
+        padding: 15px;
+        border-radius: 16px;
+        border: 1px solid rgba(148, 163, 184, 0.18);
+        background: #ffffff;
+        text-align: left;
+        cursor: pointer;
+      }
+
+      .cb-post:hover,
+      .cb-post.is-active {
+        border-color: rgba(37, 99, 235, 0.24);
+        background: #f8fafc;
+      }
+
+      .cb-post strong {
+        font-size: 1rem;
+      }
+
+      .cb-post small {
+        color: #64748b;
+      }
+
+      .cb-body {
+        white-space: pre-wrap;
+      }
+
+      .cb-reply {
+        display: grid;
+        gap: 8px;
+        padding: 14px 0;
+        border-top: 1px solid rgba(148, 163, 184, 0.18);
+      }
+
+      .cb-reply:first-child {
+        padding-top: 0;
+        border-top: 0;
+      }
+
+      .cb-save-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .cb-save-card {
+        padding: 16px;
+        border: 1px solid rgba(148, 163, 184, 0.18);
+        border-radius: 16px;
+        background: #f8fafc;
+      }
+
+      .cb-text {
+        cursor: pointer;
+        color: #2563eb;
+        font-weight: 700;
+      }
+
+      @media (max-width: 1100px) {
+        .cb-grid,
+        .cb-save-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .cb-side,
+        .cb-main,
+        .cb-detail {
+          grid-column: auto;
+          grid-row: auto;
+        }
+
+        .cb-side {
+          position: static;
+        }
+
+        .cb-scroll {
+          max-height: none;
+        }
+      }
+
+      @media (max-width: 640px) {
+        .cb-hero {
+          flex-direction: column;
+        }
+      }
+    `;
     document.head.append(style);
   }
 
