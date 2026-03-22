@@ -1441,6 +1441,9 @@ function buildArmyGuidePairKey(leftId, rightId) {
 function buildArmyGuideMaps() {
   const pairScores = new Map();
   const slotScores = new Map();
+  const vicePairScores = new Map();
+  const aidePairScores = new Map();
+  const templateScores = new Map();
 
   for (const character of preparedCharacters) {
     const placements = character.guide?.latestFormation?.placements ?? [];
@@ -1469,9 +1472,35 @@ function buildArmyGuideMaps() {
       }
     }
 
+    const templateKey = buildArmyGuideTemplateKeyFromMembers(
+      mapped.map((placement) => ({
+        slotKey: normalizeArmyGuideSlotKey(placement.slot),
+        character: placement.character
+      }))
+    );
+    templateScores.set(templateKey, (templateScores.get(templateKey) ?? 0) + 1);
+
     const commanderPlacement = mapped.find((row) => row.slot === "主将");
     if (!commanderPlacement) {
       continue;
+    }
+
+    const vicePair = mapped.filter((placement) => placement.slot === "副将1" || placement.slot === "副将2");
+    if (vicePair.length >= 2) {
+      const key = buildArmyGuideMemberGroupKey(
+        commanderPlacement.character.id,
+        vicePair.map((placement) => placement.character.id)
+      );
+      vicePairScores.set(key, (vicePairScores.get(key) ?? 0) + 1);
+    }
+
+    const aidePair = mapped.filter((placement) => placement.slot === "補佐1" || placement.slot === "補佐2");
+    if (aidePair.length >= 2) {
+      const key = buildArmyGuideMemberGroupKey(
+        commanderPlacement.character.id,
+        aidePair.map((placement) => placement.character.id)
+      );
+      aidePairScores.set(key, (aidePairScores.get(key) ?? 0) + 1);
     }
 
     for (const placement of mapped) {
@@ -1484,7 +1513,101 @@ function buildArmyGuideMaps() {
     }
   }
 
-  return { pairScores, slotScores };
+  return { pairScores, slotScores, vicePairScores, aidePairScores, templateScores };
+}
+
+function normalizeArmyGuideSlotKey(slotKey) {
+  const normalized = String(slotKey ?? "");
+  if (normalized === "主将" || normalized === "commander") {
+    return "commander";
+  }
+  if (normalized === "副将1" || normalized === "vice1") {
+    return "vice1";
+  }
+  if (normalized === "副将2" || normalized === "vice2") {
+    return "vice2";
+  }
+  if (normalized === "補佐1" || normalized === "aide1") {
+    return "aide1";
+  }
+  if (normalized === "補佐2" || normalized === "aide2") {
+    return "aide2";
+  }
+  return normalized;
+}
+
+function buildArmyGuideMemberGroupKey(commanderId, memberIds = []) {
+  return `${commanderId}:${[...memberIds].sort((left, right) => left - right).join("-")}`;
+}
+
+function buildArmyGuideTemplateKeyFromMembers(unitMembers = []) {
+  const summary = {
+    burst: 0,
+    frontline: 0,
+    support: 0,
+    disruptor: 0,
+    siege: 0,
+    heal: 0,
+    cleanse: 0,
+    counter: 0,
+    slotCounts: { commander: 0, vice: 0, aide: 0 },
+    typeCounts: {}
+  };
+
+  unitMembers.forEach((member) => {
+    const slotKey = normalizeArmyGuideSlotKey(member.slotKey ?? member.slot ?? member.label);
+    const slotFamily = slotKey.startsWith("vice") ? "vice" : slotKey.startsWith("aide") ? "aide" : "commander";
+    const character = member.character ?? member.meta?.character ?? null;
+    const roleTags = member.roleTags ?? member.meta?.roleTags ?? (character ? getArmyRoleTags(character) : []);
+
+    summary.slotCounts[slotFamily] = (summary.slotCounts[slotFamily] ?? 0) + 1;
+
+    if (roleTags.includes("role.burst-commander")) {
+      summary.burst += 1;
+    }
+    if (roleTags.includes("role.frontline-anchor")) {
+      summary.frontline += 1;
+    }
+    if (roleTags.includes("role.flex-support")) {
+      summary.support += 1;
+    }
+    if (roleTags.includes("role.disruptor")) {
+      summary.disruptor += 1;
+    }
+    if (roleTags.includes("role.siege-breaker")) {
+      summary.siege += 1;
+    }
+    if (roleTags.includes("support.heal")) {
+      summary.heal += 1;
+    }
+    if (roleTags.includes("support.cleanse")) {
+      summary.cleanse += 1;
+    }
+    if (roleTags.includes("role.counter-enabler")) {
+      summary.counter += 1;
+    }
+
+    if (character?.type) {
+      summary.typeCounts[character.type] = (summary.typeCounts[character.type] ?? 0) + 1;
+    }
+  });
+
+  return [
+    `cmd:${summary.slotCounts.commander ?? 0}`,
+    `vice:${summary.slotCounts.vice ?? 0}`,
+    `aide:${summary.slotCounts.aide ?? 0}`,
+    `burst:${Math.min(summary.burst, 3)}`,
+    `front:${Math.min(summary.frontline, 3)}`,
+    `support:${Math.min(summary.support, 3)}`,
+    `disrupt:${Math.min(summary.disruptor, 3)}`,
+    `siege:${Math.min(summary.siege, 3)}`,
+    `heal:${Math.min(summary.heal, 2)}`,
+    `cleanse:${Math.min(summary.cleanse, 2)}`,
+    `counter:${Math.min(summary.counter, 2)}`,
+    ...Object.keys(summary.typeCounts)
+      .sort()
+      .map((typeKey) => `type-${typeKey}:${summary.typeCounts[typeKey]}`)
+  ].join("|");
 }
 
 function getArmyGuidePairScore(leftCharacter, rightCharacter) {
@@ -1501,6 +1624,201 @@ function getArmyGuideSlotScore(commander, slotLabel, targetCharacter) {
   }
 
   return ARMY_GUIDE_DATA.slotScores.get(`${commander.id}:${slotLabel}:${targetCharacter.id}`) ?? 0;
+}
+
+function getArmyGuideVicePairScore(commander, viceA, viceB) {
+  if (!commander || !viceA || !viceB) {
+    return 0;
+  }
+
+  return ARMY_GUIDE_DATA.vicePairScores.get(
+    buildArmyGuideMemberGroupKey(commander.id, [viceA.id, viceB.id])
+  ) ?? 0;
+}
+
+function getArmyGuideAidePairScore(commander, aideA, aideB) {
+  if (!commander || !aideA || !aideB) {
+    return 0;
+  }
+
+  return ARMY_GUIDE_DATA.aidePairScores.get(
+    buildArmyGuideMemberGroupKey(commander.id, [aideA.id, aideB.id])
+  ) ?? 0;
+}
+
+function getArmyGuideTemplateScore(unitMembers = []) {
+  if (!unitMembers.length) {
+    return 0;
+  }
+
+  return ARMY_GUIDE_DATA.templateScores.get(buildArmyGuideTemplateKeyFromMembers(unitMembers)) ?? 0;
+}
+
+function summarizeArmyUnitPattern(unitMembers = []) {
+  const summary = {
+    burst: 0,
+    frontline: 0,
+    support: 0,
+    disruptor: 0,
+    siege: 0,
+    heal: 0,
+    cleanse: 0,
+    counter: 0,
+    utilityAides: 0,
+    burstAides: 0,
+    slotCounts: { commander: 0, vice: 0, aide: 0 },
+    typeCounts: {}
+  };
+
+  unitMembers.forEach((member) => {
+    const roleSet = member.meta?.roleTagSet ?? new Set(member.roleTags ?? []);
+    const slotKey = normalizeArmyGuideSlotKey(member.slotKey ?? member.slot ?? member.label);
+    const slotFamily = slotKey.startsWith("vice") ? "vice" : slotKey.startsWith("aide") ? "aide" : "commander";
+    const character = member.meta?.character ?? member.character ?? null;
+    const isUtilityMember =
+      roleSet.has("role.flex-support") ||
+      roleSet.has("role.frontline-anchor") ||
+      roleSet.has("role.disruptor") ||
+      roleSet.has("support.heal") ||
+      roleSet.has("support.cleanse") ||
+      roleSet.has("def.damage-cut") ||
+      roleSet.has("def.debuff-immunity");
+
+    summary.slotCounts[slotFamily] = (summary.slotCounts[slotFamily] ?? 0) + 1;
+
+    if (roleSet.has("role.burst-commander")) {
+      summary.burst += 1;
+      if (slotFamily === "aide") {
+        summary.burstAides += 1;
+      }
+    }
+    if (roleSet.has("role.frontline-anchor")) {
+      summary.frontline += 1;
+    }
+    if (roleSet.has("role.flex-support")) {
+      summary.support += 1;
+    }
+    if (roleSet.has("role.disruptor")) {
+      summary.disruptor += 1;
+    }
+    if (roleSet.has("role.siege-breaker")) {
+      summary.siege += 1;
+    }
+    if (roleSet.has("support.heal")) {
+      summary.heal += 1;
+    }
+    if (roleSet.has("support.cleanse")) {
+      summary.cleanse += 1;
+    }
+    if (roleSet.has("role.counter-enabler")) {
+      summary.counter += 1;
+    }
+    if (slotFamily === "aide" && isUtilityMember) {
+      summary.utilityAides += 1;
+    }
+    if (character?.type) {
+      summary.typeCounts[character.type] = (summary.typeCounts[character.type] ?? 0) + 1;
+    }
+  });
+
+  summary.uniqueTypes = Object.keys(summary.typeCounts).length;
+  summary.maxTypeCount = Math.max(...Object.values(summary.typeCounts), 0);
+  return summary;
+}
+
+function getArmyGuideClusterScore(unitMembers = []) {
+  if (!unitMembers.length) {
+    return 0;
+  }
+
+  const commander = unitMembers.find((member) => normalizeArmyGuideSlotKey(member.slotKey) === "commander");
+  const viceMembers = unitMembers.filter((member) => normalizeArmyGuideSlotKey(member.slotKey).startsWith("vice"));
+  const aideMembers = unitMembers.filter((member) => normalizeArmyGuideSlotKey(member.slotKey).startsWith("aide"));
+  const guideTemplateScore = getArmyGuideTemplateScore(unitMembers);
+  const vicePairScore =
+    commander && viceMembers.length >= 2
+      ? getArmyGuideVicePairScore(commander.meta.character, viceMembers[0].meta.character, viceMembers[1].meta.character)
+      : 0;
+  const aidePairScore =
+    commander && aideMembers.length >= 2
+      ? getArmyGuideAidePairScore(commander.meta.character, aideMembers[0].meta.character, aideMembers[1].meta.character)
+      : 0;
+
+  return clampArmyScore(vicePairScore * 28 + aidePairScore * 24 + guideTemplateScore * 16);
+}
+
+function getArmyExpertUnitPatternScore(unitMembers = [], concept) {
+  if (!unitMembers.length) {
+    return 0;
+  }
+
+  const summary = summarizeArmyUnitPattern(unitMembers);
+  const hasAnchor = summary.frontline >= 1;
+  const hasSupport = summary.support >= 1;
+  const hasUtility = summary.disruptor >= 1 || summary.heal >= 1 || summary.cleanse >= 1;
+  const hasPressure = summary.burst >= 1 || summary.siege >= 1;
+
+  let score = 22;
+  score += hasAnchor ? 12 : -8;
+  score += hasSupport ? 12 : -6;
+  score += hasUtility ? 10 : 0;
+  score += hasPressure ? 10 : -6;
+  score += summary.utilityAides >= 1 ? 10 : -8;
+  score += summary.utilityAides >= 2 ? 6 : 0;
+  score += summary.uniqueTypes >= 3 ? 8 : summary.uniqueTypes === 2 ? 4 : 0;
+  score += summary.maxTypeCount <= 3 ? 6 : 0;
+  score += summary.burst >= 1 && summary.burst <= 3 ? 8 : summary.burst === 4 ? 2 : 0;
+  score -= Math.max(0, summary.maxTypeCount - 3) * 7;
+  score -= summary.burstAides >= 2 ? 8 : 0;
+
+  if (concept?.primaryObjective === "pvp") {
+    score += summary.disruptor >= 1 ? 10 : -6;
+    score += hasAnchor && hasSupport ? 8 : 0;
+    score += summary.support >= 2 && summary.burst >= 1 ? 6 : 0;
+    score += summary.cleanse >= 1 || summary.heal >= 1 ? 6 : 0;
+  } else if (concept?.primaryObjective === "siege") {
+    score += summary.siege >= 1 ? 12 : -10;
+    score += summary.support >= 1 ? 8 : 0;
+    score += summary.frontline >= 1 ? 6 : 0;
+  } else if (concept?.primaryObjective === "defense") {
+    score += summary.frontline >= 2 ? 12 : hasAnchor ? 6 : -8;
+    score += summary.heal >= 1 || summary.cleanse >= 1 ? 10 : -4;
+    score += summary.disruptor >= 1 ? 6 : 0;
+  } else if (concept?.primaryObjective === "gathering") {
+    score += summary.support >= 1 ? 8 : 0;
+    score += summary.frontline >= 1 ? 4 : 0;
+  } else {
+    score += hasAnchor && hasSupport && hasPressure ? 8 : 0;
+  }
+
+  return clampArmyScore(score);
+}
+
+function getArmyExpertCoverageScore(units = [], concept) {
+  if (!units.length) {
+    return 0;
+  }
+
+  const roleCount = (tag) => units.filter((unit) => unit.roleTags.includes(tag)).length;
+  const selfSufficientUnits = units.filter((unit) => (unit.expertPatternScore ?? 0) >= 58).length;
+  let score =
+    averageArmyValues(units.map((unit) => unit.expertPatternScore ?? 0)) * 0.72 +
+    averageArmyValues(units.map((unit) => unit.guideClusterScore ?? 0)) * 0.14 +
+    (selfSufficientUnits / Math.max(units.length, 1)) * 100 * 0.14;
+
+  if (concept?.primaryObjective === "pvp") {
+    score += roleCount("role.frontline-anchor") >= 2 ? 8 : 0;
+    score += roleCount("role.flex-support") >= 2 ? 8 : 0;
+    score += roleCount("role.disruptor") >= 2 ? 10 : roleCount("role.disruptor") >= 1 ? 4 : 0;
+  } else if (concept?.primaryObjective === "siege") {
+    score += roleCount("role.siege-breaker") >= 2 ? 10 : roleCount("role.siege-breaker") >= 1 ? 4 : 0;
+    score += roleCount("role.flex-support") >= 2 ? 6 : 0;
+  } else if (concept?.primaryObjective === "defense") {
+    score += roleCount("role.frontline-anchor") >= 3 ? 10 : roleCount("role.frontline-anchor") >= 2 ? 6 : 0;
+    score += roleCount("support.cleanse") >= 1 || roleCount("support.heal") >= 1 ? 8 : 0;
+  }
+
+  return clampArmyScore(score);
 }
 
 function normalizeChainRate(rate) {
@@ -2894,12 +3212,14 @@ function getArmyUnitMetaPriorScore(unit, concept, formation) {
   const pairAverage = averageArmyValues(
     viceMembers.map((member) => getArmyGuidePairScore(commanderMeta.character, member.meta.character) * 18)
   );
+  const guideClusterScore = unit.guideClusterScore ?? getArmyGuideClusterScore(unit.unitMembers);
+  const expertPatternScore = unit.expertPatternScore ?? getArmyExpertUnitPatternScore(unit.unitMembers, concept);
   const objectiveMatch =
     averageArmyValues(unit.unitMembers.map((member) => member.meta.objectiveScores?.[concept.primaryObjective] ?? 50)) / 100;
   const formationMatch = formation.key === getConceptRecommendedFormationKey(concept) ? 1 : 0.82;
 
   return clampArmyScore(
-    (guideAverage * 0.72 + pairAverage * 0.28) *
+    (guideAverage * 0.42 + pairAverage * 0.12 + guideClusterScore * 0.24 + expertPatternScore * 0.22) *
       ARMY_META_PRIOR_FACTORS.sourceTrust *
       ARMY_META_PRIOR_FACTORS.recency *
       formationMatch *
@@ -3106,20 +3426,24 @@ function buildArmyUnitCandidate(commanderMeta, viceMetaA, viceMetaB, aideMetaA, 
       getArmyGuideBonus(commanderMeta, aides[1].meta, aides[1].slotKey === "aide1" ? "補佐1" : "補佐2")
     ])
   );
+  const guideClusterScore = getArmyGuideClusterScore(unitMembers);
+  const expertPatternScore = getArmyExpertUnitPatternScore(unitMembers, concept);
   const roleBreadthScore = clampArmyScore(
     new Set(unitMembers.flatMap((member) => member.meta.roleTags)).size * 8
   );
   const synergyScore = clampArmyScore(
-    averageArmyValues(chainScores) * 0.44 +
-      guideBonusScore * 0.2 +
-      roleBreadthScore * 0.18 +
+    averageArmyValues(chainScores) * 0.36 +
+      guideBonusScore * 0.14 +
+      guideClusterScore * 0.12 +
+      expertPatternScore * 0.12 +
+      roleBreadthScore * 0.14 +
       averageArmyValues([
         getArmyTacticSupportScore(commanderMeta, viceOrder.vice1, "vice1"),
         getArmyTacticSupportScore(commanderMeta, viceOrder.vice2, "vice2"),
         aides[0].fitness.supportMatch,
         aides[1].fitness.supportMatch
       ]) *
-        0.18
+        0.12
   );
   const tempoScore = clampArmyScore(
     getArmyTempoOrderValue(commanderMeta.character, concept) * 0.46 +
@@ -3172,7 +3496,9 @@ function buildArmyUnitCandidate(commanderMeta, viceMetaA, viceMetaB, aideMetaA, 
     sustainScore,
     utilityScore,
     investmentScore,
-    powerScore
+    powerScore,
+    guideClusterScore,
+    expertPatternScore
   };
   const rowScores = getArmyUnitRowScores(unitMembers, concept);
   const defaultRow = keepTopArmyEntries(
@@ -3197,7 +3523,9 @@ function buildArmyUnitCandidate(commanderMeta, viceMetaA, viceMetaB, aideMetaA, 
       rowScores,
       defaultRow,
       scoreBreakdown,
-      roleTags
+      roleTags,
+      guideClusterScore,
+      expertPatternScore
     },
     concept,
     defaultFormationContext.formation,
@@ -3213,8 +3541,9 @@ function buildArmyUnitCandidate(commanderMeta, viceMetaA, viceMetaB, aideMetaA, 
     powerScore >= 82 || scoreAxes.powerCurrent >= 82 ? `戦力寄与が高く、5人合計の部隊戦力が伸びやすい` : "",
     scoreAxes.burst20s >= 68 ? "前半20秒の戦法火力が出やすい" : "",
     scoreAxes.controlUptime >= 66 ? "妨害や強化解除を早い時間帯に通しやすい" : "",
+    expertPatternScore >= 66 ? "猛者編成で多い 前衛+支援+火力 の骨格に近い" : "",
     highTags.length ? `コンセプト一致タグ: ${highTags.slice(0, 4).join(" / ")}` : "",
-    guideBonusScore >= 36 ? "GameWith のおすすめ編成に近い組み合わせが含まれる" : "",
+    guideClusterScore >= 40 ? "おすすめ編成でよく見る副将ペア / 補佐ペアに近い" : guideBonusScore >= 36 ? "GameWith のおすすめ編成に近い組み合わせが含まれる" : "",
     roleTags.includes("role.flex-support") ? "補佐が支援役を埋めて、技能条件が崩れにくい" : ""
   ].filter(Boolean);
 
@@ -3222,6 +3551,7 @@ function buildArmyUnitCandidate(commanderMeta, viceMetaA, viceMetaB, aideMetaA, 
     averageArmyValues(chainScores) < 40 ? "副将連鎖率は高めではない" : "",
     !roleTags.includes("role.frontline-anchor") ? "前列維持役が薄い" : "",
     !roleTags.includes("role.flex-support") ? "補佐の支援色は弱め" : "",
+    expertPatternScore < 42 ? "火力役に寄りすぎて、実戦型の骨格が薄い" : "",
     scoreAxes.cleanseCoverage < 38 && concept.key === "defense" ? "防衛安定向けとしては弱化解除が不足しやすい" : "",
     scoreAxes.formationFit < 48 ? "おすすめ陣形に置いても列適性が伸び切りにくい" : ""
   ].filter(Boolean);
@@ -3245,6 +3575,8 @@ function buildArmyUnitCandidate(commanderMeta, viceMetaA, viceMetaB, aideMetaA, 
     synergyScore,
     sustainScore,
     guideBonusScore,
+    guideClusterScore,
+    expertPatternScore,
     reasons: reasons.slice(0, 4),
     warnings: warnings.slice(0, 3),
     roleTags,
@@ -3729,14 +4061,16 @@ function evaluateArmyComposition(units, concept, seedMeta) {
       ruleCoverage.map((rule) => rule.ratio * 100 * Math.max(rule.weight ?? 1, 0.4))
     )
   );
+  const expertCoverageScore = getArmyExpertCoverageScore(augmentedUnits, concept);
   const commanderQualityScore = clampArmyScore(
     averageArmyValues(
       augmentedUnits.map((unit) => getArmySlotBaseScore(getArmyMeta(unit.commander), "commander", concept))
     )
   );
   const synergyCoverageScore = clampArmyScore(
-    averageArmyValues(augmentedUnits.map((unit) => unit.chainAverage)) * 0.42 +
-      averageArmyValues(augmentedUnits.map((unit) => unit.synergyScore)) * 0.58
+    averageArmyValues(augmentedUnits.map((unit) => unit.chainAverage)) * 0.34 +
+      averageArmyValues(augmentedUnits.map((unit) => unit.synergyScore)) * 0.46 +
+      expertCoverageScore * 0.2
   );
   const stabilityScore = clampArmyScore(
     averageArmyValues(augmentedUnits.map((unit) => unit.sustainScore)) * 0.62 +
@@ -3746,8 +4080,9 @@ function evaluateArmyComposition(units, concept, seedMeta) {
     averageArmyValues(
       augmentedUnits.map((unit) => unit.scoreBreakdown.objectiveFitScore)
     ) *
-      0.62 +
-      roleCoverageScore * 0.38
+      0.54 +
+      roleCoverageScore * 0.28 +
+      expertCoverageScore * 0.18
   );
   const investmentEfficiencyScore = clampArmyScore(
     averageArmyValues(augmentedUnits.map((unit) => unit.scoreBreakdown.investmentScore))
@@ -3765,6 +4100,7 @@ function evaluateArmyComposition(units, concept, seedMeta) {
     const aides = unit.unitMembers.filter((member) => member.slotKey.startsWith("aide"));
     return averageArmyValues(aides.map((member) => member.slotBaseScore)) < 56;
   }).length;
+  const brittleUnits = augmentedUnits.filter((unit) => (unit.expertPatternScore ?? 0) < 48).length;
 
   if (rowCounts.front < (concept.rowTarget?.front ?? 0)) {
     penalties.missingFrontline = ARMY_PENALTY_MAP.missingFrontline ?? 15;
@@ -3877,14 +4213,16 @@ function evaluateArmyCompositionForFormation(units, concept, seedMeta, formation
       ruleCoverage.map((rule) => rule.ratio * 100 * Math.max(rule.weight ?? 1, 0.4))
     )
   );
+  const expertCoverageScore = getArmyExpertCoverageScore(augmentedUnits, concept);
   const commanderQualityScore = clampArmyScore(
     averageArmyValues(
       augmentedUnits.map((unit) => getArmySlotBaseScore(getArmyMeta(unit.commander), "commander", concept))
     )
   );
   const synergyCoverageScore = clampArmyScore(
-    averageArmyValues(augmentedUnits.map((unit) => unit.chainAverage)) * 0.42 +
-      averageArmyValues(augmentedUnits.map((unit) => unit.synergyScore)) * 0.58
+    averageArmyValues(augmentedUnits.map((unit) => unit.chainAverage)) * 0.34 +
+      averageArmyValues(augmentedUnits.map((unit) => unit.synergyScore)) * 0.46 +
+      expertCoverageScore * 0.2
   );
   const stabilityScore = clampArmyScore(
     averageArmyValues(augmentedUnits.map((unit) => unit.sustainScore)) * 0.62 +
@@ -3894,8 +4232,9 @@ function evaluateArmyCompositionForFormation(units, concept, seedMeta, formation
     averageArmyValues(
       augmentedUnits.map((unit) => unit.scoreBreakdown.objectiveFitScore)
     ) *
-      0.62 +
-      roleCoverageScore * 0.38
+      0.54 +
+      roleCoverageScore * 0.28 +
+      expertCoverageScore * 0.18
   );
   const investmentEfficiencyScore = clampArmyScore(
     averageArmyValues(augmentedUnits.map((unit) => unit.scoreBreakdown.investmentScore))
@@ -3922,6 +4261,7 @@ function evaluateArmyCompositionForFormation(units, concept, seedMeta, formation
     const aides = unit.unitMembers.filter((member) => member.slotKey.startsWith("aide"));
     return averageArmyValues(aides.map((member) => member.slotBaseScore)) < 56;
   }).length;
+  const brittleUnits = augmentedUnits.filter((unit) => (unit.expertPatternScore ?? 0) < 48).length;
 
   if (rowCounts.front < (concept.rowTarget?.front ?? 0)) {
     penalties.missingFrontline = ARMY_PENALTY_MAP.missingFrontline ?? 15;
@@ -3943,6 +4283,9 @@ function evaluateArmyCompositionForFormation(units, concept, seedMeta, formation
   }
   if (lowAideUnits >= 2) {
     penalties.badAideUsage = Math.round((ARMY_PENALTY_MAP.badAideUsage ?? 12) * (lowAideUnits / 3));
+  }
+  if (brittleUnits >= 2) {
+    penalties.brittleMetaFrame = Math.round(brittleUnits * 2.5);
   }
   const rowDelta = ARMY_BUILDER_ROW_KEYS.reduce((sum, rowKey) => {
     return sum + Math.abs((rowCounts[rowKey] ?? 0) - (concept.rowTarget?.[rowKey] ?? 0));
@@ -3995,7 +4338,9 @@ function evaluateArmyCompositionForFormation(units, concept, seedMeta, formation
     ),
     formationFit: formationFitScore,
     metaPrior: clampArmyScore(
-      averageArmyValues(augmentedUnits.map((unit) => unit.scoreAxes?.metaPrior ?? 0)) * 0.88 + roleCoverageScore * 0.12
+      averageArmyValues(augmentedUnits.map((unit) => unit.scoreAxes?.metaPrior ?? 0)) * 0.72 +
+        roleCoverageScore * 0.1 +
+        expertCoverageScore * 0.18
     ),
     roleCoverage: clampArmyScore(roleCoverageScore * 0.84 + averageArmyValues(augmentedUnits.map((unit) => unit.scoreAxes?.roleCoverage ?? 0)) * 0.16),
     investmentEfficiency: clampArmyScore(
@@ -4060,6 +4405,7 @@ function evaluateArmyCompositionForFormation(units, concept, seedMeta, formation
       missingRules[0] ? `${armyRoleTagLabel(missingRules[0].tag)} を埋める武将へ差し替える` : "",
       rowCounts.front < (concept.rowTarget?.front ?? 0) ? "前列向きの主将を増やす" : "",
       lowAideUnits >= 2 ? "補佐枠を支援寄りの武将へ差し替える" : "",
+      brittleUnits >= 2 ? "各部隊に 前衛 or 支援 の軸を入れて型崩れを減らす" : "",
       !activeFormationBonus ? "陣効果が未発動なのでタイプ構成を寄せる" : "",
       scoreAxes.cleanseCoverage < 42 && concept.key === "defense" ? "防衛安定では弱化解除か回復を増やす" : "",
       scoreAxes.controlUptime < 46 && concept.key === "debuff" ? "妨害先手では恐怖や強化解除を前半20秒へ寄せる" : ""
