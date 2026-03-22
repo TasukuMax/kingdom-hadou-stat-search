@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-03-21T16:36:37Z",
+  "updatedAt": "2026-03-22T20:53:46Z",
   "entries": [
     {
       "id": "rk-58004fb76d26",
@@ -25,6 +25,19 @@
       "proofImageUrl": "shared/uploads/3ae7e6ca9d944b56862852e000eb94e3.jpg",
       "proofFileName": "IMG_2693.png",
       "postedAt": "2026-03-21T14:09:39Z",
+      "isMine": false
+    },
+    {
+      "id": "rk-eae1ee43d4d3",
+      "boardKey": "overall",
+      "server": "1",
+      "playerName": "TestUser",
+      "powerType": "戦闘力",
+      "powerValue": 12345,
+      "comment": "",
+      "proofImageUrl": "shared/uploads/3436445053654826bf07ad6d33948428.png",
+      "proofFileName": "proof.png",
+      "postedAt": "2026-03-22T20:53:46Z",
       "isMine": false
     }
   ]
