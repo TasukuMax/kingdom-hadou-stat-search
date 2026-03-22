@@ -278,6 +278,24 @@ const ARMY_META_PRIOR_FACTORS = {
   recency: 0.88,
   softCap: 0.15
 };
+const ARMY_EXPERT_TEMPLATE_LABELS = {
+  "balanced-hybrid": "汎用混成型",
+  "support-engine": "支援主将型",
+  "utility-net": "妨害支援型",
+  "assault-shell": "突撃主将型",
+  "guarded-burst": "盾付き突撃型",
+  "siege-burst": "攻城混成型",
+  "fortress-wall": "防衛壁型"
+};
+const ARMY_EXPERT_TEMPLATE_FAMILY_MAP = {
+  "balanced-hybrid": "hybrid",
+  "support-engine": "support",
+  "utility-net": "support",
+  "assault-shell": "assault",
+  "guarded-burst": "assault",
+  "siege-burst": "siege",
+  "fortress-wall": "defense"
+};
 const ARMY_TIMELINE_WINDOWS = {
   burst: 20,
   sustain: 40,
@@ -1747,46 +1765,60 @@ function getArmyGuideClusterScore(unitMembers = []) {
   return clampArmyScore(vicePairScore * 28 + aidePairScore * 24 + guideTemplateScore * 16);
 }
 
-function getArmyExpertUnitPatternScore(unitMembers = [], concept) {
-  if (!unitMembers.length) {
-    return 0;
-  }
+function getArmyCommanderPatternFlags(commanderMeta) {
+  const roleSet = commanderMeta?.roleTagSet ?? new Set();
+  const commander = commanderMeta?.character ?? null;
+  return {
+    support: roleSet.has("role.flex-support") || commander?.type === "援",
+    frontline: roleSet.has("role.frontline-anchor") || commander?.type === "護",
+    burst: roleSet.has("role.burst-commander") || commander?.type === "闘",
+    siege: roleSet.has("role.siege-breaker"),
+    disruptor: roleSet.has("role.disruptor") || commander?.type === "妨"
+  };
+}
 
-  const summary = summarizeArmyUnitPattern(unitMembers);
+function getArmyExpertBasePatternScore(summary, commanderMeta, concept) {
+  const commanderFlags = getArmyCommanderPatternFlags(commanderMeta);
+  const sustainTools = summary.heal + summary.cleanse;
   const hasAnchor = summary.frontline >= 1;
   const hasSupport = summary.support >= 1;
-  const hasUtility = summary.disruptor >= 1 || summary.heal >= 1 || summary.cleanse >= 1;
+  const hasUtility = summary.disruptor >= 1 || sustainTools >= 1;
   const hasPressure = summary.burst >= 1 || summary.siege >= 1;
 
-  let score = 22;
-  score += hasAnchor ? 12 : -8;
-  score += hasSupport ? 12 : -6;
-  score += hasUtility ? 10 : 0;
-  score += hasPressure ? 10 : -6;
-  score += summary.utilityAides >= 1 ? 10 : -8;
-  score += summary.utilityAides >= 2 ? 6 : 0;
-  score += summary.uniqueTypes >= 3 ? 8 : summary.uniqueTypes === 2 ? 4 : 0;
+  let score = 18;
+  score += hasAnchor ? 8 : 0;
+  score += hasSupport ? 8 : -4;
+  score += hasUtility ? 8 : 0;
+  score += hasPressure ? 8 : -6;
+  score += summary.utilityAides >= 1 ? 8 : -4;
+  score += summary.utilityAides >= 2 ? 4 : 0;
+  score += summary.uniqueTypes >= 3 ? 8 : summary.uniqueTypes === 2 ? 3 : 0;
   score += summary.maxTypeCount <= 3 ? 6 : 0;
-  score += summary.burst >= 1 && summary.burst <= 3 ? 8 : summary.burst === 4 ? 2 : 0;
+  score += summary.burst >= 1 && summary.burst <= 3 ? 6 : summary.burst === 4 ? 2 : 0;
   score -= Math.max(0, summary.maxTypeCount - 3) * 7;
   score -= summary.burstAides >= 2 ? 8 : 0;
+  score += commanderFlags.support && summary.support >= 2 ? 10 : 0;
+  score += commanderFlags.frontline && summary.frontline >= 2 ? 10 : 0;
+  score += commanderFlags.burst && summary.burst >= 2 ? 10 : 0;
+  score += commanderFlags.siege && summary.siege >= 1 ? 8 : 0;
+  score += commanderFlags.disruptor && summary.disruptor >= 1 ? 8 : 0;
 
   if (concept?.primaryObjective === "pvp") {
-    score += summary.disruptor >= 1 ? 10 : -6;
-    score += hasAnchor && hasSupport ? 8 : 0;
-    score += summary.support >= 2 && summary.burst >= 1 ? 6 : 0;
-    score += summary.cleanse >= 1 || summary.heal >= 1 ? 6 : 0;
+    score += summary.disruptor >= 1 ? 8 : -4;
+    score += hasAnchor ? 6 : -4;
+    score += hasSupport ? 4 : 0;
+    score += sustainTools >= 1 ? 4 : 0;
   } else if (concept?.primaryObjective === "siege") {
-    score += summary.siege >= 1 ? 12 : -10;
-    score += summary.support >= 1 ? 8 : 0;
-    score += summary.frontline >= 1 ? 6 : 0;
+    score += summary.siege >= 1 ? 10 : -8;
+    score += hasSupport ? 5 : 0;
+    score += summary.burst >= 2 ? 5 : 0;
   } else if (concept?.primaryObjective === "defense") {
     score += summary.frontline >= 2 ? 12 : hasAnchor ? 6 : -8;
-    score += summary.heal >= 1 || summary.cleanse >= 1 ? 10 : -4;
-    score += summary.disruptor >= 1 ? 6 : 0;
+    score += sustainTools >= 1 ? 10 : -2;
+    score += hasSupport ? 6 : 0;
   } else if (concept?.primaryObjective === "gathering") {
-    score += summary.support >= 1 ? 8 : 0;
-    score += summary.frontline >= 1 ? 4 : 0;
+    score += hasSupport ? 8 : 0;
+    score += hasAnchor ? 4 : 0;
   } else {
     score += hasAnchor && hasSupport && hasPressure ? 8 : 0;
   }
@@ -1794,30 +1826,201 @@ function getArmyExpertUnitPatternScore(unitMembers = [], concept) {
   return clampArmyScore(score);
 }
 
+function getArmyExpertUnitPatternMatch(unitMembers = [], concept) {
+  if (!unitMembers.length) {
+    return {
+      key: "balanced-hybrid",
+      label: ARMY_EXPERT_TEMPLATE_LABELS["balanced-hybrid"],
+      family: ARMY_EXPERT_TEMPLATE_FAMILY_MAP["balanced-hybrid"],
+      score: 0,
+      summary: summarizeArmyUnitPattern([])
+    };
+  }
+
+  const summary = summarizeArmyUnitPattern(unitMembers);
+  const commanderMeta =
+    unitMembers.find((member) => normalizeArmyGuideSlotKey(member.slotKey) === "commander")?.meta ?? unitMembers[0]?.meta ?? null;
+  const commanderFlags = getArmyCommanderPatternFlags(commanderMeta);
+  const sustainTools = summary.heal + summary.cleanse;
+  const genericScore = getArmyExpertBasePatternScore(summary, commanderMeta, concept);
+
+  const candidates = [
+    {
+      key: "balanced-hybrid",
+      label: ARMY_EXPERT_TEMPLATE_LABELS["balanced-hybrid"],
+      family: ARMY_EXPERT_TEMPLATE_FAMILY_MAP["balanced-hybrid"],
+      score: genericScore
+    },
+    {
+      key: "support-engine",
+      label: ARMY_EXPERT_TEMPLATE_LABELS["support-engine"],
+      family: ARMY_EXPERT_TEMPLATE_FAMILY_MAP["support-engine"],
+      score: clampArmyScore(
+        18 +
+          (commanderFlags.support ? 24 : commanderFlags.disruptor ? 8 : -10) +
+          (summary.support >= 2 ? 18 : summary.support === 1 ? 8 : -10) +
+          (summary.utilityAides >= 1 ? 12 : -8) +
+          (summary.disruptor >= 1 ? 10 : 0) +
+          (summary.burst >= 1 ? 8 : -4) +
+          (sustainTools >= 1 ? 6 : 0) +
+          (summary.uniqueTypes >= 3 ? 6 : 0) +
+          (summary.maxTypeCount <= 3 ? 5 : -4) +
+          (summary.frontline >= 1 ? 4 : 0) +
+          (concept?.primaryObjective === "siege" && summary.siege >= 1 ? 8 : 0) -
+          (concept?.primaryObjective === "defense" && summary.frontline === 0 ? 8 : 0)
+      )
+    },
+    {
+      key: "utility-net",
+      label: ARMY_EXPERT_TEMPLATE_LABELS["utility-net"],
+      family: ARMY_EXPERT_TEMPLATE_FAMILY_MAP["utility-net"],
+      score: clampArmyScore(
+        16 +
+          (commanderFlags.support || commanderFlags.disruptor || commanderFlags.frontline ? 18 : -8) +
+          (summary.support >= 2 ? 14 : summary.support === 1 ? 6 : -8) +
+          (summary.disruptor >= 1 ? 12 : -2) +
+          (summary.utilityAides >= 2 ? 14 : summary.utilityAides >= 1 ? 8 : -8) +
+          (sustainTools >= 1 ? 8 : 0) +
+          (summary.burst >= 1 ? 4 : 0) +
+          (summary.maxTypeCount <= 3 ? 4 : -4)
+      )
+    },
+    {
+      key: "assault-shell",
+      label: ARMY_EXPERT_TEMPLATE_LABELS["assault-shell"],
+      family: ARMY_EXPERT_TEMPLATE_FAMILY_MAP["assault-shell"],
+      score: clampArmyScore(
+        18 +
+          (commanderFlags.burst ? 22 : commanderFlags.support ? 4 : -8) +
+          (summary.burst >= 2 ? 18 : summary.burst === 1 ? 8 : -12) +
+          (summary.support >= 1 ? 10 : -8) +
+          (summary.frontline >= 1 ? 8 : 0) +
+          (summary.utilityAides >= 1 ? 8 : -6) +
+          (summary.disruptor >= 1 ? 6 : 0) +
+          (summary.siege >= 1 ? 4 : 0) +
+          (summary.uniqueTypes >= 3 ? 6 : 0) +
+          (summary.maxTypeCount <= 3 ? 5 : -6) +
+          (concept?.primaryObjective === "pvp" && summary.frontline >= 1 && summary.support >= 1 ? 6 : 0) -
+          (concept?.primaryObjective === "defense" && summary.frontline === 0 ? 6 : 0)
+      )
+    },
+    {
+      key: "guarded-burst",
+      label: ARMY_EXPERT_TEMPLATE_LABELS["guarded-burst"],
+      family: ARMY_EXPERT_TEMPLATE_FAMILY_MAP["guarded-burst"],
+      score: clampArmyScore(
+        18 +
+          (commanderFlags.burst ? 18 : -6) +
+          (summary.burst >= 1 ? 10 : -12) +
+          (summary.frontline >= 2 ? 18 : summary.frontline === 1 ? 8 : -8) +
+          (summary.support >= 1 ? 8 : -8) +
+          (summary.utilityAides >= 1 ? 6 : 0) +
+          (sustainTools >= 1 ? 6 : 0) +
+          (summary.maxTypeCount <= 3 ? 4 : -4) +
+          (concept?.primaryObjective === "pvp" ? 8 : 0) +
+          (concept?.primaryObjective === "siege" ? 2 : 0)
+      )
+    },
+    {
+      key: "siege-burst",
+      label: ARMY_EXPERT_TEMPLATE_LABELS["siege-burst"],
+      family: ARMY_EXPERT_TEMPLATE_FAMILY_MAP["siege-burst"],
+      score: clampArmyScore(
+        18 +
+          (commanderFlags.burst || commanderFlags.siege ? 18 : -8) +
+          (summary.siege >= 1 ? 22 : -12) +
+          (summary.support >= 1 ? 10 : -6) +
+          (summary.burst >= 2 ? 10 : summary.burst === 1 ? 4 : -8) +
+          (summary.utilityAides >= 1 ? 10 : -8) +
+          (summary.frontline >= 1 ? 4 : 0) +
+          (summary.uniqueTypes >= 3 ? 6 : 0) +
+          (concept?.primaryObjective === "siege" ? 10 : 0)
+      )
+    },
+    {
+      key: "fortress-wall",
+      label: ARMY_EXPERT_TEMPLATE_LABELS["fortress-wall"],
+      family: ARMY_EXPERT_TEMPLATE_FAMILY_MAP["fortress-wall"],
+      score: clampArmyScore(
+        18 +
+          (commanderFlags.frontline ? 22 : -8) +
+          (summary.frontline >= 3 ? 20 : summary.frontline === 2 ? 12 : -10) +
+          (summary.support >= 1 ? 10 : -8) +
+          (sustainTools >= 1 ? 12 : 0) +
+          (summary.utilityAides >= 1 ? 6 : 0) +
+          (summary.disruptor >= 1 ? 4 : 0) +
+          (summary.maxTypeCount <= 3 ? 4 : -4) +
+          (summary.burst <= 2 ? 6 : 0) +
+          (concept?.primaryObjective === "defense" ? 10 : 0) -
+          (concept?.primaryObjective === "siege" ? 8 : 0)
+      )
+    }
+  ];
+
+  const best = candidates.reduce((currentBest, candidate) => {
+    if (!currentBest) {
+      return candidate;
+    }
+    return candidate.score > currentBest.score ? candidate : currentBest;
+  }, null);
+
+  return {
+    ...(best ?? candidates[0]),
+    score: clampArmyScore(best?.score ?? genericScore),
+    summary
+  };
+}
+
+function getArmyExpertUnitPatternScore(unitMembers = [], concept) {
+  return getArmyExpertUnitPatternMatch(unitMembers, concept).score;
+}
+
 function getArmyExpertCoverageScore(units = [], concept) {
   if (!units.length) {
     return 0;
   }
 
+  const patternEntries = units.map((unit) => unit.expertPattern ?? getArmyExpertUnitPatternMatch(unit.unitMembers, concept));
   const roleCount = (tag) => units.filter((unit) => unit.roleTags.includes(tag)).length;
-  const selfSufficientUnits = units.filter((unit) => (unit.expertPatternScore ?? 0) >= 58).length;
+  const selfSufficientUnits = patternEntries.filter((pattern) => (pattern.score ?? 0) >= 58).length;
+  const familyCounts = patternEntries.reduce((result, pattern) => {
+    const family = pattern.family ?? "hybrid";
+    result[family] = (result[family] ?? 0) + 1;
+    return result;
+  }, {});
+  const uniqueTemplateCount = new Set(patternEntries.map((pattern) => pattern.key)).size;
+  const maxFamilyCount = Math.max(...Object.values(familyCounts), 0);
   let score =
-    averageArmyValues(units.map((unit) => unit.expertPatternScore ?? 0)) * 0.72 +
+    averageArmyValues(patternEntries.map((pattern) => pattern.score ?? 0)) * 0.62 +
     averageArmyValues(units.map((unit) => unit.guideClusterScore ?? 0)) * 0.14 +
-    (selfSufficientUnits / Math.max(units.length, 1)) * 100 * 0.14;
+    (selfSufficientUnits / Math.max(units.length, 1)) * 100 * 0.12 +
+    (uniqueTemplateCount / Math.max(units.length, 1)) * 100 * 0.12;
 
   if (concept?.primaryObjective === "pvp") {
+    score += (familyCounts.support ?? 0) >= 1 ? 8 : -6;
+    score += (familyCounts.assault ?? 0) >= 2 ? 10 : (familyCounts.assault ?? 0) >= 1 ? 4 : -6;
+    score += (familyCounts.defense ?? 0) >= 1 ? 8 : 0;
     score += roleCount("role.frontline-anchor") >= 2 ? 8 : 0;
     score += roleCount("role.flex-support") >= 2 ? 8 : 0;
     score += roleCount("role.disruptor") >= 2 ? 10 : roleCount("role.disruptor") >= 1 ? 4 : 0;
   } else if (concept?.primaryObjective === "siege") {
+    score += (familyCounts.siege ?? 0) >= 1 ? 12 : -10;
+    score += (familyCounts.support ?? 0) >= 1 ? 8 : 0;
+    score += (familyCounts.assault ?? 0) >= 1 ? 6 : 0;
     score += roleCount("role.siege-breaker") >= 2 ? 10 : roleCount("role.siege-breaker") >= 1 ? 4 : 0;
     score += roleCount("role.flex-support") >= 2 ? 6 : 0;
   } else if (concept?.primaryObjective === "defense") {
+    score += (familyCounts.defense ?? 0) >= 1 ? 12 : -10;
+    score += (familyCounts.support ?? 0) >= 1 ? 8 : 0;
+    score += (familyCounts.assault ?? 0) >= 1 ? 4 : 0;
     score += roleCount("role.frontline-anchor") >= 3 ? 10 : roleCount("role.frontline-anchor") >= 2 ? 6 : 0;
     score += roleCount("support.cleanse") >= 1 || roleCount("support.heal") >= 1 ? 8 : 0;
+  } else {
+    score += (familyCounts.support ?? 0) >= 1 ? 6 : 0;
+    score += (familyCounts.assault ?? 0) >= 1 ? 6 : 0;
   }
 
+  score -= Math.max(0, maxFamilyCount - 3) * 5;
   return clampArmyScore(score);
 }
 
@@ -3213,7 +3416,8 @@ function getArmyUnitMetaPriorScore(unit, concept, formation) {
     viceMembers.map((member) => getArmyGuidePairScore(commanderMeta.character, member.meta.character) * 18)
   );
   const guideClusterScore = unit.guideClusterScore ?? getArmyGuideClusterScore(unit.unitMembers);
-  const expertPatternScore = unit.expertPatternScore ?? getArmyExpertUnitPatternScore(unit.unitMembers, concept);
+  const expertPattern = unit.expertPattern ?? getArmyExpertUnitPatternMatch(unit.unitMembers, concept);
+  const expertPatternScore = unit.expertPatternScore ?? expertPattern.score;
   const objectiveMatch =
     averageArmyValues(unit.unitMembers.map((member) => member.meta.objectiveScores?.[concept.primaryObjective] ?? 50)) / 100;
   const formationMatch = formation.key === getConceptRecommendedFormationKey(concept) ? 1 : 0.82;
@@ -3427,7 +3631,8 @@ function buildArmyUnitCandidate(commanderMeta, viceMetaA, viceMetaB, aideMetaA, 
     ])
   );
   const guideClusterScore = getArmyGuideClusterScore(unitMembers);
-  const expertPatternScore = getArmyExpertUnitPatternScore(unitMembers, concept);
+  const expertPattern = getArmyExpertUnitPatternMatch(unitMembers, concept);
+  const expertPatternScore = expertPattern.score;
   const roleBreadthScore = clampArmyScore(
     new Set(unitMembers.flatMap((member) => member.meta.roleTags)).size * 8
   );
@@ -3525,7 +3730,8 @@ function buildArmyUnitCandidate(commanderMeta, viceMetaA, viceMetaB, aideMetaA, 
       scoreBreakdown,
       roleTags,
       guideClusterScore,
-      expertPatternScore
+      expertPatternScore,
+      expertPattern
     },
     concept,
     defaultFormationContext.formation,
@@ -3541,7 +3747,7 @@ function buildArmyUnitCandidate(commanderMeta, viceMetaA, viceMetaB, aideMetaA, 
     powerScore >= 82 || scoreAxes.powerCurrent >= 82 ? `戦力寄与が高く、5人合計の部隊戦力が伸びやすい` : "",
     scoreAxes.burst20s >= 68 ? "前半20秒の戦法火力が出やすい" : "",
     scoreAxes.controlUptime >= 66 ? "妨害や強化解除を早い時間帯に通しやすい" : "",
-    expertPatternScore >= 66 ? "猛者編成で多い 前衛+支援+火力 の骨格に近い" : "",
+    expertPatternScore >= 62 ? `猛者編成で多い ${expertPattern.label} に近い` : "",
     highTags.length ? `コンセプト一致タグ: ${highTags.slice(0, 4).join(" / ")}` : "",
     guideClusterScore >= 40 ? "おすすめ編成でよく見る副将ペア / 補佐ペアに近い" : guideBonusScore >= 36 ? "GameWith のおすすめ編成に近い組み合わせが含まれる" : "",
     roleTags.includes("role.flex-support") ? "補佐が支援役を埋めて、技能条件が崩れにくい" : ""
@@ -3551,7 +3757,7 @@ function buildArmyUnitCandidate(commanderMeta, viceMetaA, viceMetaB, aideMetaA, 
     averageArmyValues(chainScores) < 40 ? "副将連鎖率は高めではない" : "",
     !roleTags.includes("role.frontline-anchor") ? "前列維持役が薄い" : "",
     !roleTags.includes("role.flex-support") ? "補佐の支援色は弱め" : "",
-    expertPatternScore < 42 ? "火力役に寄りすぎて、実戦型の骨格が薄い" : "",
+    expertPatternScore < 42 ? "部隊タイプが曖昧で、猛者編成の型に寄り切れていない" : "",
     scoreAxes.cleanseCoverage < 38 && concept.key === "defense" ? "防衛安定向けとしては弱化解除が不足しやすい" : "",
     scoreAxes.formationFit < 48 ? "おすすめ陣形に置いても列適性が伸び切りにくい" : ""
   ].filter(Boolean);
@@ -3577,6 +3783,7 @@ function buildArmyUnitCandidate(commanderMeta, viceMetaA, viceMetaB, aideMetaA, 
     guideBonusScore,
     guideClusterScore,
     expertPatternScore,
+    expertPattern,
     reasons: reasons.slice(0, 4),
     warnings: warnings.slice(0, 3),
     roleTags,
