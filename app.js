@@ -34,6 +34,9 @@ const SHARE_PARAM_KEY = "share";
 const SHARE_PAYLOAD_VERSION = 1;
 const BACKUP_VERSION = 1;
 const BACKUP_FILE_PREFIX = "kingdom-hadou-backup";
+const RUNTIME_CONFIG_URL = "./shared/runtime-config.json";
+const POPULAR_VIEW_LIMIT = 6;
+const DYNAMIC_VIEW_TRACK_PREFIX = "kh-dynamic-view";
 
 const SHARE_VIEW_HINTS = {
   power: "戦力検索のステータス条件、連鎖基準、絞り込みをURLに入れて共有します。",
@@ -158,6 +161,16 @@ TOOL_PAGE_DEFS.splice(TOOL_PAGE_DEFS.length - 1, 0, {
 });
 
 const TOOL_PAGE_BY_KEY = Object.fromEntries(TOOL_PAGE_DEFS.map((entry) => [entry.key, entry]));
+const dynamicSiteState = {
+  checked: false,
+  bridgeEnabled: false,
+  apiBase: "",
+  dynamicSiteUrl: "",
+  crossOrigin: false,
+  monthKey: "",
+  popularViews: [],
+  tracking: new Set()
+};
 const PAGE_MODE = document.body?.dataset.pageMode ?? "hub";
 const PAGE_TOOL_VIEW = VIEW_KEYS.includes(document.body?.dataset.toolView ?? "")
   ? document.body.dataset.toolView
@@ -2210,6 +2223,8 @@ const elements = {
   siteToolNav: document.querySelector("#siteToolNav"),
   siteShellModeLabel: document.querySelector("#siteShellModeLabel"),
   toolDirectoryGrid: document.querySelector("#toolDirectoryGrid"),
+  sitePopularSummary: document.querySelector("#sitePopularSummary"),
+  sitePopularTools: document.querySelector("#sitePopularTools"),
   toolPageBanner: document.querySelector("#toolPageBanner"),
   toolPageEyebrow: document.querySelector("#toolPageEyebrow"),
   toolPageTitle: document.querySelector("#toolPageTitle"),
@@ -3206,6 +3221,222 @@ function setActiveView(viewKey, options = {}) {
       behavior: "smooth"
     });
   }
+
+  renderPopularToolsPanel(nextView);
+  Promise.resolve(trackDynamicView(nextView)).catch(() => {});
+}
+
+function isDynamicSiteOrigin() {
+  const hostname = window.location.hostname || "";
+  return hostname === "127.0.0.1" || hostname === "localhost" || hostname.endsWith(".trycloudflare.com");
+}
+
+function applyDynamicRuntimeConfig(payload = {}) {
+  const dynamicApiBase = String(payload?.dynamicApiBase || "").trim().replace(/\/$/, "");
+  dynamicSiteState.bridgeEnabled = Boolean(payload?.bridgeEnabled && dynamicApiBase);
+  dynamicSiteState.apiBase = dynamicSiteState.bridgeEnabled ? dynamicApiBase : "";
+  dynamicSiteState.dynamicSiteUrl = String(payload?.dynamicSiteUrl || "").trim().replace(/\/$/, "");
+  dynamicSiteState.crossOrigin = Boolean(dynamicSiteState.apiBase && /^https?:\/\//.test(dynamicSiteState.apiBase));
+}
+
+async function loadDynamicSiteRuntimeConfig() {
+  if (isDynamicSiteOrigin()) {
+    applyDynamicRuntimeConfig({
+      bridgeEnabled: true,
+      dynamicApiBase: `${window.location.origin}/api`,
+      dynamicSiteUrl: window.location.origin
+    });
+    dynamicSiteState.checked = true;
+    renderPopularToolsPanel();
+    return;
+  }
+
+  try {
+    const response = await fetch(RUNTIME_CONFIG_URL, { cache: "no-store" });
+    if (response.ok) {
+      applyDynamicRuntimeConfig(await response.json());
+    }
+  } catch (error) {
+    // Ignore runtime bridge lookup failures on the static site.
+  } finally {
+    dynamicSiteState.checked = true;
+    renderPopularToolsPanel();
+  }
+}
+
+function buildDynamicApiUrl(path) {
+  if (!dynamicSiteState.apiBase) {
+    return path;
+  }
+  if (!dynamicSiteState.crossOrigin) {
+    return path;
+  }
+  return `${dynamicSiteState.apiBase}${path.replace(/^\/api/, "")}`;
+}
+
+async function requestDynamicSiteJson(path, options = {}) {
+  if (!dynamicSiteState.apiBase && !isDynamicSiteOrigin()) {
+    return null;
+  }
+
+  const headers = new Headers(options.headers || {});
+  if (options.body && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json;charset=utf-8");
+  }
+
+  const response = await fetch(buildDynamicApiUrl(path), {
+    method: options.method || "GET",
+    headers,
+    body: options.body,
+    cache: "no-store",
+    credentials: "omit",
+    mode: dynamicSiteState.crossOrigin ? "cors" : "same-origin"
+  });
+
+  if (!response.ok) {
+    throw new Error(`dynamic-site-request-failed-${response.status}`);
+  }
+
+  return response.status === 204 ? null : response.json();
+}
+
+function formatPopularMonth(monthKey = "") {
+  const match = /^(\d{4})-(\d{2})$/.exec(String(monthKey || ""));
+  if (!match) {
+    return "今月";
+  }
+  return `${Number(match[2])}月`;
+}
+
+function renderPopularToolsPanel(activeView = getCurrentViewKey()) {
+  if (!elements.sitePopularTools || !elements.sitePopularSummary) {
+    return;
+  }
+
+  if (!dynamicSiteState.checked) {
+    elements.sitePopularSummary.textContent = "集計確認中";
+    elements.sitePopularTools.innerHTML = `
+      <article class="popular-tool-card is-placeholder">
+        <div class="popular-tool-copy">
+          <h3>人気機能を確認しています</h3>
+          <p>動的サイトの集計と接続状態を確認したら、この欄を更新します。</p>
+        </div>
+      </article>
+    `;
+    return;
+  }
+
+  const entries = Array.isArray(dynamicSiteState.popularViews)
+    ? dynamicSiteState.popularViews.filter((entry) => VIEW_META[entry.viewKey]).slice(0, POPULAR_VIEW_LIMIT)
+    : [];
+
+  if (!entries.length) {
+    elements.sitePopularSummary.textContent = dynamicSiteState.apiBase ? "今月の集計 0件" : "動的集計オフ";
+    elements.sitePopularTools.innerHTML = `
+      <article class="popular-tool-card is-placeholder">
+        <div class="popular-tool-copy">
+          <h3>${dynamicSiteState.apiBase ? "今月の人気機能はまだ集計前です" : "動的集計を起動するとここが埋まります"}</h3>
+          <p>${
+            dynamicSiteState.apiBase
+              ? "最初の閲覧が入り次第、ホームから上位機能へ直接飛べるようになります。"
+              : "ランキング投稿や人気機能集計のような動的機能は、橋渡しURLが有効な時だけ表示されます。"
+          }</p>
+        </div>
+      </article>
+    `;
+    return;
+  }
+
+  elements.sitePopularSummary.textContent = `${formatPopularMonth(dynamicSiteState.monthKey)} 上位${entries.length}件`;
+  elements.sitePopularTools.innerHTML = entries
+    .map((entry, index) => {
+      const meta = VIEW_META[entry.viewKey];
+      if (!meta) {
+        return "";
+      }
+      const isActive = entry.viewKey === activeView;
+      return `
+        <article class="popular-tool-card">
+          <div class="popular-tool-head">
+            <span class="popular-tool-rank">#${index + 1}</span>
+            <div class="popular-tool-copy">
+              <h3>${escapeHtml(meta.label)}</h3>
+              <p>${escapeHtml(meta.summary)}</p>
+            </div>
+          </div>
+          <div class="popular-tool-meta meta-chip-list">
+            <span class="meta-chip">閲覧 ${Number(entry.viewCount || 0).toLocaleString("ja-JP")}回</span>
+            <span class="meta-chip">${escapeHtml(TOOL_PAGE_BY_KEY[entry.viewKey]?.category || "機能")}</span>
+            ${isActive ? '<span class="meta-chip">閲覧中</span>' : ""}
+          </div>
+          <div class="popular-tool-actions">
+            <a class="button-link primary-button" href="${escapeHtml(
+              buildToolPageUrl(entry.viewKey, { hash: entry.viewKey })
+            )}">専用ページへ</a>
+            <button class="secondary-button" type="button" data-switch-view="${escapeHtml(entry.viewKey)}">この場で開く</button>
+          </div>
+        </article>
+      `;
+    })
+    .join("");
+}
+
+async function loadDynamicSiteSummary() {
+  if (!dynamicSiteState.apiBase && !isDynamicSiteOrigin()) {
+    renderPopularToolsPanel();
+    return;
+  }
+
+  try {
+    const payload = await requestDynamicSiteJson("/api/site/summary");
+    if (payload && typeof payload === "object") {
+      dynamicSiteState.monthKey = String(payload.monthKey || "");
+      dynamicSiteState.popularViews = Array.isArray(payload.popularViews) ? payload.popularViews : [];
+      if (!dynamicSiteState.apiBase && payload.dynamicApiBase) {
+        applyDynamicRuntimeConfig(payload);
+      }
+    }
+  } catch (error) {
+    // Keep the panel in fallback mode.
+  } finally {
+    renderPopularToolsPanel();
+  }
+}
+
+async function trackDynamicView(viewKey) {
+  if (!VIEW_KEYS.includes(viewKey) || (!dynamicSiteState.apiBase && !isDynamicSiteOrigin())) {
+    return;
+  }
+
+  const monthKey = dynamicSiteState.monthKey || new Date().toISOString().slice(0, 7);
+  const storageKey = `${DYNAMIC_VIEW_TRACK_PREFIX}:${monthKey}:${viewKey}`;
+  if (window.sessionStorage.getItem(storageKey) === "1" || dynamicSiteState.tracking.has(storageKey)) {
+    return;
+  }
+
+  dynamicSiteState.tracking.add(storageKey);
+  try {
+    const payload = await requestDynamicSiteJson("/api/site/views", {
+      method: "POST",
+      body: JSON.stringify({ viewKey })
+    });
+    if (payload && typeof payload === "object") {
+      dynamicSiteState.monthKey = String(payload.monthKey || monthKey);
+      dynamicSiteState.popularViews = Array.isArray(payload.popularViews) ? payload.popularViews : dynamicSiteState.popularViews;
+    }
+    window.sessionStorage.setItem(storageKey, "1");
+  } catch (error) {
+    // Ignore tracking failures.
+  } finally {
+    dynamicSiteState.tracking.delete(storageKey);
+    renderPopularToolsPanel(viewKey);
+  }
+}
+
+async function initializeDynamicSiteFeatures(initialView) {
+  await loadDynamicSiteRuntimeConfig();
+  await loadDynamicSiteSummary();
+  await trackDynamicView(initialView);
 }
 
 function populateCommanderDatalist() {
@@ -8712,6 +8943,9 @@ function boot() {
     getUiState().activeView ||
     "power";
   setActiveView(initialView, { updateHash: false });
+  initializeDynamicSiteFeatures(initialView).catch(() => {
+    renderPopularToolsPanel(initialView);
+  });
   window.setTimeout(updateBackupMeta, 0);
 
   if (
