@@ -1,19 +1,6 @@
 {
-  "updatedAt": "2026-03-23T04:43:44Z",
+  "updatedAt": "2026-03-23T04:43:47Z",
   "entries": [
-    {
-      "id": "rk-4c39200aa8c8",
-      "boardKey": "season-2",
-      "server": "1",
-      "playerName": "Audit-audit_aee7636016",
-      "powerType": "戦闘力",
-      "powerValue": 222222,
-      "comment": "",
-      "proofImageUrl": "shared/uploads/ec2222b8e8e842dc96ea790fd73b82f7.png",
-      "proofFileName": "audit2.png",
-      "postedAt": "2026-03-23T04:43:44Z",
-      "isMine": false
-    },
     {
       "id": "rk-58004fb76d26",
       "boardKey": "overall",
