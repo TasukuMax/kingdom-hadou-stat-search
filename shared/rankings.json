@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-03-23T04:14:20Z",
+  "updatedAt": "2026-03-23T04:14:23Z",
   "entries": [
     {
       "id": "rk-58004fb76d26",
@@ -25,19 +25,6 @@
       "proofImageUrl": "shared/uploads/3ae7e6ca9d944b56862852e000eb94e3.jpg",
       "proofFileName": "IMG_2693.png",
       "postedAt": "2026-03-21T14:09:39Z",
-      "isMine": false
-    },
-    {
-      "id": "rk-2e6826c3e043",
-      "boardKey": "overall",
-      "server": "3",
-      "playerName": "CodexVerify",
-      "powerType": "戦闘力",
-      "powerValue": 54321,
-      "comment": "",
-      "proofImageUrl": "shared/uploads/d42ca1c1aafb476b8476cd2b3a5fd7bf.png",
-      "proofFileName": "proof.png",
-      "postedAt": "2026-03-23T04:14:20Z",
       "isMine": false
     },
     {
