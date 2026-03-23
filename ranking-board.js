@@ -5,9 +5,11 @@
   }
 
   const STORAGE_KEY = "kh-ranking-board-v4";
+  const RUNTIME_CACHE_KEY = "kh-ranking-runtime-config-v1";
   const SHARE_STATE_VERSION = 1;
   const API_BASE = "/api";
   const SHARED_DATA_URL = "./shared/rankings.json";
+  const RUNTIME_CONFIG_URL = "./shared/runtime-config.json";
   const MAX_IMAGE_DIMENSION = 960;
   const IMAGE_OUTPUT_QUALITY = 0.76;
   const numberFormatter = new Intl.NumberFormat("ja-JP");
@@ -62,6 +64,39 @@
   function showToast(message) {
     if (message) {
       window.KH_APP_API?.showStatusToast?.(message);
+    }
+  }
+
+  function sanitizeRuntimePayload(payload) {
+    const dynamicApiBase = String(payload?.dynamicApiBase || "").trim().replace(/\/$/, "");
+    const dynamicSiteUrl = String(payload?.dynamicSiteUrl || "").trim().replace(/\/$/, "");
+    return {
+      bridgeEnabled: Boolean(payload?.bridgeEnabled && dynamicApiBase),
+      dynamicApiBase,
+      dynamicSiteUrl
+    };
+  }
+
+  function saveRuntimeCache(payload) {
+    try {
+      window.localStorage.setItem(
+        RUNTIME_CACHE_KEY,
+        JSON.stringify({
+          updatedAt: new Date().toISOString(),
+          ...sanitizeRuntimePayload(payload)
+        })
+      );
+    } catch (error) {
+      // Ignore localStorage failures.
+    }
+  }
+
+  function loadRuntimeCache() {
+    try {
+      const parsed = JSON.parse(window.localStorage.getItem(RUNTIME_CACHE_KEY) || "{}");
+      return sanitizeRuntimePayload(parsed);
+    } catch (error) {
+      return sanitizeRuntimePayload({});
     }
   }
 
@@ -182,6 +217,10 @@
   const apiState = {
     checked: false,
     available: false,
+    bridgeEnabled: false,
+    apiBase: API_BASE,
+    crossOrigin: false,
+    dynamicSiteUrl: "",
     sharedAvailable: false,
     syncing: false,
     remoteEntries: defaultRemoteEntries
@@ -267,18 +306,70 @@
     return Boolean(entry && (entry.source === "local" || entry.isMine || state.manageTokens[entry.id]));
   }
 
+  function isDynamicOrigin() {
+    const hostname = window.location.hostname || "";
+    return hostname === "127.0.0.1" || hostname === "localhost" || hostname.endsWith(".trycloudflare.com");
+  }
+
+  async function loadRuntimeConfig() {
+    if (isDynamicOrigin()) {
+      apiState.bridgeEnabled = true;
+      apiState.apiBase = API_BASE;
+      apiState.crossOrigin = false;
+      apiState.dynamicSiteUrl = window.location.origin;
+      saveRuntimeCache({
+        bridgeEnabled: true,
+        dynamicApiBase: `${window.location.origin}/api`,
+        dynamicSiteUrl: window.location.origin
+      });
+      return;
+    }
+
+    try {
+      const response = await fetch(RUNTIME_CONFIG_URL, { cache: "no-store" });
+      if (response.ok) {
+        const payload = sanitizeRuntimePayload(await response.json());
+        apiState.bridgeEnabled = payload.bridgeEnabled;
+        apiState.apiBase = payload.bridgeEnabled ? payload.dynamicApiBase : API_BASE;
+        apiState.crossOrigin = payload.bridgeEnabled && /^https?:\/\//.test(apiState.apiBase);
+        apiState.dynamicSiteUrl = payload.dynamicSiteUrl;
+        if (payload.dynamicApiBase || payload.dynamicSiteUrl) {
+          saveRuntimeCache(payload);
+        }
+        return;
+      }
+    }
+    catch (error) {
+      // Fall back to the last known bridge config.
+    }
+
+    const cached = loadRuntimeCache();
+    apiState.bridgeEnabled = cached.bridgeEnabled;
+    apiState.apiBase = cached.bridgeEnabled ? cached.dynamicApiBase : API_BASE;
+    apiState.crossOrigin = cached.bridgeEnabled && /^https?:\/\//.test(apiState.apiBase);
+    apiState.dynamicSiteUrl = cached.dynamicSiteUrl;
+  }
+
+  function buildApiUrl(path) {
+    if (!apiState.bridgeEnabled || !apiState.crossOrigin) {
+      return path;
+    }
+    return `${apiState.apiBase}${path.replace(/^\/api/, "")}`;
+  }
+
   async function requestJson(path, options = {}) {
     const headers = new Headers(options.headers || {});
     if (options.body && !headers.has("Content-Type")) {
       headers.set("Content-Type", "application/json;charset=utf-8");
     }
 
-    const response = await fetch(path, {
+    const response = await fetch(buildApiUrl(path), {
       method: options.method || "GET",
       headers,
       body: options.body,
       cache: "no-store",
-      credentials: "same-origin"
+      credentials: "include",
+      mode: apiState.crossOrigin ? "cors" : "same-origin"
     });
 
     if (!response.ok) {
@@ -605,6 +696,8 @@
             : "ログイン状態を確認しています。"
         }</div>
         <div class="toolbar-summary" id="rankingOwnedSummary">${escapeHtml(ownedSummary)}</div>
+        <div class="button-row" id="rankingBridgeActions"></div>
+        <div class="toolbar-summary" id="rankingBridgeSummary"></div>
       </section>
     `;
   }
@@ -697,6 +790,8 @@
     logoutButton: root.querySelector("#rankingLogoutButton"),
     authSummary: root.querySelector("#rankingAuthSummary"),
     ownedSummary: root.querySelector("#rankingOwnedSummary"),
+    bridgeActions: root.querySelector("#rankingBridgeActions"),
+    bridgeSummary: root.querySelector("#rankingBridgeSummary"),
     serverInput: root.querySelector("#rankingServerInput"),
     nameInput: root.querySelector("#rankingNameInput"),
     powerInput: root.querySelector("#rankingPowerInput"),
@@ -743,9 +838,13 @@
         : "共有ランキング接続中です。投稿は全ユーザーに公開されます。";
     }
     if (apiState.sharedAvailable) {
-      return "オンライン保存された共有ランキングを表示中です。投稿は動的URL側から行えます。";
+      return apiState.dynamicSiteUrl
+        ? "オンライン保存された共有ランキングを表示中です。投稿やログインは動的投稿ページから行えます。"
+        : "オンライン保存された共有ランキングを表示中です。投稿は動的URL側から行えます。";
     }
-    return "共有API未接続のため、現在はこの端末だけに保存します。";
+    return apiState.dynamicSiteUrl
+      ? "共有APIは停止中ですが、最後に使っていた動的投稿ページへの導線は残しています。"
+      : "共有API未接続のため、現在はこの端末だけに保存します。";
   }
 
   function renderAll() {
@@ -794,6 +893,18 @@
         : apiState.available
           ? "ログインすると、自分の戦闘力だけ更新できるようになります。"
           : "このページは閲覧専用です。ログインは動的URL側で使えます。";
+    }
+    if (elements.bridgeActions) {
+      elements.bridgeActions.innerHTML = apiState.dynamicSiteUrl
+        ? `<a class="button-link secondary-button" href="${escapeHtml(apiState.dynamicSiteUrl)}" target="_blank" rel="noreferrer">動的投稿ページを開く</a>`
+        : "";
+    }
+    if (elements.bridgeSummary) {
+      elements.bridgeSummary.textContent = apiState.dynamicSiteUrl
+        ? apiState.available
+          ? `現在の投稿先: ${apiState.dynamicSiteUrl}`
+          : `投稿が止まった時はこのURLから復旧できます: ${apiState.dynamicSiteUrl}`
+        : "動的投稿ページURLはまだ未設定です。";
     }
     if (elements.loginButton) {
       elements.loginButton.disabled = !apiState.available;
@@ -910,7 +1021,11 @@
     }
 
     if (!apiState.available) {
-      showToast("投稿は動的URL側から行ってください。");
+      showToast(
+        apiState.dynamicSiteUrl
+          ? "共有APIに接続できません。少し待ってから再試行するか、動的サイトURLを開いてください。"
+          : "共有APIに接続できません。動的サイトを起動してから再試行してください。"
+      );
       return;
     }
 
@@ -1205,9 +1320,12 @@
 
   bindEvents();
   renderAll();
-  probeApiAvailability().catch(() => {
-    apiState.checked = true;
-    apiState.available = false;
-    renderAll();
-  });
+  loadRuntimeConfig()
+    .catch(() => {})
+    .then(() => probeApiAvailability())
+    .catch(() => {
+      apiState.checked = true;
+      apiState.available = false;
+      renderAll();
+    });
 })();
