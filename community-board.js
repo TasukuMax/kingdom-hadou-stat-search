@@ -3,6 +3,7 @@
   if (!root) return;
 
   const appApi = window.KH_APP_API ?? {};
+  const RUNTIME_CONFIG_URL = "./shared/runtime-config.json";
   const CATS = [
     { key: "all", label: "すべて" },
     { key: "general", label: "総合" },
@@ -23,6 +24,10 @@
     loading: true,
     submitting: false,
     apiAvailable: true,
+    bridgeEnabled: false,
+    apiBase: "/api",
+    crossOrigin: false,
+    dynamicSiteUrl: "",
     readOnly: false,
     authenticated: false,
     user: null,
@@ -82,9 +87,47 @@
     ensureSelection();
   }
 
+  function isDynamicOrigin() {
+    const hostname = window.location.hostname || "";
+    return hostname === "127.0.0.1" || hostname === "localhost" || hostname.endsWith(".trycloudflare.com");
+  }
+
+  async function loadRuntimeConfig() {
+    if (isDynamicOrigin()) {
+      state.bridgeEnabled = true;
+      state.apiBase = "/api";
+      state.crossOrigin = false;
+      state.dynamicSiteUrl = window.location.origin;
+      return;
+    }
+    try {
+      const response = await fetch(RUNTIME_CONFIG_URL, { cache: "no-store" });
+      if (!response.ok) return;
+      const payload = await response.json();
+      const dynamicApiBase = String(payload?.dynamicApiBase || "").trim().replace(/\/$/, "");
+      state.bridgeEnabled = Boolean(payload?.bridgeEnabled && dynamicApiBase);
+      state.apiBase = state.bridgeEnabled ? dynamicApiBase : "/api";
+      state.crossOrigin = state.bridgeEnabled && /^https?:\/\//.test(state.apiBase);
+      state.dynamicSiteUrl = String(payload?.dynamicSiteUrl || "").trim();
+    } catch {
+      state.bridgeEnabled = false;
+      state.apiBase = "/api";
+      state.crossOrigin = false;
+      state.dynamicSiteUrl = "";
+    }
+  }
+
+  function apiUrl(path) {
+    if (!state.bridgeEnabled || !state.crossOrigin) {
+      return path;
+    }
+    return `${state.apiBase}${path.replace(/^\/api/, "")}`;
+  }
+
   async function req(url, options = {}) {
-    const response = await fetch(url, {
+    const response = await fetch(apiUrl(url), {
       credentials: "include",
+      mode: state.crossOrigin ? "cors" : "same-origin",
       headers: { "Content-Type": "application/json; charset=utf-8", ...(options.headers ?? {}) },
       ...options
     });
@@ -813,10 +856,13 @@
 
   injectStyle();
   render();
-  refresh().then(() => {
-    if (window.__KH_PENDING_SHARE_PAYLOAD?.view === "community") {
-      applyShareState(window.__KH_PENDING_SHARE_PAYLOAD.state ?? {}, { showToast: true });
-      window.__KH_PENDING_SHARE_PAYLOAD = null;
-    }
-  });
+  loadRuntimeConfig()
+    .catch(() => {})
+    .then(() => refresh())
+    .then(() => {
+      if (window.__KH_PENDING_SHARE_PAYLOAD?.view === "community") {
+        applyShareState(window.__KH_PENDING_SHARE_PAYLOAD.state ?? {}, { showToast: true });
+        window.__KH_PENDING_SHARE_PAYLOAD = null;
+      }
+    });
 })();
