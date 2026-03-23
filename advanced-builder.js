@@ -143,6 +143,96 @@
       }
     }
   ];
+  const GROWTH_STUDY_STAT_DEFS = [
+    { key: "power", label: "戦闘力" },
+    { key: "attack", label: "攻撃" },
+    { key: "defense", label: "防御" },
+    { key: "war", label: "戦威" },
+    { key: "strategy", label: "策略" },
+    { key: "charm", label: "魅力" }
+  ];
+  const GROWTH_STUDY_LEVEL_RECORDS = [
+    {
+      characterName: "王騎",
+      label: "能力タブ",
+      stageLabel: "Lv34",
+      order: 34,
+      values: { power: 4436, attack: 698, defense: 694, war: 615, strategy: 565, charm: 665 }
+    },
+    {
+      characterName: "王騎",
+      label: "能力タブ",
+      stageLabel: "Lv35",
+      order: 35,
+      values: { power: 4456, attack: 701, defense: 697, war: 619, strategy: 568, charm: 669 }
+    },
+    {
+      characterName: "王騎",
+      label: "能力タブ",
+      stageLabel: "Lv36",
+      order: 36,
+      values: { power: 4476, attack: 704, defense: 700, war: 622, strategy: 571, charm: 672 }
+    }
+  ];
+  const GROWTH_STUDY_NOTES = [
+    {
+      key: "star-ouki",
+      system: "将星",
+      characterName: "王騎",
+      title: "王騎 将星の次凸コスト",
+      summary: "次の将星凸で伸びる値と必要素材を、そのまま研究メモ化しました。",
+      chips: ["友好度 3000", "将星印・援 7000", "援タイプ印"],
+      details: [
+        "現在の将星補正: 攻撃+417 / 防御+417 / 戦威+408 / 策略+374 / 魅力+408",
+        "次凸の上昇表示: 攻撃+60 / 防御+60 / 戦威+58 / 策略+54 / 魅力+58",
+        "友好度 2730/3000、将星印・援 4745/7000 の画面を確認"
+      ]
+    },
+    {
+      key: "training-ouki",
+      system: "練達",
+      characterName: "王騎",
+      title: "王騎 練達の次上昇",
+      summary: "練達は武将ごとに伸び方と素材配分がかなり違うと見て良さそうです。",
+      chips: ["必要Lv 30", "Lv40+ 練達尖撃表示", "素材 50 / 50 / 20 / 30 / 200"],
+      details: [
+        "現在の練達補正: 攻撃+68 / 防御+68 / 戦威+33 / 策略+45 / 魅力+113",
+        "次の上昇表示: 攻撃+17 / 防御+17 / 戦威+16 / 策略+15 / 魅力+16",
+        "魅力だけ伸びが大きく、均等配分ではない構造に見える"
+      ]
+    },
+    {
+      key: "training-tou",
+      system: "練達",
+      characterName: "騰",
+      title: "騰 練達の次上昇",
+      summary: "同じSSR援でも、王騎と騰で必要素材と重点ステがはっきり違います。",
+      chips: ["必要Lv 25", "Lv40+ 練達破壁表示", "素材 10 / 30 / 150 / 30 / 10"],
+      details: [
+        "現在の練達補正: 攻撃+16 / 防御+48 / 戦威+96 / 策略+39 / 魅力+15",
+        "次の上昇表示: 攻撃+16 / 防御+16 / 戦威+16 / 策略+13 / 魅力+15",
+        "戦威偏重の育成パターンが見え、武将別テーブル化の価値が高い"
+      ]
+    },
+    {
+      key: "equipment-shoukaku",
+      system: "装備",
+      characterName: "昌珂",
+      title: "装備解放レベルの確認",
+      summary: "装備枠は一括解放ではなく、部位ごとにレベル解放がある前提でUIを考えるべきです。",
+      chips: ["天賦800 SSR", "頭 Lv22", "武器 Lv26"],
+      details: [
+        "盾と胴は開放済み、頭防具はLv22、武器はLv26で解放表示",
+        "装備検索や研究所UIも、未開放枠を前提にした入力制御が必要"
+      ]
+    }
+  ];
+  const GROWTH_DATA_REQUESTS = [
+    "能力タブの Lv1 / 10 / 20 / 30 / 40 / 50 を同じ武将で並べた画像",
+    "将星の各凸段階で、凸前と凸後が分かる画像",
+    "練達で 0→1、1→2 の前後比較が分かる画像",
+    "魅力込みの5ステが見える画像を、天賦900と800で数体ずつ"
+  ];
 
   function injectStyles() {
     if (document.querySelector("#advanced-builder-style")) {
@@ -194,6 +284,7 @@
       .advanced-member-grid,
       .advanced-formation-grid,
       .advanced-metric-grid,
+      .advanced-study-grid,
       .advanced-replacement-grid {
         display: grid;
         gap: 12px;
@@ -319,6 +410,80 @@
       .advanced-replacement-card,
       .advanced-note-card {
         padding: 16px;
+      }
+      .advanced-study-grid {
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      }
+      .advanced-study-card {
+        display: grid;
+        gap: 14px;
+        padding: 16px;
+        border-radius: 20px;
+        border: 1px solid rgba(201, 160, 71, 0.24);
+        background:
+          radial-gradient(circle at top right, rgba(255, 214, 132, 0.12), transparent 38%),
+          rgba(18, 18, 22, 0.9);
+        box-shadow: 0 10px 28px rgba(0, 0, 0, 0.18);
+      }
+      .advanced-study-card h4,
+      .advanced-study-card h5 {
+        margin: 0;
+      }
+      .advanced-study-card p,
+      .advanced-study-card li {
+        color: rgba(245, 235, 220, 0.8);
+        line-height: 1.65;
+      }
+      .advanced-study-card ul {
+        margin: 0;
+        padding-left: 18px;
+        display: grid;
+        gap: 6px;
+      }
+      .advanced-study-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.86rem;
+      }
+      .advanced-study-table th,
+      .advanced-study-table td {
+        padding: 8px 10px;
+        border-bottom: 1px solid rgba(255, 235, 195, 0.08);
+        text-align: right;
+      }
+      .advanced-study-table th:first-child,
+      .advanced-study-table td:first-child {
+        text-align: left;
+      }
+      .advanced-study-delta-list {
+        display: grid;
+        gap: 8px;
+      }
+      .advanced-study-delta {
+        padding: 12px;
+        border-radius: 16px;
+        border: 1px solid rgba(235, 196, 109, 0.18);
+        background: rgba(255, 248, 232, 0.05);
+      }
+      .advanced-study-delta strong,
+      .advanced-study-request-card strong {
+        display: block;
+        font-size: 1rem;
+      }
+      .advanced-study-request-card {
+        display: grid;
+        gap: 12px;
+        padding: 16px;
+        border-radius: 20px;
+        border: 1px dashed rgba(235, 196, 109, 0.28);
+        background: rgba(255, 248, 232, 0.04);
+      }
+      .advanced-study-request-card ol {
+        margin: 0;
+        padding-left: 18px;
+        display: grid;
+        gap: 8px;
+        color: rgba(245, 235, 220, 0.8);
       }
       .advanced-member-card {
         display: grid;
@@ -1093,6 +1258,149 @@
       .join("");
   }
 
+  function formatStudyValue(value) {
+    return Number(value || 0).toLocaleString("ja-JP");
+  }
+
+  function formatStudyDelta(value) {
+    const number = Number(value || 0);
+    return `${number >= 0 ? "+" : ""}${formatStudyValue(number)}`;
+  }
+
+  function buildStudyDeltaSummary(fromRecord, toRecord) {
+    return GROWTH_STUDY_STAT_DEFS.map((definition) => {
+      const fromValue = Number(fromRecord.values?.[definition.key] || 0);
+      const toValue = Number(toRecord.values?.[definition.key] || 0);
+      return `${definition.label}${formatStudyDelta(toValue - fromValue)}`;
+    }).join(" / ");
+  }
+
+  function renderGrowthStudy(currentState) {
+    const selectedNames = new Set(currentState.members.map((member) => member.characterName).filter(Boolean));
+    const levelGroups = Object.entries(
+      GROWTH_STUDY_LEVEL_RECORDS.reduce((grouped, record) => {
+        const groupKey = record.characterName || "その他";
+        grouped[groupKey] = grouped[groupKey] || [];
+        grouped[groupKey].push(record);
+        return grouped;
+      }, {})
+    )
+      .sort(([leftName], [rightName]) => {
+        const selectedDiff = Number(selectedNames.has(rightName)) - Number(selectedNames.has(leftName));
+        return selectedDiff || leftName.localeCompare(rightName, "ja");
+      })
+      .map(([characterName, records]) => [
+        characterName,
+        [...records].sort((left, right) => Number(left.order || 0) - Number(right.order || 0))
+      ]);
+    const sortedStudyNotes = [...GROWTH_STUDY_NOTES].sort((left, right) => {
+      const selectedDiff = Number(selectedNames.has(right.characterName)) - Number(selectedNames.has(left.characterName));
+      return selectedDiff || left.characterName.localeCompare(right.characterName, "ja");
+    });
+
+    return `
+      <section class="advanced-section">
+        <div class="advanced-section__header">
+          <div>
+            <h3>育成研究メモ</h3>
+            <p>添付画像から読み取れた実測を、上級編成研究所のすぐ下で見返せるようにしました。選択中の武将に近いメモが先頭へ来ます。</p>
+          </div>
+        </div>
+        <div class="advanced-study-grid">
+          ${levelGroups
+            .map(([characterName, records]) => {
+              const deltaRows = records.slice(1).map((record, index) => ({
+                from: records[index],
+                to: record,
+                summary: buildStudyDeltaSummary(records[index], record)
+              }));
+              return `
+                <article class="advanced-study-card">
+                  <div class="advanced-section__header">
+                    <div>
+                      <h4>${escapeHtml(characterName)} レベル差分</h4>
+                      <p>${escapeHtml(records[0]?.label || "能力タブ")}の実測です。レベルごとの伸びは完全固定ではなく、丸めで1前後ぶれる可能性があります。</p>
+                    </div>
+                    <div class="advanced-chip-row">
+                      ${selectedNames.has(characterName) ? '<span class="advanced-chip">編成内の武将</span>' : ""}
+                      <span class="advanced-chip">Lv ${escapeHtml(`${records[0]?.order ?? "-"} -> ${records[records.length - 1]?.order ?? "-"}`)}</span>
+                    </div>
+                  </div>
+                  <table class="advanced-study-table">
+                    <thead>
+                      <tr>
+                        <th>段階</th>
+                        ${GROWTH_STUDY_STAT_DEFS.map((definition) => `<th>${escapeHtml(definition.label)}</th>`).join("")}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      ${records
+                        .map(
+                          (record) => `
+                            <tr>
+                              <td>${escapeHtml(record.stageLabel)}</td>
+                              ${GROWTH_STUDY_STAT_DEFS.map(
+                                (definition) => `<td>${escapeHtml(formatStudyValue(record.values?.[definition.key] || 0))}</td>`
+                              ).join("")}
+                            </tr>
+                          `
+                        )
+                        .join("")}
+                    </tbody>
+                  </table>
+                  <div class="advanced-study-delta-list">
+                    ${deltaRows
+                      .map(
+                        (entry) => `
+                          <div class="advanced-study-delta">
+                            <strong>${escapeHtml(`${entry.from.stageLabel} -> ${entry.to.stageLabel}`)}</strong>
+                            <p>${escapeHtml(entry.summary)}</p>
+                          </div>
+                        `
+                      )
+                      .join("")}
+                  </div>
+                </article>
+              `;
+            })
+            .join("")}
+          ${sortedStudyNotes
+            .map(
+              (entry) => `
+                <article class="advanced-study-card">
+                  <div class="advanced-section__header">
+                    <div>
+                      <h4>${escapeHtml(entry.title)}</h4>
+                      <p>${escapeHtml(entry.summary)}</p>
+                    </div>
+                    <div class="advanced-chip-row">
+                      <span class="advanced-chip">${escapeHtml(entry.system)}</span>
+                      <span class="advanced-chip">${escapeHtml(entry.characterName)}</span>
+                      ${selectedNames.has(entry.characterName) ? '<span class="advanced-chip">編成内の武将</span>' : ""}
+                    </div>
+                  </div>
+                  <div class="advanced-chip-row">
+                    ${entry.chips.map((chip) => `<span class="advanced-chip">${escapeHtml(chip)}</span>`).join("")}
+                  </div>
+                  <ul>
+                    ${entry.details.map((detail) => `<li>${escapeHtml(detail)}</li>`).join("")}
+                  </ul>
+                </article>
+              `
+            )
+            .join("")}
+          <article class="advanced-study-request-card">
+            <strong>精度を上げるために次に欲しいデータ</strong>
+            <p>ここが揃うと、練達テーブルや将星ごとの伸び幅を固定値で実装しやすくなります。</p>
+            <ol>
+              ${GROWTH_DATA_REQUESTS.map((request) => `<li>${escapeHtml(request)}</li>`).join("")}
+            </ol>
+          </article>
+        </div>
+      </section>
+    `;
+  }
+
   function renderTypeCounts(currentState, report) {
     return `
       <div class="advanced-type-grid">
@@ -1556,6 +1864,7 @@
       <div class="advanced-builder">
         ${renderToolbar()}
         ${renderSummary(report)}
+        ${renderGrowthStudy(state)}
         ${renderMemberInputs(state)}
         ${renderMetricCards(report)}
         ${renderFormationCards(report)}
