@@ -1160,6 +1160,83 @@
         font-size: 0.9rem;
       }
 
+      .popular-tools-panel {
+        position: relative;
+      }
+
+      .popular-tools-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 14px;
+      }
+
+      .popular-tool-card {
+        display: grid;
+        gap: 14px;
+        padding: 18px;
+        border-radius: 22px;
+        border: 1px solid rgba(201, 160, 71, 0.16);
+        background:
+          linear-gradient(180deg, rgba(255, 252, 247, 0.94), rgba(241, 232, 220, 0.84)),
+          radial-gradient(circle at top right, rgba(233, 188, 103, 0.18), transparent 40%);
+        box-shadow: var(--shadow-soft);
+      }
+
+      .popular-tool-card.is-placeholder {
+        background:
+          linear-gradient(180deg, rgba(255, 252, 247, 0.76), rgba(241, 232, 220, 0.58)),
+          radial-gradient(circle at top right, rgba(190, 190, 190, 0.12), transparent 40%);
+      }
+
+      .popular-tool-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        align-items: flex-start;
+      }
+
+      .popular-tool-rank {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 42px;
+        min-height: 42px;
+        padding: 0 12px;
+        border-radius: 999px;
+        background: linear-gradient(135deg, rgba(32, 27, 24, 0.92), rgba(98, 62, 21, 0.92));
+        color: #fff7e6;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+      }
+
+      .popular-tool-copy h3 {
+        margin: 0;
+        font-size: 1.06rem;
+      }
+
+      .popular-tool-copy p {
+        margin: 6px 0 0;
+        color: var(--muted);
+        line-height: 1.65;
+      }
+
+      .popular-tool-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .popular-tool-meta .meta-chip {
+        margin-top: 0;
+        font-size: 0.78rem;
+      }
+
+      .popular-tool-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
       .equipment-match-panel {
         margin-top: 18px;
       }
@@ -6433,6 +6510,24 @@
             <button class="secondary-button" type="button" data-switch-view="community">この場で開く</button>
           </div>
         </article>
+        </div>
+      </section>
+
+      <section class="panel popular-tools-panel" data-home-only="true">
+        <div class="panel-header">
+          <div>
+            <h2>今月よく見られている機能</h2>
+            <p>やりこみ勢が今どこを使っているかを、月間の閲覧数からそのまま辿れる導線です。</p>
+          </div>
+          <span class="count-pill" id="sitePopularSummary">集計待ち</span>
+        </div>
+        <div class="popular-tools-grid" id="sitePopularTools">
+          <article class="popular-tool-card is-placeholder">
+            <div class="popular-tool-copy">
+              <h3>動的集計を準備中</h3>
+              <p>動的サイト接続後に、今月の人気機能ランキングをここへ表示します。</p>
+            </div>
+          </article>
         </div>
       </section>
 
