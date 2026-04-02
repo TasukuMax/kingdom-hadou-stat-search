@@ -2514,6 +2514,408 @@
         box-shadow: var(--shadow-soft);
       }
 
+      .army-unit-card.is-active-focus {
+        border-color: rgba(156, 95, 34, 0.34);
+        box-shadow:
+          0 24px 44px rgba(20, 12, 6, 0.18),
+          0 0 0 1px rgba(176, 124, 49, 0.2);
+      }
+
+      .stacked-meta {
+        display: grid;
+        justify-items: end;
+        gap: 8px;
+      }
+
+      .army-battle-shell {
+        display: grid;
+        gap: 16px;
+      }
+
+      .army-battle-stage {
+        display: grid;
+        grid-template-columns: minmax(0, 1.08fr) minmax(320px, 0.92fr);
+        gap: 16px;
+        align-items: start;
+      }
+
+      .army-battle-card {
+        display: grid;
+        gap: 14px;
+      }
+
+      .army-ref-shell,
+      .army-ref-board-shell,
+      .army-ref-detail-shell {
+        display: grid;
+        gap: 14px;
+      }
+
+      .army-ref-axis {
+        display: grid;
+        grid-template-columns: repeat(7, minmax(0, 1fr));
+        gap: 8px;
+      }
+
+      .army-ref-axis span {
+        padding: 6px 0;
+        text-align: center;
+        border-radius: 999px;
+        font-size: 0.76rem;
+        color: var(--muted);
+        background: rgba(255, 255, 255, 0.78);
+        border: 1px solid rgba(109, 57, 17, 0.12);
+      }
+
+      .army-ref-list {
+        display: grid;
+        gap: 12px;
+      }
+
+      .army-ref-row {
+        padding: 16px;
+        border-radius: 22px;
+        border: 1px solid rgba(125, 89, 47, 0.14);
+        background:
+          linear-gradient(180deg, rgba(255, 252, 246, 0.96), rgba(240, 229, 212, 0.84));
+        text-align: left;
+        color: inherit;
+        display: grid;
+        gap: 12px;
+        box-shadow: var(--shadow-soft);
+      }
+
+      .army-ref-row.is-selected {
+        border-color: rgba(176, 124, 49, 0.38);
+        box-shadow:
+          0 22px 42px rgba(20, 12, 6, 0.18),
+          0 0 0 1px rgba(176, 124, 49, 0.16);
+      }
+
+      .army-ref-row.is-current {
+        background:
+          linear-gradient(180deg, rgba(251, 241, 220, 0.98), rgba(236, 221, 196, 0.9));
+      }
+
+      .army-ref-row-head,
+      .army-ref-board-head,
+      .army-ref-detail-head,
+      .army-ref-current-head,
+      .army-ref-faction-head,
+      .army-ref-summary-item-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        align-items: flex-start;
+      }
+
+      .army-ref-row-title {
+        display: grid;
+        gap: 6px;
+      }
+
+      .army-ref-source-line,
+      .army-ref-row-meta,
+      .army-ref-row-notes,
+      .army-ref-current-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .army-ref-source-badge,
+      .army-ref-type-chip,
+      .army-ref-row-meta span,
+      .army-ref-summary-badge,
+      .army-ref-current-chip,
+      .army-ref-note,
+      .army-ref-cell-effect {
+        min-height: 28px;
+        padding: 0 10px;
+        border-radius: 999px;
+        display: inline-flex;
+        align-items: center;
+      }
+
+      .army-ref-source-badge {
+        background: rgba(176, 124, 49, 0.16);
+        color: var(--gold-deep);
+        font-weight: 700;
+      }
+
+      .army-ref-type-chip,
+      .army-ref-row-meta span {
+        background: rgba(255, 255, 255, 0.82);
+        border: 1px solid rgba(109, 57, 17, 0.1);
+        color: var(--muted);
+        font-size: 0.76rem;
+      }
+
+      .army-ref-meta-text,
+      .army-ref-board-head span,
+      .army-ref-detail-kicker,
+      .army-ref-current-head span,
+      .army-ref-faction-head span {
+        color: var(--muted);
+        font-size: 0.8rem;
+      }
+
+      .army-ref-tactic-name,
+      .army-ref-detail-title {
+        font-size: 1.02rem;
+      }
+
+      .army-ref-track {
+        position: relative;
+        min-height: calc(var(--lanes) * 30px + 18px);
+        border-radius: 20px;
+        overflow: hidden;
+        border: 1px solid rgba(109, 57, 17, 0.12);
+        background:
+          linear-gradient(to right, rgba(109, 57, 17, 0.08) 1px, transparent 1px) 0 0 / calc(100% / 5) 100%,
+          linear-gradient(180deg, rgba(228, 238, 247, 0.82), rgba(232, 226, 214, 0.82));
+      }
+
+      .army-ref-track-bar {
+        position: absolute;
+        top: calc(8px + var(--lane) * 30px);
+        left: calc((var(--start) / 60) * 100% + 5px);
+        width: max(calc(((var(--end) - var(--start)) / 60) * 100% - 10px), 72px);
+        height: 24px;
+        border: 1px solid rgba(255, 255, 255, 0.28);
+        border-radius: 12px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 8px;
+        padding: 0 10px;
+        font-size: 0.76rem;
+        font-weight: 700;
+        color: inherit;
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
+      }
+
+      .army-ref-row,
+      .army-ref-track-bar,
+      .army-ref-cell button {
+        cursor: pointer;
+      }
+
+      .army-ref-track-bar-label {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .army-ref-track-bar.is-estimated {
+        border-style: dashed;
+      }
+
+      .army-ref-track-bar small,
+      .army-ref-note small,
+      .army-ref-current-chip small {
+        font-size: 0.68rem;
+        opacity: 0.82;
+      }
+
+      .army-ref-track-bar.tone-support,
+      .army-ref-note.tone-support,
+      .army-ref-summary-item.tone-support,
+      .army-ref-current-chip.tone-support,
+      .army-ref-cell.tone-support {
+        background: rgba(81, 155, 101, 0.2);
+        color: #1f4b30;
+      }
+
+      .army-ref-track-bar.tone-damage,
+      .army-ref-note.tone-damage,
+      .army-ref-summary-item.tone-damage,
+      .army-ref-current-chip.tone-damage,
+      .army-ref-cell.tone-damage {
+        background: rgba(190, 74, 55, 0.22);
+        color: #6b2217;
+      }
+
+      .army-ref-track-bar.tone-debuff,
+      .army-ref-note.tone-debuff,
+      .army-ref-summary-item.tone-debuff,
+      .army-ref-current-chip.tone-debuff,
+      .army-ref-cell.tone-debuff {
+        background: rgba(226, 111, 104, 0.18);
+        color: #7a2e24;
+      }
+
+      .army-ref-track-bar.tone-heal,
+      .army-ref-note.tone-heal,
+      .army-ref-summary-item.tone-heal,
+      .army-ref-current-chip.tone-heal,
+      .army-ref-cell.tone-heal {
+        background: rgba(62, 141, 123, 0.18);
+        color: #20524a;
+      }
+
+      .army-ref-track-bar.tone-utility,
+      .army-ref-note.tone-utility,
+      .army-ref-summary-item.tone-utility,
+      .army-ref-current-chip.tone-utility,
+      .army-ref-cell.tone-utility {
+        background: rgba(86, 122, 157, 0.18);
+        color: #284d69;
+      }
+
+      .army-ref-now {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 3px;
+        left: calc((var(--at) / 60) * 100%);
+        background: rgba(209, 67, 52, 0.7);
+        box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.84);
+      }
+
+      .army-ref-board-duo {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+      }
+
+      .army-ref-faction {
+        padding: 16px;
+        border-radius: 24px;
+        color: #f4efe7;
+        box-shadow: 0 18px 30px rgba(20, 16, 12, 0.16);
+      }
+
+      .army-ref-faction.is-ally {
+        background:
+          linear-gradient(180deg, rgba(38, 72, 114, 0.98), rgba(21, 46, 76, 0.98));
+      }
+
+      .army-ref-faction.is-enemy {
+        background:
+          linear-gradient(180deg, rgba(112, 40, 34, 0.98), rgba(68, 22, 18, 0.98));
+      }
+
+      .army-ref-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px;
+      }
+
+      .army-ref-cell {
+        position: relative;
+        min-height: 102px;
+        border-radius: 16px;
+        padding: 8px;
+        display: grid;
+        align-content: space-between;
+        gap: 4px;
+        overflow: hidden;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+      }
+
+      .army-ref-cell.is-occupied {
+        background: rgba(255, 255, 255, 0.08);
+      }
+
+      .army-ref-cell.is-empty {
+        place-items: center;
+        background: rgba(0, 0, 0, 0.12);
+        color: rgba(244, 239, 231, 0.46);
+      }
+
+      .army-ref-cell.is-self {
+        outline: 3px solid rgba(157, 210, 140, 0.72);
+      }
+
+      .army-ref-cell.is-target {
+        outline: 3px solid rgba(255, 225, 155, 0.82);
+      }
+
+      .army-ref-cell button {
+        position: absolute;
+        inset: 0;
+        border: 0;
+        background: transparent;
+      }
+
+      .army-ref-cell-slot {
+        font-size: 0.68rem;
+        color: rgba(244, 239, 231, 0.64);
+      }
+
+      .army-ref-cell-title {
+        font-size: 0.94rem;
+        font-weight: 700;
+        line-height: 1.15;
+      }
+
+      .army-ref-cell-note,
+      .army-ref-cell-empty {
+        font-size: 0.7rem;
+        line-height: 1.35;
+        color: rgba(244, 239, 231, 0.78);
+      }
+
+      .army-ref-cell-effect {
+        width: fit-content;
+        max-width: 100%;
+        background: rgba(255, 255, 255, 0.14);
+        color: rgba(244, 239, 231, 0.94);
+        font-size: 0.68rem;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .army-ref-summary-list {
+        display: grid;
+        gap: 10px;
+      }
+
+      .army-ref-note,
+      .army-ref-current-chip {
+        display: inline-grid;
+        gap: 2px;
+        padding: 8px 10px;
+        min-height: auto;
+      }
+
+      .army-ref-summary-item {
+        padding: 12px 14px;
+        border-radius: 18px;
+        border: 1px solid rgba(109, 57, 17, 0.12);
+      }
+
+      .army-ref-summary-badge {
+        background: rgba(255, 255, 255, 0.72);
+        color: inherit;
+        font-weight: 700;
+      }
+
+      .army-ref-summary-sub,
+      .army-ref-summary-raw {
+        color: var(--muted);
+        font-size: 0.82rem;
+        line-height: 1.6;
+      }
+
+      .army-ref-current-shell {
+        padding: 14px;
+        border-radius: 18px;
+        background: rgba(54, 90, 116, 0.08);
+        border: 1px solid rgba(54, 90, 116, 0.12);
+        display: grid;
+        gap: 12px;
+      }
+
+      @media (max-width: 960px) {
+        .army-battle-stage,
+        .army-ref-board-duo {
+          grid-template-columns: 1fr;
+        }
+      }
+
       .army-unit-head,
       .army-role-line,
       .army-list-row,
@@ -2559,6 +2961,20 @@
         border-radius: 18px;
         background: rgba(54, 90, 116, 0.08);
         border: 1px solid rgba(54, 90, 116, 0.12);
+      }
+
+      .army-skill-summary {
+        background: linear-gradient(180deg, rgba(122, 45, 24, 0.09), rgba(111, 65, 22, 0.04));
+        border-color: rgba(156, 95, 34, 0.14);
+      }
+
+      .army-skill-summary .army-list-row span:first-child {
+        color: var(--gold-deep);
+        font-weight: 700;
+      }
+
+      .army-skill-summary .army-list-row span:last-child {
+        color: rgba(73, 48, 26, 0.9);
       }
 
       .army-summary-card {
@@ -2645,6 +3061,7 @@
           inset 0 0 0 1px rgba(255, 231, 183, 0.32);
       }
 
+      .army-roster-card.is-tier-unselected,
       .army-roster-card.is-tier-usable {
         border-color: rgba(156, 95, 34, 0.54);
         box-shadow:
@@ -2701,6 +3118,7 @@
         color: #fff8ef;
       }
 
+      .army-roster-card.is-tier-unselected .army-roster-state-badge,
       .army-roster-card.is-tier-usable .army-roster-state-badge {
         background: rgba(122, 45, 24, 0.86);
       }
@@ -2813,6 +3231,133 @@
 
       .army-import-summary-grid {
         margin-top: 16px;
+      }
+
+      .army-image-import {
+        display: grid;
+        gap: 16px;
+        margin-top: 4px;
+        padding: 18px;
+        border-radius: 24px;
+        border: 1px solid rgba(109, 57, 17, 0.16);
+        background:
+          linear-gradient(180deg, rgba(255, 253, 247, 0.92), rgba(244, 235, 223, 0.82)),
+          linear-gradient(135deg, rgba(201, 151, 70, 0.08), transparent 62%);
+        box-shadow: var(--shadow-soft);
+      }
+
+      .army-image-import__header {
+        display: grid;
+        gap: 6px;
+      }
+
+      .army-image-import__header strong {
+        font-size: 1rem;
+      }
+
+      .army-image-import__preview-grid {
+        display: grid;
+        grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
+        gap: 16px;
+        align-items: start;
+      }
+
+      .army-image-import__preview,
+      .army-image-import__result {
+        display: grid;
+        gap: 12px;
+        min-height: 180px;
+        padding: 16px;
+        border-radius: 20px;
+        border: 1px solid rgba(109, 57, 17, 0.12);
+        background: rgba(255, 255, 255, 0.7);
+      }
+
+      .army-image-import__preview img {
+        width: 100%;
+        border-radius: 16px;
+        border: 1px solid rgba(109, 57, 17, 0.14);
+        object-fit: cover;
+        box-shadow: var(--shadow-soft);
+      }
+
+      .army-image-import__empty {
+        display: grid;
+        place-items: center;
+        min-height: 148px;
+        color: var(--muted);
+        text-align: center;
+      }
+
+      .army-image-import__meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .army-image-import__meta span,
+      .army-image-import__suggestions button {
+        padding: 6px 10px;
+        border-radius: 999px;
+        border: 1px solid rgba(56, 92, 120, 0.16);
+        background: rgba(255, 255, 255, 0.84);
+        color: var(--navy);
+        font-size: 0.83rem;
+        font-weight: 700;
+      }
+
+      .army-image-import__suggestions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .army-image-import__suggestions button {
+        cursor: pointer;
+      }
+
+      .army-image-import__field-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+        gap: 10px;
+      }
+
+      .army-image-import__field-grid label {
+        display: grid;
+        gap: 6px;
+        font-size: 0.84rem;
+        color: var(--muted);
+      }
+
+      .army-image-import__field-grid input {
+        width: 100%;
+      }
+
+      .army-image-import__raw {
+        display: grid;
+        gap: 8px;
+      }
+
+      .army-image-import__raw pre {
+        margin: 0;
+        max-height: 180px;
+        overflow: auto;
+        padding: 12px;
+        border-radius: 16px;
+        background: rgba(36, 50, 66, 0.08);
+        color: var(--navy);
+        font-size: 0.82rem;
+        line-height: 1.6;
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+
+      .army-image-import__result-head {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        gap: 8px 12px;
+        align-items: center;
       }
 
       .builder-slot-card,
@@ -3129,6 +3674,55 @@
         gap: 14px;
       }
 
+      .builder-timeline-toolbar {
+        display: grid;
+        gap: 12px;
+        padding: 16px 18px;
+        border-radius: 24px;
+        border: 1px solid rgba(109, 57, 17, 0.12);
+        background:
+          linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(244, 235, 220, 0.82));
+        box-shadow: var(--shadow-soft);
+      }
+
+      .builder-timeline-current {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        align-items: center;
+      }
+
+      .builder-timeline-current strong {
+        font-size: 1.05rem;
+      }
+
+      .builder-timeline-current span {
+        color: var(--muted);
+        font-size: 0.84rem;
+      }
+
+      .builder-timeline-second-pills {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .builder-second-pill {
+        min-height: 34px;
+        padding: 0 12px;
+        border-radius: 999px;
+        border: 1px solid rgba(109, 57, 17, 0.12);
+        background: rgba(255, 255, 255, 0.84);
+        color: var(--muted);
+      }
+
+      .builder-second-pill.is-active {
+        color: var(--ink);
+        border-color: rgba(156, 95, 34, 0.34);
+        background: linear-gradient(180deg, rgba(251, 241, 220, 0.98), rgba(241, 228, 205, 0.92));
+        box-shadow: 0 10px 22px rgba(109, 57, 17, 0.12);
+      }
+
       .builder-timeline-axis {
         display: grid;
         grid-template-columns: repeat(6, minmax(0, 1fr));
@@ -3148,6 +3742,98 @@
       .builder-timeline-rows {
         display: grid;
         gap: 12px;
+      }
+
+      .builder-timeline-groups {
+        display: grid;
+        gap: 14px;
+      }
+
+      .builder-timeline-group {
+        display: grid;
+        gap: 12px;
+        padding: 18px;
+        border-radius: 24px;
+        border: 1px solid rgba(109, 57, 17, 0.12);
+        background:
+          linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(244, 235, 220, 0.82));
+        box-shadow: var(--shadow-soft);
+      }
+
+      .builder-timeline-group.is-ally {
+        border-color: rgba(38, 72, 114, 0.16);
+      }
+
+      .builder-timeline-group.is-enemy {
+        border-color: rgba(112, 40, 34, 0.18);
+      }
+
+      .builder-timeline-group-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 14px;
+        align-items: center;
+      }
+
+      .builder-timeline-group-head strong {
+        display: block;
+        margin-bottom: 4px;
+        font-size: 1rem;
+      }
+
+      .builder-timeline-group-head span {
+        color: var(--muted);
+        font-size: 0.8rem;
+      }
+
+      .builder-timeline-rows--dense {
+        gap: 10px;
+      }
+
+      .builder-timeline-rowline {
+        display: grid;
+        grid-template-columns: 112px minmax(0, 1fr) 190px;
+        gap: 12px;
+        align-items: center;
+        padding: 12px 14px;
+        border-radius: 20px;
+        border: 1px solid rgba(109, 57, 17, 0.1);
+        background: rgba(255, 255, 255, 0.72);
+      }
+
+      .builder-timeline-rowline.is-active {
+        border-color: rgba(156, 95, 34, 0.26);
+        background: linear-gradient(180deg, rgba(251, 241, 220, 0.96), rgba(241, 228, 205, 0.86));
+      }
+
+      .builder-timeline-rowline-label {
+        display: grid;
+        gap: 4px;
+      }
+
+      .builder-timeline-rowline-label strong {
+        font-size: 0.9rem;
+      }
+
+      .builder-timeline-rowline-label small {
+        color: var(--muted);
+        font-size: 0.74rem;
+      }
+
+      .builder-timeline-rowline-current {
+        display: grid;
+        gap: 4px;
+        text-align: right;
+      }
+
+      .builder-timeline-rowline-current strong {
+        font-size: 0.86rem;
+      }
+
+      .builder-timeline-rowline-current span {
+        color: var(--muted);
+        font-size: 0.75rem;
+        line-height: 1.45;
       }
 
       .builder-timeline-row {
@@ -3232,6 +3918,8 @@
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
+        appearance: none;
+        cursor: pointer;
         border: 1px solid rgba(255, 255, 255, 0.22);
         box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
       }
@@ -3433,6 +4121,55 @@
       .builder-effect-stream {
         display: grid;
         gap: 10px;
+      }
+
+      .builder-effect-columns {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .builder-effect-column {
+        display: grid;
+        gap: 10px;
+        padding: 14px;
+        border-radius: 20px;
+        border: 1px solid rgba(109, 57, 17, 0.1);
+        background: rgba(255, 255, 255, 0.62);
+      }
+
+      .builder-effect-column.is-ally {
+        border-color: rgba(38, 72, 114, 0.16);
+      }
+
+      .builder-effect-column.is-enemy {
+        border-color: rgba(112, 40, 34, 0.18);
+      }
+
+      .builder-effect-column-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        align-items: center;
+      }
+
+      .builder-effect-column-head strong {
+        display: block;
+        margin-bottom: 4px;
+      }
+
+      .builder-effect-column-head span {
+        color: var(--muted);
+        font-size: 0.8rem;
+      }
+
+      .builder-effect-empty {
+        padding: 16px;
+        border-radius: 16px;
+        border: 1px dashed rgba(109, 57, 17, 0.16);
+        background: rgba(255, 255, 255, 0.68);
+        color: var(--muted);
+        text-align: center;
       }
 
       .builder-effect-stream-head {
@@ -3773,6 +4510,35 @@
           0 24px 44px rgba(20, 12, 6, 0.18),
           inset 0 1px 0 rgba(255, 255, 255, 0.74);
         border-color: rgba(166, 121, 63, 0.24);
+      }
+
+      .army-commander-card {
+        cursor: pointer;
+      }
+
+      .army-commander-card img {
+        width: 100%;
+        height: clamp(136px, 16vw, 182px);
+        display: block;
+        margin: 12px 0 14px;
+        border-radius: 20px;
+        object-fit: cover;
+        object-position: center 18%;
+        border: 1px solid rgba(126, 78, 30, 0.12);
+        background: linear-gradient(180deg, rgba(248, 241, 229, 0.92), rgba(232, 218, 196, 0.8));
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+      }
+
+      .army-commander-card.is-selected {
+        border-color: rgba(198, 138, 44, 0.45);
+        box-shadow:
+          0 18px 34px rgba(29, 22, 15, 0.14),
+          0 0 0 2px rgba(198, 138, 44, 0.18);
+      }
+
+      .army-commander-card:focus-visible {
+        outline: 3px solid rgba(198, 138, 44, 0.32);
+        outline-offset: 2px;
       }
 
       a {
@@ -5568,14 +6334,24 @@
         .builder-board-stage-head,
         .builder-board-faction-head,
         .builder-effect-stream-head,
+        .builder-effect-column-head,
         .builder-effect-item-head,
         .timeline-row-head {
           flex-direction: column;
           align-items: flex-start;
         }
 
+        .builder-effect-columns,
         .builder-board-stage-grid {
           grid-template-columns: 1fr;
+        }
+
+        .builder-timeline-rowline {
+          grid-template-columns: 1fr;
+        }
+
+        .builder-timeline-rowline-current {
+          text-align: left;
         }
 
         .builder-timeline-meta {
@@ -6113,15 +6889,62 @@
         min-width: 148px;
       }
 
+      .shared-view-banner {
+        position: relative;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 18px;
+        align-items: center;
+        width: min(1220px, calc(100% - 28px));
+        margin: 14px auto 0;
+        padding: 18px 20px;
+        border-radius: 24px;
+        border: 1px solid rgba(204, 71, 37, 0.22);
+        background:
+          radial-gradient(circle at top right, rgba(234, 114, 71, 0.18), transparent 28%),
+          linear-gradient(180deg, rgba(59, 22, 18, 0.98), rgba(40, 17, 15, 0.96));
+        box-shadow:
+          0 22px 48px rgba(44, 15, 10, 0.28),
+          inset 0 1px 0 rgba(255, 214, 186, 0.08);
+      }
+
+      .shared-view-banner__copy {
+        display: grid;
+        gap: 8px;
+      }
+
+      .shared-view-banner__copy h2 {
+        color: #fff2df;
+        font-size: clamp(1.1rem, 1.8vw, 1.4rem);
+      }
+
+      .shared-view-banner__copy p {
+        color: rgba(255, 230, 210, 0.82);
+        line-height: 1.7;
+      }
+
+      .shared-view-banner__actions {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 10px;
+      }
+
       @media (max-width: 720px) {
         .tool-jump-card,
         .tool-page-banner,
+        .shared-view-banner,
         .home-utility-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .army-image-import__preview-grid {
           grid-template-columns: 1fr;
         }
 
         .tool-jump-card__actions,
         .tool-page-banner__actions,
+        .shared-view-banner__actions,
         .home-utility-actions {
           justify-content: stretch;
         }
@@ -6129,22 +6952,1473 @@
         .tool-jump-card__actions .primary-button,
         .tool-jump-card__actions .source-link,
         .tool-page-banner__actions > *,
+        .shared-view-banner__actions > *,
         .home-utility-actions > * {
           width: 100%;
           justify-content: center;
         }
       }
+
+      /* Kingdom Hadou-inspired warm war-room refresh */
+      :root {
+        --khd-bg-top: #140e0b;
+        --khd-bg-mid: #2a1d15;
+        --khd-bg-bottom: #3b2a1d;
+        --khd-panel-top: rgba(255, 250, 241, 0.96);
+        --khd-panel-bottom: rgba(238, 223, 197, 0.92);
+        --khd-panel-border: rgba(141, 103, 53, 0.3);
+        --khd-panel-shadow: 0 22px 42px rgba(23, 13, 7, 0.2);
+        --khd-gold-bright: #f0c778;
+        --khd-gold: #ca9646;
+        --khd-gold-deep: #8e5923;
+        --khd-red: #91452d;
+        --khd-red-soft: #c57a56;
+        --khd-cream: #fff4de;
+        --khd-ink: #332116;
+        --khd-muted: #76614f;
+      }
+
+      body,
+      body[data-page-mode="hub"],
+      body[data-page-mode="tool"] {
+        background:
+          radial-gradient(circle at 12% 12%, rgba(243, 197, 103, 0.18), transparent 19%),
+          radial-gradient(circle at 86% 10%, rgba(166, 64, 40, 0.18), transparent 17%),
+          radial-gradient(circle at 50% 100%, rgba(255, 230, 176, 0.08), transparent 24%),
+          linear-gradient(180deg, var(--khd-bg-top) 0%, var(--khd-bg-mid) 42%, var(--khd-bg-bottom) 100%);
+      }
+
+      body::before,
+      body[data-page-mode="hub"]::before,
+      body[data-page-mode="tool"]::before {
+        display: block;
+        background-image:
+          linear-gradient(rgba(255, 246, 224, 0.05), rgba(255, 246, 224, 0.01)),
+          repeating-linear-gradient(
+            135deg,
+            rgba(255, 217, 154, 0.018) 0,
+            rgba(255, 217, 154, 0.018) 12px,
+            transparent 12px,
+            transparent 24px
+          );
+        opacity: 0.95;
+      }
+
+      body::after,
+      body[data-page-mode="hub"]::after,
+      body[data-page-mode="tool"]::after {
+        display: block;
+        background:
+          radial-gradient(circle at 50% 0%, rgba(255, 224, 159, 0.1), transparent 26%),
+          linear-gradient(180deg, rgba(255, 240, 214, 0.04), transparent 18%, transparent 82%, rgba(0, 0, 0, 0.18));
+      }
+
+      .page {
+        padding-top: 26px;
+      }
+
+      .site-shell {
+        border-bottom: 1px solid rgba(240, 207, 145, 0.14);
+        background:
+          linear-gradient(180deg, rgba(26, 17, 12, 0.96), rgba(37, 25, 17, 0.92));
+        box-shadow: 0 18px 36px rgba(0, 0, 0, 0.28);
+        backdrop-filter: blur(18px);
+      }
+
+      .site-brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+        color: #f8e7c4;
+        letter-spacing: 0.06em;
+      }
+
+      .site-brand::before {
+        content: "";
+        width: 12px;
+        height: 12px;
+        border-radius: 3px;
+        transform: rotate(45deg);
+        background:
+          linear-gradient(135deg, var(--khd-gold-bright), var(--khd-gold-deep));
+        box-shadow:
+          0 0 16px rgba(240, 199, 120, 0.36),
+          inset 0 1px 0 rgba(255, 243, 213, 0.45);
+      }
+
+      .site-shell__mode {
+        color: rgba(255, 233, 194, 0.72);
+      }
+
+      .site-tool-link {
+        border-color: rgba(243, 214, 158, 0.14);
+        background: rgba(255, 246, 228, 0.06);
+        color: rgba(255, 233, 194, 0.8);
+        box-shadow: inset 0 1px 0 rgba(255, 245, 220, 0.05);
+      }
+
+      .site-tool-link:hover {
+        background: rgba(255, 246, 228, 0.12);
+        color: #fff4de;
+      }
+
+      .site-tool-link.is-active {
+        background:
+          linear-gradient(135deg, #ebc77c 0%, var(--khd-gold) 40%, var(--khd-gold-deep) 100%);
+        border-color: rgba(132, 83, 30, 0.56);
+        color: #fff9f0;
+        box-shadow:
+          0 12px 24px rgba(88, 52, 18, 0.28),
+          inset 0 1px 0 rgba(255, 240, 208, 0.42);
+      }
+
+      body[data-page-mode="hub"] .hero,
+      body[data-page-mode="hub"] .panel,
+      body[data-page-mode="hub"] .result-section,
+      body[data-page-mode="tool"] .panel,
+      body[data-page-mode="tool"] .result-section,
+      .info-card,
+      .journey-card,
+      .preset-card,
+      .compare-panel,
+      .formation-card,
+      .timeline-segment-card,
+      .tool-jump-card,
+      .home-utility-note {
+        background:
+          linear-gradient(180deg, var(--khd-panel-top), var(--khd-panel-bottom)),
+          linear-gradient(135deg, rgba(177, 131, 71, 0.08), transparent 48%);
+        border-color: var(--khd-panel-border);
+        box-shadow:
+          var(--khd-panel-shadow),
+          inset 0 1px 0 rgba(255, 255, 255, 0.58);
+        backdrop-filter: none;
+      }
+
+      body[data-page-mode="hub"] .hero::before,
+      body[data-page-mode="hub"] .panel::before,
+      body[data-page-mode="hub"] .result-section::before,
+      body[data-page-mode="tool"] .panel::before,
+      body[data-page-mode="tool"] .result-section::before,
+      .featured-tool-card::before {
+        display: block;
+        background:
+          linear-gradient(135deg, rgba(255, 248, 232, 0.34), transparent 34%),
+          linear-gradient(180deg, rgba(154, 104, 42, 0.08), transparent 18%);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.36);
+      }
+
+      body[data-page-mode="hub"] .hero {
+        display: grid;
+        grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.65fr);
+        gap: 18px 28px;
+        padding: 32px;
+        isolation: isolate;
+        background:
+          radial-gradient(circle at 12% 14%, rgba(255, 213, 134, 0.2), transparent 22%),
+          radial-gradient(circle at 88% 16%, rgba(168, 58, 39, 0.2), transparent 18%),
+          linear-gradient(135deg, rgba(74, 48, 31, 0.98), rgba(33, 21, 16, 0.98) 58%, rgba(30, 22, 18, 0.98) 100%);
+        border-color: rgba(227, 190, 119, 0.24);
+        box-shadow:
+          0 32px 72px rgba(0, 0, 0, 0.42),
+          inset 0 1px 0 rgba(255, 235, 198, 0.18),
+          inset 0 0 0 1px rgba(255, 230, 184, 0.06);
+      }
+
+      body[data-page-mode="hub"] .hero::before {
+        z-index: 0;
+        inset: 0;
+        background:
+          radial-gradient(circle at 78% 18%, rgba(255, 210, 126, 0.28), transparent 18%),
+          linear-gradient(90deg, rgba(33, 21, 16, 0.02) 0%, rgba(33, 21, 16, 0.08) 34%, rgba(33, 21, 16, 0.58) 58%, rgba(33, 21, 16, 0.9) 100%),
+          url("./assets/gacha/chara_1.png") right 170px top 30px / 250px 250px no-repeat,
+          url("./assets/gacha/chara_6.png") right 16px bottom 20px / 220px 220px no-repeat,
+          linear-gradient(135deg, rgba(255, 248, 232, 0.16), transparent 34%),
+          linear-gradient(180deg, rgba(154, 104, 42, 0.08), transparent 18%);
+        opacity: 0.52;
+        filter: saturate(1.08) contrast(1.04);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22);
+      }
+
+      body[data-page-mode="hub"] .hero::after {
+        display: block;
+        z-index: 0;
+        inset: 16px auto auto 24px;
+        width: 112px;
+        height: 168px;
+        background:
+          linear-gradient(180deg, rgba(178, 57, 39, 0.86), rgba(112, 31, 21, 0.94));
+        clip-path: polygon(0 0, 100% 0, 100% 78%, 50% 100%, 0 78%);
+        box-shadow:
+          0 16px 26px rgba(0, 0, 0, 0.24),
+          inset 0 1px 0 rgba(255, 232, 198, 0.18);
+      }
+
+      body[data-page-mode="hub"] .hero > * {
+        position: relative;
+        z-index: 1;
+      }
+
+      body[data-page-mode="hub"] .hero > .eyebrow,
+      body[data-page-mode="hub"] .hero > h1,
+      body[data-page-mode="hub"] .hero > p,
+      body[data-page-mode="hub"] .hero > .hero-actions {
+        grid-column: 1;
+      }
+
+      body[data-page-mode="hub"] .hero > .hero-command {
+        display: grid !important;
+        position: relative;
+        overflow: hidden;
+        grid-column: 2;
+        grid-row: 1 / span 4;
+        align-self: stretch;
+        padding: 20px;
+        max-height: 548px;
+        background:
+          linear-gradient(180deg, rgba(255, 248, 232, 0.12), rgba(255, 248, 232, 0.05));
+        border: 1px solid rgba(246, 214, 155, 0.18);
+        box-shadow:
+          inset 0 1px 0 rgba(255, 243, 218, 0.08),
+          0 22px 34px rgba(0, 0, 0, 0.18);
+      }
+
+      body[data-page-mode="hub"] .hero > .hero-command::before {
+        content: "";
+        position: absolute;
+        top: 14px;
+        left: 14px;
+        width: 74px;
+        height: 3px;
+        border-radius: 999px;
+        background: linear-gradient(90deg, rgba(255, 208, 125, 0.92), transparent);
+        box-shadow: 0 0 14px rgba(255, 208, 125, 0.22);
+      }
+
+      body[data-page-mode="hub"] .hero > .hero-command::after {
+        content: "";
+        position: absolute;
+        right: -18px;
+        bottom: -10px;
+        width: 132px;
+        height: 132px;
+        border-radius: 24px 0 0 0;
+        background:
+          linear-gradient(180deg, rgba(30, 20, 14, 0.08), rgba(30, 20, 14, 0.02)),
+          url("./assets/gacha/chara_1.png") center / cover no-repeat;
+        opacity: 0.22;
+        filter: saturate(1.02) contrast(1.04);
+      }
+
+      body[data-page-mode="hub"] .hero > .hero-meta {
+        grid-column: 1 / -1;
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 10px;
+        overflow: visible;
+        padding-bottom: 0;
+      }
+
+      body[data-page-mode="hub"] .eyebrow {
+        color: rgba(255, 227, 178, 0.92);
+        padding-left: 128px;
+      }
+
+      body[data-page-mode="hub"] .hero h1 {
+        max-width: 13.5ch;
+        font-size: clamp(2.25rem, 3.9vw, 3.65rem);
+        color: #fff7ea;
+        text-shadow: 0 16px 28px rgba(0, 0, 0, 0.24);
+      }
+
+      body[data-page-mode="hub"] .hero p {
+        max-width: 48rem;
+        color: rgba(249, 236, 212, 0.82);
+        line-height: 1.88;
+      }
+
+      body[data-page-mode="hub"] .hero-meta span {
+        min-height: 78px;
+        align-items: flex-start;
+        justify-content: space-between;
+        flex-direction: column;
+        gap: 10px;
+        padding: 14px 16px;
+        border-radius: 20px;
+        background:
+          linear-gradient(180deg, rgba(255, 249, 237, 0.1), rgba(255, 249, 237, 0.04));
+        border: 1px solid rgba(247, 218, 164, 0.18);
+        color: rgba(255, 239, 207, 0.92);
+        box-shadow:
+          inset 0 1px 0 rgba(255, 245, 221, 0.08),
+          0 12px 24px rgba(0, 0, 0, 0.12);
+      }
+
+      body[data-page-mode="hub"] .hero-meta span strong {
+        font-size: 1.02rem;
+        color: #fff7ea;
+      }
+
+      body[data-page-mode="hub"] .hero-command-head strong {
+        color: #fff0cf;
+      }
+
+      body[data-page-mode="hub"] .hero-command-head p,
+      body[data-page-mode="hub"] .hero-command-summary {
+        color: rgba(250, 236, 207, 0.76);
+      }
+
+      body[data-page-mode="hub"] .hero-shortcut-strip {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      body[data-page-mode="hub"] .hero-command-summary,
+      body[data-page-mode="hub"] .hero-shortcut-chip,
+      body[data-page-mode="hub"] .hero-result-card {
+        background: rgba(255, 248, 231, 0.06);
+        border-color: rgba(245, 213, 152, 0.16);
+        color: #fff0d0;
+        box-shadow:
+          inset 0 1px 0 rgba(255, 245, 221, 0.08),
+          0 12px 22px rgba(0, 0, 0, 0.12);
+      }
+
+      body[data-page-mode="hub"] .hero-command-box input[type="text"] {
+        background: rgba(255, 249, 238, 0.08);
+        border-color: rgba(245, 213, 152, 0.18);
+        color: #fff3dd;
+      }
+
+      body[data-page-mode="hub"] .hero-command-box input[type="text"]::placeholder {
+        color: rgba(255, 236, 198, 0.46);
+      }
+
+      body[data-page-mode="hub"] .hero-command-results {
+        max-height: 246px;
+        overflow: auto;
+        padding-right: 4px;
+        scrollbar-width: thin;
+        scrollbar-color: rgba(241, 208, 144, 0.36) transparent;
+      }
+
+      body[data-page-mode="hub"] .hero-command-results::-webkit-scrollbar {
+        width: 8px;
+      }
+
+      body[data-page-mode="hub"] .hero-command-results::-webkit-scrollbar-thumb {
+        border-radius: 999px;
+        background: rgba(241, 208, 144, 0.28);
+      }
+
+      body[data-page-mode="hub"] .hero .mini-button,
+      body[data-page-mode="hub"] .hero .secondary-button,
+      body[data-page-mode="tool"] .tool-page-banner .secondary-button {
+        background: rgba(255, 249, 238, 0.08);
+        border: 1px solid rgba(246, 219, 169, 0.22);
+        color: #fff1d3;
+        box-shadow:
+          inset 0 1px 0 rgba(255, 243, 214, 0.12),
+          0 10px 24px rgba(0, 0, 0, 0.16);
+      }
+
+      body[data-page-mode="hub"] .hero .mini-button:hover,
+      body[data-page-mode="hub"] .hero .secondary-button:hover,
+      body[data-page-mode="tool"] .tool-page-banner .secondary-button:hover {
+        background: rgba(255, 249, 238, 0.16);
+      }
+
+      body[data-page-mode="tool"] .tool-page-banner {
+        isolation: isolate;
+        background:
+          radial-gradient(circle at 14% 18%, rgba(255, 207, 122, 0.18), transparent 24%),
+          linear-gradient(135deg, rgba(81, 53, 35, 0.96), rgba(36, 24, 17, 0.98) 60%, rgba(29, 22, 18, 0.98));
+        border-color: rgba(228, 190, 121, 0.22);
+        box-shadow:
+          0 28px 58px rgba(0, 0, 0, 0.34),
+          inset 0 1px 0 rgba(255, 235, 198, 0.12);
+      }
+
+      body[data-page-mode="tool"] .tool-page-banner::before {
+        display: block;
+        z-index: 0;
+        inset: 0;
+        background:
+          linear-gradient(90deg, rgba(32, 21, 15, 0.02) 0%, rgba(32, 21, 15, 0.1) 46%, rgba(32, 21, 15, 0.72) 100%),
+          url("./assets/gacha/chara_56.png") right 28px bottom 18px / 172px 172px no-repeat,
+          linear-gradient(135deg, rgba(255, 248, 232, 0.18), transparent 34%),
+          linear-gradient(180deg, rgba(154, 104, 42, 0.08), transparent 18%);
+        opacity: 0.26;
+        filter: saturate(1.04);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+      }
+
+      body[data-page-mode="tool"] .tool-page-banner > * {
+        position: relative;
+        z-index: 1;
+      }
+
+      body[data-page-mode="tool"] .tool-page-banner__copy h1 {
+        color: #fff7ea;
+      }
+
+      body[data-page-mode="tool"] .tool-page-banner__copy p {
+        color: rgba(249, 236, 212, 0.8);
+      }
+
+      .tool-page-banner__badges {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
+      .tool-page-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        border-radius: 999px;
+        border: 1px solid rgba(234, 202, 148, 0.16);
+        background: rgba(255, 245, 224, 0.07);
+        color: rgba(252, 238, 209, 0.88);
+        font-size: 0.82rem;
+        line-height: 1.2;
+        box-shadow: inset 0 1px 0 rgba(255, 248, 236, 0.04);
+      }
+
+      .panel-header h2,
+      .result-header h2,
+      .info-card h2,
+      .tool-jump-card__copy strong {
+        color: var(--khd-ink);
+      }
+
+      .panel-header h2::before,
+      .result-header h2::before,
+      .info-card h2::before {
+        content: "";
+        display: inline-block;
+        width: 18px;
+        height: 3px;
+        margin-right: 10px;
+        vertical-align: middle;
+        border-radius: 999px;
+        background: linear-gradient(90deg, var(--khd-red), var(--khd-gold-bright));
+        box-shadow: 0 0 12px rgba(224, 175, 89, 0.22);
+      }
+
+      .panel-header p,
+      .field-note,
+      .tool-jump-card__copy p,
+      .home-utility-note,
+      .journey-card p {
+        color: var(--khd-muted);
+      }
+
+      .tool-link-card,
+      .journey-card,
+      .preset-card {
+        position: relative;
+        border-color: var(--khd-panel-border);
+        background:
+          linear-gradient(180deg, rgba(255, 251, 244, 0.98), rgba(242, 229, 207, 0.92));
+        box-shadow:
+          0 18px 32px rgba(31, 18, 10, 0.14),
+          inset 0 1px 0 rgba(255, 255, 255, 0.6);
+      }
+
+      .tool-link-card::before,
+      .journey-card::before,
+      .preset-card::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        background:
+          linear-gradient(135deg, rgba(191, 144, 84, 0.12), transparent 48%),
+          linear-gradient(180deg, rgba(255, 255, 255, 0.18), transparent 26%);
+      }
+
+      .tool-link-card::after,
+      .journey-card::after,
+      .preset-card::after {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 20px;
+        right: 20px;
+        height: 4px;
+        border-radius: 0 0 999px 999px;
+        background: linear-gradient(90deg, rgba(129, 54, 37, 0.3), rgba(240, 199, 120, 0.92), rgba(129, 54, 37, 0.3));
+      }
+
+      .tool-link-card:hover,
+      .journey-card:hover,
+      .preset-card:hover,
+      .tool-jump-card:hover {
+        transform: translateY(-4px);
+        box-shadow:
+          0 24px 40px rgba(31, 18, 10, 0.18),
+          inset 0 1px 0 rgba(255, 255, 255, 0.62);
+      }
+
+      .tool-link-card__category,
+      .journey-eyebrow {
+        background: linear-gradient(135deg, rgba(151, 60, 40, 0.98), rgba(96, 34, 25, 0.92));
+        border: 1px solid rgba(121, 39, 25, 0.32);
+        color: #fff2d7;
+        box-shadow:
+          0 10px 18px rgba(72, 24, 16, 0.16),
+          inset 0 1px 0 rgba(255, 228, 194, 0.18);
+      }
+
+      .tool-link-card h3,
+      .journey-card h3 {
+        color: var(--khd-ink);
+      }
+
+      .tool-link-card p {
+        color: var(--khd-muted);
+      }
+
+      .tool-link-card__footer {
+        color: var(--khd-gold-deep);
+      }
+
+      .tool-link-card h3,
+      .tool-link-card p,
+      .tool-link-card__footer,
+      .journey-card h3,
+      .journey-card p,
+      .preset-card h3,
+      .preset-card p {
+        position: relative;
+        z-index: 1;
+      }
+
+      .featured-tool-panel {
+        overflow: visible;
+      }
+
+      .featured-tool-card {
+        color: #fff4de;
+        border-color: rgba(255, 216, 154, 0.2);
+        background:
+          radial-gradient(circle at 88% 18%, rgba(255, 207, 123, 0.16), transparent 24%),
+          linear-gradient(135deg, rgba(117, 48, 31, 0.96), rgba(60, 22, 17, 0.98) 58%, rgba(33, 17, 13, 1));
+        box-shadow:
+          0 28px 48px rgba(35, 14, 10, 0.28),
+          inset 0 1px 0 rgba(255, 236, 205, 0.08);
+      }
+
+      .featured-tool-card h2,
+      .featured-tool-card h3 {
+        color: #fff7e7;
+      }
+
+      .featured-tool-card p {
+        color: rgba(255, 236, 207, 0.82);
+      }
+
+      .featured-tool-kicker {
+        color: rgba(255, 225, 172, 0.9);
+        letter-spacing: 0.14em;
+      }
+
+      .featured-tool-kicker::before {
+        display: block;
+      }
+
+      .featured-tool-actions {
+        padding: 18px;
+        border: 1px solid rgba(255, 222, 168, 0.14);
+        border-radius: 20px;
+        background: rgba(13, 5, 5, 0.28);
+      }
+
+      .featured-tool-actions p {
+        display: block;
+        color: rgba(255, 236, 207, 0.74);
+      }
+
+      .hero-command,
+      .hero-meta span,
+      .toolbar-summary,
+      .results-summary,
+      .equipment-stat-card,
+      .equipment-match-row,
+      .builder-overview-grid > *,
+      .gacha-stat-card,
+      .army-summary-card {
+        background:
+          linear-gradient(180deg, rgba(255, 252, 246, 0.92), rgba(244, 233, 217, 0.84));
+        border-color: rgba(141, 103, 53, 0.18);
+        box-shadow:
+          0 12px 24px rgba(31, 18, 10, 0.08),
+          inset 0 1px 0 rgba(255, 255, 255, 0.48);
+      }
+
+      input[type="text"],
+      input[type="search"],
+      input[type="number"],
+      select,
+      textarea {
+        background:
+          linear-gradient(180deg, rgba(255, 253, 248, 0.98), rgba(245, 235, 220, 0.94));
+        border-color: rgba(141, 103, 53, 0.24);
+        color: var(--khd-ink);
+        box-shadow:
+          inset 0 1px 0 rgba(255, 255, 255, 0.68),
+          0 8px 20px rgba(32, 18, 10, 0.06);
+      }
+
+      input[type="text"]:focus,
+      input[type="search"]:focus,
+      input[type="number"]:focus,
+      select:focus,
+      textarea:focus {
+        border-color: rgba(202, 150, 70, 0.72);
+        box-shadow:
+          0 0 0 4px rgba(202, 150, 70, 0.12),
+          0 14px 30px rgba(34, 22, 13, 0.14);
+      }
+
+      .primary-button,
+      .secondary-button,
+      .mini-button,
+      .dock-button,
+      .tab-button {
+        min-height: 48px;
+        border-radius: 15px;
+      }
+
+      .primary-button,
+      .button-link.primary-button {
+        background:
+          linear-gradient(135deg, #f1cf8b 0%, var(--khd-gold) 40%, var(--khd-gold-deep) 100%);
+        border: 1px solid rgba(123, 79, 30, 0.42);
+        color: #fff8ef;
+        box-shadow:
+          0 16px 28px rgba(105, 60, 15, 0.22),
+          inset 0 1px 0 rgba(255, 237, 205, 0.42);
+      }
+
+      .primary-button:hover,
+      .button-link.primary-button:hover {
+        background:
+          linear-gradient(135deg, #f4d998 0%, #d3a355 42%, #94622a 100%);
+      }
+
+      .secondary-button,
+      .mini-button,
+      .tab-button,
+      .dock-button,
+      .button-link.secondary-button {
+        background:
+          linear-gradient(180deg, rgba(255, 253, 248, 0.96), rgba(241, 229, 209, 0.9));
+        border: 1px solid rgba(141, 103, 53, 0.24);
+        color: #4e3927;
+        box-shadow:
+          0 12px 24px rgba(32, 18, 10, 0.08),
+          inset 0 1px 0 rgba(255, 255, 255, 0.54);
+      }
+
+      .secondary-button:hover,
+      .mini-button:hover,
+      .tab-button:hover,
+      .dock-button:hover,
+      .button-link.secondary-button:hover {
+        background:
+          linear-gradient(180deg, rgba(255, 250, 242, 1), rgba(237, 223, 201, 0.94));
+      }
+
+      .tab-button.is-active,
+      .dock-button.is-active {
+        background:
+          linear-gradient(135deg, #e7c173 0%, var(--khd-gold) 40%, var(--khd-gold-deep) 100%);
+        border-color: rgba(123, 79, 30, 0.46);
+        color: #fffaf1;
+      }
+
+      .view-nav {
+        background:
+          linear-gradient(180deg, rgba(35, 24, 18, 0.94), rgba(24, 16, 12, 0.92));
+        border-color: rgba(241, 207, 145, 0.14);
+        box-shadow: 0 16px 34px rgba(0, 0, 0, 0.24);
+        backdrop-filter: blur(18px);
+      }
+
+      .count-pill,
+      .meta-chip,
+      .featured-tool-badges .meta-chip {
+        background: rgba(236, 205, 144, 0.14);
+        border-color: rgba(156, 95, 34, 0.16);
+        color: #5c3d21;
+      }
+
+      .source-link {
+        color: var(--khd-gold-deep);
+      }
+
+      body[data-page-mode="hub"] .home-guide-panel,
+      body[data-page-mode="hub"] .journey-panel,
+      body[data-page-mode="hub"] .home-faq-panel,
+      body[data-page-mode="hub"] .preset-panel {
+        display: block !important;
+      }
+
+      body[data-page-mode="hub"] .home-portal-layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1.58fr) minmax(310px, 0.86fr);
+        gap: 18px;
+        align-items: start;
+      }
+
+      body[data-page-mode="hub"] .home-portal-layout > .panel {
+        margin-top: 0;
+      }
+
+      body[data-page-mode="hub"] .home-portal-layout .home-seo-panel {
+        display: none !important;
+      }
+
+      body[data-page-mode="hub"] .home-portal-layout .tool-directory-panel {
+        grid-column: 1;
+        order: 1;
+      }
+
+      body[data-page-mode="hub"] .home-portal-layout .featured-tool-panel {
+        grid-column: 1;
+        order: 2;
+      }
+
+      body[data-page-mode="hub"] .home-portal-layout .journey-panel {
+        grid-column: 1;
+        order: 3;
+      }
+
+      body[data-page-mode="hub"] .home-portal-layout .home-guide-panel {
+        grid-column: 2;
+        order: 1;
+      }
+
+      body[data-page-mode="hub"] .home-portal-layout .popular-tools-panel {
+        grid-column: 2;
+        order: 2;
+      }
+
+      body[data-page-mode="hub"] .home-portal-layout .home-utility-panel {
+        grid-column: 2;
+        order: 3;
+      }
+
+      body[data-page-mode="hub"] .home-faq-panel,
+      body[data-page-mode="hub"] .preset-panel {
+        margin-top: 18px;
+      }
+
+      body[data-page-mode="hub"] .hero {
+        gap: 14px 24px;
+        padding: 26px 28px 24px;
+      }
+
+      body[data-page-mode="hub"] .hero h1 {
+        font-size: clamp(2.05rem, 3.5vw, 3.15rem);
+        max-width: 15ch;
+      }
+
+      body[data-page-mode="hub"] .hero p {
+        font-size: 0.92rem;
+        line-height: 1.8;
+      }
+
+      body[data-page-mode="hub"] .hero-actions {
+        gap: 8px;
+      }
+
+      .hero-war-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 14px;
+      }
+
+      .hero-war-card {
+        display: grid;
+        gap: 10px;
+        padding: 16px;
+        border-radius: 22px;
+        border: 1px solid rgba(244, 212, 155, 0.16);
+        background:
+          linear-gradient(180deg, rgba(255, 249, 236, 0.08), rgba(255, 245, 225, 0.04));
+        box-shadow:
+          inset 0 1px 0 rgba(255, 247, 227, 0.08),
+          0 16px 32px rgba(0, 0, 0, 0.14);
+      }
+
+      .hero-war-card__eyebrow {
+        color: rgba(255, 221, 167, 0.72);
+        font-size: 0.74rem;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+      }
+
+      .hero-war-card strong {
+        color: #fff4dd;
+        font-family: "Noto Serif JP", serif;
+        font-size: 1.06rem;
+      }
+
+      .hero-war-card p {
+        color: rgba(247, 236, 218, 0.76);
+        font-size: 0.9rem;
+        line-height: 1.7;
+      }
+
+      body[data-page-mode="hub"] .hero .mini-button {
+        min-height: 40px;
+        padding-inline: 12px;
+        font-size: 0.8rem;
+      }
+
+      body[data-page-mode="hub"] .hero > .hero-meta {
+        grid-template-columns: repeat(8, minmax(0, 1fr));
+      }
+
+      body[data-page-mode="hub"] .hero-meta span {
+        min-height: 64px;
+        padding: 10px 12px;
+        gap: 6px;
+        font-size: 0.8rem;
+      }
+
+      body[data-page-mode="hub"] .hero-meta span strong {
+        font-size: 0.94rem;
+      }
+
+      body[data-page-mode="hub"] .home-portal-layout .panel-header {
+        gap: 12px;
+      }
+
+      body[data-page-mode="hub"] .home-portal-layout .panel-header h2 {
+        font-size: 1.1rem;
+      }
+
+      body[data-page-mode="hub"] .home-portal-layout .panel-header p {
+        font-size: 0.85rem;
+        line-height: 1.65;
+      }
+
+      body[data-page-mode="hub"] .home-portal-layout .tool-directory-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      body[data-page-mode="hub"] .home-portal-layout .tool-link-card {
+        min-height: 0;
+        padding: 15px 15px 13px;
+        gap: 8px;
+        border-radius: 16px;
+      }
+
+      body[data-page-mode="hub"] .home-portal-layout .tool-link-card__category {
+        min-height: 26px;
+        padding: 0 8px;
+        font-size: 0.72rem;
+      }
+
+      body[data-page-mode="hub"] .home-portal-layout .tool-link-card h3 {
+        font-size: 1rem;
+        line-height: 1.35;
+      }
+
+      body[data-page-mode="hub"] .home-portal-layout .tool-link-card p {
+        font-size: 0.82rem;
+        line-height: 1.58;
+      }
+
+      body[data-page-mode="hub"] .home-portal-layout .tool-link-card__footer {
+        font-size: 0.78rem;
+      }
+
+      body[data-page-mode="hub"] .home-portal-layout .home-guide-panel {
+        position: sticky;
+        top: 112px;
+      }
+
+      body[data-page-mode="hub"] .home-portal-layout .home-guide-panel .info-grid,
+      body[data-page-mode="hub"] .home-portal-layout .popular-tools-grid {
+        grid-template-columns: 1fr;
+        gap: 10px;
+        margin-top: 14px;
+      }
+
+      body[data-page-mode="hub"] .home-portal-layout .home-guide-panel .info-card,
+      body[data-page-mode="hub"] .home-portal-layout .popular-tool-card,
+      body[data-page-mode="hub"] .home-portal-layout .home-utility-note {
+        padding: 14px;
+        border-radius: 16px;
+      }
+
+      body[data-page-mode="hub"] .home-portal-layout .home-guide-panel .info-card h2,
+      body[data-page-mode="hub"] .home-portal-layout .popular-tool-copy h3 {
+        font-size: 1rem;
+      }
+
+      body[data-page-mode="hub"] .home-portal-layout .home-guide-panel .info-card p,
+      body[data-page-mode="hub"] .home-portal-layout .home-guide-panel .trust-list li,
+      body[data-page-mode="hub"] .home-portal-layout .popular-tool-copy p {
+        font-size: 0.82rem;
+        line-height: 1.62;
+      }
+
+      body[data-page-mode="hub"] .home-portal-layout .home-guide-panel .service-actions,
+      body[data-page-mode="hub"] .home-portal-layout .home-utility-actions {
+        gap: 8px;
+      }
+
+      body[data-page-mode="hub"] .home-portal-layout .home-guide-panel .mini-button {
+        min-height: 36px;
+        padding-inline: 10px;
+        font-size: 0.74rem;
+      }
+
+      body[data-page-mode="hub"] .home-portal-layout .featured-tool-grid {
+        grid-template-columns: 1fr;
+      }
+
+      body[data-page-mode="hub"] .home-portal-layout .featured-tool-card {
+        grid-template-columns: minmax(0, 1.4fr) minmax(220px, 0.8fr);
+      }
+
+      body[data-page-mode="hub"] .home-portal-layout .journey-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      body[data-page-mode="hub"] .home-portal-layout .journey-card {
+        padding: 16px;
+        border-radius: 16px;
+      }
+
+      body[data-page-mode="hub"] .home-portal-layout .journey-card h3 {
+        font-size: 1rem;
+      }
+
+      body[data-page-mode="hub"] .home-portal-layout .journey-card p,
+      body[data-page-mode="hub"] .home-portal-layout .journey-card .bullet-list li {
+        font-size: 0.82rem;
+        line-height: 1.58;
+      }
+
+      body[data-page-mode="hub"] .home-portal-layout .journey-actions {
+        gap: 8px;
+      }
+
+      body[data-page-mode="hub"] .home-portal-layout .journey-actions .mini-button {
+        min-height: 36px;
+        font-size: 0.74rem;
+      }
+
+      body[data-page-mode="hub"] .home-portal-layout .home-utility-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+      }
+
+      body[data-page-mode="hub"] .home-portal-layout .home-utility-actions {
+        justify-content: stretch;
+      }
+
+      body[data-page-mode="hub"] .home-portal-layout .home-utility-actions > * {
+        width: 100%;
+        justify-content: center;
+      }
+
+      body[data-page-mode="hub"] .home-faq-panel .section-details,
+      body[data-page-mode="hub"] .preset-panel .section-details {
+        border-color: rgba(141, 103, 53, 0.18);
+        background:
+          linear-gradient(180deg, rgba(255, 251, 244, 0.78), rgba(244, 233, 217, 0.72));
+      }
+
+      body[data-page-mode="hub"] .preset-panel .preset-grid {
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      body[data-page-mode="hub"] .preset-panel .preset-card {
+        padding: 16px;
+        border-radius: 16px;
+      }
+
+      body[data-page-mode="hub"] .preset-panel .preset-card h3 {
+        font-size: 1rem;
+      }
+
+      body[data-page-mode="hub"] .preset-panel .preset-card p {
+        font-size: 0.82rem;
+        line-height: 1.58;
+      }
+
+      @media (max-width: 920px) {
+        body[data-page-mode="hub"] .home-portal-layout {
+          grid-template-columns: 1fr;
+        }
+
+        body[data-page-mode="hub"] .home-portal-layout .tool-directory-panel,
+        body[data-page-mode="hub"] .home-portal-layout .featured-tool-panel,
+        body[data-page-mode="hub"] .home-portal-layout .journey-panel,
+        body[data-page-mode="hub"] .home-portal-layout .home-guide-panel,
+        body[data-page-mode="hub"] .home-portal-layout .popular-tools-panel,
+        body[data-page-mode="hub"] .home-portal-layout .home-utility-panel {
+          grid-column: 1;
+        }
+
+        body[data-page-mode="hub"] .home-portal-layout .home-guide-panel {
+          position: static;
+        }
+
+        body[data-page-mode="hub"] .hero {
+          grid-template-columns: 1fr;
+        }
+
+        body[data-page-mode="hub"] .hero > .hero-command,
+        body[data-page-mode="hub"] .hero > .hero-meta,
+        body[data-page-mode="hub"] .hero > .hero-war-grid {
+          grid-column: 1;
+          grid-row: auto;
+        }
+
+        body[data-page-mode="hub"] .hero > .hero-meta {
+          grid-template-columns: repeat(4, minmax(0, 1fr));
+        }
+
+        .hero-war-grid {
+          grid-template-columns: 1fr;
+        }
+
+        body[data-page-mode="hub"] .hero::before {
+          background:
+            linear-gradient(180deg, rgba(33, 21, 16, 0.08), rgba(33, 21, 16, 0.42)),
+            url("./assets/gacha/chara_1.png") right -10px top 18px / 200px 200px no-repeat,
+            linear-gradient(135deg, rgba(255, 248, 232, 0.16), transparent 34%),
+            linear-gradient(180deg, rgba(154, 104, 42, 0.08), transparent 18%);
+          opacity: 0.28;
+        }
+
+        body[data-page-mode="hub"] .eyebrow {
+          padding-left: 0;
+        }
+
+        body[data-page-mode="hub"] .home-portal-layout .tool-directory-grid,
+        body[data-page-mode="hub"] .home-portal-layout .journey-grid,
+        body[data-page-mode="hub"] .preset-panel .preset-grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        body[data-page-mode="hub"] .home-portal-layout .featured-tool-card {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      @media (max-width: 640px) {
+        body[data-page-mode="hub"] .hero {
+          padding: 22px;
+        }
+
+        body[data-page-mode="hub"] .hero > .hero-meta {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        body[data-page-mode="hub"] .hero-meta span {
+          min-height: 88px;
+        }
+
+        body[data-page-mode="hub"] .hero::after {
+          width: 78px;
+          height: 118px;
+          inset: 14px auto auto 18px;
+        }
+
+        body[data-page-mode="hub"] .home-portal-layout .tool-directory-grid,
+        body[data-page-mode="hub"] .home-portal-layout .journey-grid,
+        body[data-page-mode="hub"] .preset-panel .preset-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      :root {
+        --site-page-width: 1180px;
+        --site-density-scale: 1;
+        --site-radius-scale: 1;
+        --site-shadow-strength: 0.58;
+        --site-contrast-strength: 1;
+        --site-accent: #9f6a31;
+        --site-paper-color: #f2e8da;
+        --site-shell-color: #15110e;
+      }
+
+      body {
+        background:
+          radial-gradient(circle at 16% 0%, rgba(214, 167, 94, 0.14), transparent 20%),
+          radial-gradient(circle at 88% 10%, rgba(123, 78, 38, 0.16), transparent 18%),
+          linear-gradient(180deg, var(--site-shell-color) 0%, #1d1713 38%, #271f19 100%);
+      }
+
+      body::before {
+        opacity: 0.45;
+      }
+
+      body::after {
+        opacity: 0.68;
+      }
+
+      body[data-site-skin="archive"] {
+        background:
+          radial-gradient(circle at 8% 4%, rgba(185, 141, 79, 0.12), transparent 18%),
+          linear-gradient(180deg, var(--site-shell-color) 0%, #1b1815 42%, #241f1a 100%);
+      }
+
+      body[data-site-skin="quiet"] {
+        background:
+          radial-gradient(circle at 18% 4%, rgba(124, 117, 101, 0.08), transparent 16%),
+          linear-gradient(180deg, var(--site-shell-color) 0%, #1a1b1e 38%, #202226 100%);
+      }
+
+      .page,
+      .site-shell__inner,
+      .site-tool-nav {
+        width: min(var(--site-page-width), calc(100% - 28px));
+      }
+
+      .page {
+        padding: calc(24px * var(--site-density-scale)) 0 calc(56px * var(--site-density-scale));
+      }
+
+      .site-shell {
+        border-bottom: 1px solid rgba(255, 235, 203, calc(0.08 * var(--site-contrast-strength)));
+        background: linear-gradient(180deg, rgba(18, 15, 12, 0.96), rgba(27, 22, 18, 0.9));
+        box-shadow: 0 calc(10px * var(--site-shadow-strength)) calc(28px * var(--site-shadow-strength)) rgba(0, 0, 0, 0.22);
+      }
+
+      .site-shell__inner {
+        padding: calc(12px * var(--site-density-scale)) 0 calc(10px * var(--site-density-scale));
+        align-items: flex-start;
+      }
+
+      .site-shell__identity {
+        display: grid;
+        gap: 4px;
+        min-width: 0;
+      }
+
+      .site-brand {
+        font-size: 1.04rem;
+        letter-spacing: 0.02em;
+        color: #f8ecda;
+      }
+
+      .site-shell__mode {
+        color: rgba(249, 228, 191, 0.72);
+      }
+
+      .site-shell__actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        margin-left: auto;
+      }
+
+      .site-design-panel {
+        min-width: min(420px, 100%);
+        max-width: min(460px, 100%);
+      }
+
+      .site-design-panel > summary {
+        list-style: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 40px;
+        padding: 0 14px;
+        border-radius: 999px;
+        border: 1px solid rgba(248, 222, 177, 0.18);
+        background: rgba(255, 248, 232, 0.06);
+        color: #f9eedc;
+        cursor: pointer;
+        user-select: none;
+      }
+
+      .site-design-panel > summary::-webkit-details-marker {
+        display: none;
+      }
+
+      .site-design-panel[open] > summary {
+        background: rgba(255, 248, 232, 0.12);
+        border-color: rgba(248, 222, 177, 0.28);
+      }
+
+      .site-design-card {
+        margin-top: 10px;
+        display: grid;
+        gap: 12px;
+        padding: 14px;
+        border-radius: calc(16px * var(--site-radius-scale));
+        border: 1px solid rgba(248, 222, 177, 0.16);
+        background: linear-gradient(180deg, rgba(39, 31, 24, 0.96), rgba(26, 22, 18, 0.94));
+        color: #f6ead7;
+        box-shadow: 0 18px 36px rgba(0, 0, 0, 0.28);
+      }
+
+      .site-design-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px 12px;
+      }
+
+      .site-design-field {
+        display: grid;
+        gap: 6px;
+      }
+
+      .site-design-field label,
+      .site-design-field span {
+        font-size: 0.78rem;
+        color: rgba(255, 236, 208, 0.74);
+      }
+
+      .site-design-field input,
+      .site-design-field select,
+      .site-design-field textarea {
+        width: 100%;
+        border-radius: calc(12px * var(--site-radius-scale));
+        border: 1px solid rgba(248, 222, 177, 0.18);
+        background: rgba(255, 251, 242, 0.08);
+        color: #fff7ea;
+      }
+
+      .site-design-field input[type="color"] {
+        min-height: 38px;
+        padding: 4px;
+      }
+
+      .site-design-field input[type="range"] {
+        accent-color: var(--site-accent);
+      }
+
+      .site-design-json {
+        min-height: 120px;
+        padding: 10px 12px;
+        resize: vertical;
+        font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+        font-size: 0.8rem;
+      }
+
+      .site-design-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .site-design-note {
+        margin: 0;
+        font-size: 0.8rem;
+        color: rgba(255, 234, 205, 0.78);
+      }
+
+      .hero,
+      .panel,
+      .result-section,
+      .info-card,
+      .journey-card,
+      .preset-card,
+      .compare-panel,
+      .formation-card,
+      .timeline-segment-card,
+      .tool-jump-card,
+      .home-utility-note,
+      .tool-link-card,
+      .featured-tool-card,
+      .quick-card,
+      .army-summary-card {
+        border-radius: calc(18px * var(--site-radius-scale));
+        border: 1px solid rgba(84, 62, 40, calc(0.18 * var(--site-contrast-strength)));
+        background: linear-gradient(180deg, rgba(255, 250, 242, 0.96), rgba(241, 232, 220, 0.9));
+        box-shadow:
+          0 calc(14px * var(--site-shadow-strength)) calc(34px * var(--site-shadow-strength)) rgba(22, 15, 9, 0.14),
+          inset 0 1px 0 rgba(255, 255, 255, 0.42);
+      }
+
+      body[data-site-skin="archive"] .hero,
+      body[data-site-skin="archive"] .panel,
+      body[data-site-skin="archive"] .result-section,
+      body[data-site-skin="archive"] .tool-link-card,
+      body[data-site-skin="archive"] .featured-tool-card,
+      body[data-site-skin="archive"] .quick-card,
+      body[data-site-skin="archive"] .army-summary-card {
+        background: linear-gradient(180deg, rgba(250, 244, 236, 0.98), rgba(240, 232, 222, 0.93));
+      }
+
+      body[data-site-skin="quiet"] .hero,
+      body[data-site-skin="quiet"] .panel,
+      body[data-site-skin="quiet"] .result-section,
+      body[data-site-skin="quiet"] .tool-link-card,
+      body[data-site-skin="quiet"] .featured-tool-card,
+      body[data-site-skin="quiet"] .quick-card,
+      body[data-site-skin="quiet"] .army-summary-card {
+        background: linear-gradient(180deg, rgba(246, 244, 241, 0.98), rgba(235, 232, 228, 0.94));
+      }
+
+      .hero {
+        padding: calc(28px * var(--site-density-scale));
+      }
+
+      .hero h1 {
+        font-size: clamp(2rem, 4.8vw, 3.1rem);
+        line-height: 1.12;
+        letter-spacing: -0.02em;
+      }
+
+      .hero > p,
+      .hero-command-head p,
+      .panel-header p,
+      .result-header p,
+      .field-note,
+      .toolbar-summary {
+        color: #5c5145;
+      }
+
+      .hero-command,
+      .section-details,
+      .field {
+        border-radius: calc(16px * var(--site-radius-scale));
+        border: 1px solid rgba(88, 65, 41, 0.14);
+        background: rgba(255, 251, 244, 0.72);
+      }
+
+      .site-tool-link {
+        border-color: rgba(243, 214, 158, 0.14);
+        background: rgba(255, 246, 228, 0.06);
+        color: rgba(255, 233, 194, 0.82);
+        box-shadow: inset 0 1px 0 rgba(255, 245, 220, 0.04);
+      }
+
+      .site-tool-link:hover {
+        background: rgba(255, 246, 228, 0.12);
+        color: #fff4de;
+      }
+
+      .site-tool-link.is-active,
+      .primary-button,
+      .secondary-button.is-active,
+      .mini-button.is-active {
+        background: linear-gradient(135deg, #c99852 0%, var(--site-accent) 55%, #5f3f22 100%);
+        border-color: rgba(111, 71, 33, 0.58);
+        color: #fffaf2;
+      }
+
+      .secondary-button,
+      .mini-button,
+      .primary-button {
+        border-radius: calc(14px * var(--site-radius-scale));
+      }
+
+      .result-header,
+      .panel-header {
+        align-items: center;
+      }
+
+      .home-utility-note {
+        background: rgba(255, 249, 240, 0.56);
+      }
+
+      @media (max-width: 980px) {
+        .site-shell__inner {
+          display: grid;
+          gap: 10px;
+        }
+
+        .site-shell__actions {
+          margin-left: 0;
+          justify-content: flex-start;
+        }
+
+        .site-design-panel {
+          min-width: 0;
+          max-width: none;
+        }
+
+        .site-design-grid {
+          grid-template-columns: 1fr;
+        }
+      }
     </style>
+    <link rel="stylesheet" href="./shared/user-theme.css" />
   </head>
   <body data-page-mode="tool" data-tool-view="skill">
     <a class="skip-link" href="#mainContent">メインコンテンツへ移動</a>
     <header class="site-shell">
       <div class="site-shell__inner">
-        <a class="site-brand" href="./index.html">キングダム覇道 攻略ツール</a>
-        <span class="site-shell__mode" id="siteShellModeLabel">ツール一覧</span>
+        <div class="site-shell__identity">
+          <a class="site-brand" href="./index.html">キングダム覇道 攻略軍議ノート</a>
+          <span class="site-shell__mode" id="siteShellModeLabel">ツール一覧</span>
+        </div>
+        <div class="site-shell__actions">
+          <details class="site-design-panel" id="siteDesignPanel">
+            <summary>画面調整</summary>
+            <div class="site-design-card">
+              <p class="site-design-note" id="siteDesignSummary">共有URLにも載せられる画面調整です。細かい上書きは shared/user-theme.css でも触れます。</p>
+              <div class="site-design-grid">
+                <div class="site-design-field">
+                  <label for="siteDesignPreset">雰囲気</label>
+                  <select id="siteDesignPreset" aria-label="画面の雰囲気"></select>
+                </div>
+                <div class="site-design-field">
+                  <label for="siteDesignWidth">横幅 <span id="siteDesignWidthValue">1180px</span></label>
+                  <input id="siteDesignWidth" type="range" min="980" max="1440" step="20" value="1180">
+                </div>
+                <div class="site-design-field">
+                  <label for="siteDesignDensity">密度 <span id="siteDesignDensityValue">100%</span></label>
+                  <input id="siteDesignDensity" type="range" min="88" max="118" step="1" value="100">
+                </div>
+                <div class="site-design-field">
+                  <label for="siteDesignRadius">角丸 <span id="siteDesignRadiusValue">18px</span></label>
+                  <input id="siteDesignRadius" type="range" min="8" max="30" step="1" value="18">
+                </div>
+                <div class="site-design-field">
+                  <label for="siteDesignShadow">影 <span id="siteDesignShadowValue">58%</span></label>
+                  <input id="siteDesignShadow" type="range" min="0" max="100" step="1" value="58">
+                </div>
+                <div class="site-design-field">
+                  <label for="siteDesignContrast">コントラスト <span id="siteDesignContrastValue">100%</span></label>
+                  <input id="siteDesignContrast" type="range" min="88" max="125" step="1" value="100">
+                </div>
+                <div class="site-design-field">
+                  <label for="siteDesignAccent">差し色</label>
+                  <input id="siteDesignAccent" type="color" value="#9f6a31">
+                </div>
+                <div class="site-design-field">
+                  <label for="siteDesignPaper">紙色</label>
+                  <input id="siteDesignPaper" type="color" value="#f2e8da">
+                </div>
+                <div class="site-design-field">
+                  <label for="siteDesignShell">背景色</label>
+                  <input id="siteDesignShell" type="color" value="#15110e">
+                </div>
+              </div>
+              <div class="site-design-field">
+                <label for="siteDesignJson">JSONで保存 / 復元</label>
+                <textarea class="site-design-json" id="siteDesignJson" spellcheck="false"></textarea>
+              </div>
+              <div class="site-design-actions">
+                <button class="mini-button" id="siteDesignApplyJson" type="button">JSONを反映</button>
+                <button class="mini-button" id="siteDesignCopyJson" type="button">JSONをコピー</button>
+                <button class="mini-button" id="siteDesignReset" type="button">標準に戻す</button>
+              </div>
+            </div>
+          </details>
+        </div>
       </div>
       <nav class="site-tool-nav" id="siteToolNav" aria-label="ツール一覧ナビ">
-        <a class="site-tool-link" href="./index.html">ツール一覧</a>
+        <a class="site-tool-link" href="./index.html">軍議卓</a>
         <a class="site-tool-link" href="./power.html">戦力検索</a>
         <a class="site-tool-link" href="./equipment.html">装備検索</a>
         <a class="site-tool-link" href="./character.html">武将DB</a>
@@ -6160,13 +8434,24 @@
       </nav>
     </header>
     <div class="status-toast" id="statusToast" role="status" aria-live="polite" aria-atomic="true"></div>
+    <section class="shared-view-banner" id="sharedViewBanner" hidden>
+      <div class="shared-view-banner__copy">
+        <p class="eyebrow" id="sharedViewEyebrow">共有固定表示</p>
+        <h2 id="sharedViewTitle">共有リンクの状態をそのまま表示しています</h2>
+        <p id="sharedViewSummary"></p>
+      </div>
+      <div class="shared-view-banner__actions">
+        <button class="secondary-button" id="sharedViewCopyButton" type="button">今の状態で固定URLをコピー</button>
+        <button class="secondary-button" id="sharedViewExitButton" type="button">固定表示を解除</button>
+      </div>
+    </section>
     <main class="page" id="mainContent">
       <section class="hero" data-home-only="true">
         <p class="eyebrow">キングダム覇道 / 非公式攻略ツール</p>
-        <h1>必要な画面だけ、すぐ開ける攻略ツール集</h1>
+        <h1>キングダム覇道の手持ち整理と編成作業を、一つの軍議ノートにまとめる</h1>
         <p>
-          戦力検索、編成、ガチャ、ランキング、掲示板を用途別の専用ページに整理しています。
-          まずはよく使う画面を開いて、必要になった時だけ他のツールへ広げられる構成です。
+          育成候補探し、主将の見直し、25体編成の組み直しを、毎日触る順番で並べています。
+          共有URLを開けば、条件と表示状態をできるだけ揃えたまま確認できます。
         </p>
         <div class="hero-command">
           <div class="hero-command-head">
@@ -6195,6 +8480,26 @@
           <button class="mini-button" type="button" data-switch-view="ranking">全鯖ランキングを開く</button>
           <button class="mini-button" type="button" data-switch-view="community">攻略掲示板を開く</button>
         </div>
+        <div class="hero-war-grid">
+          <article class="hero-war-card">
+            <span class="hero-war-card__eyebrow">Search</span>
+            <strong>育成候補をすぐ絞る</strong>
+            <p>戦力検索と武将DBを起点に、主将候補と不足役をすぐ確認できます。</p>
+            <button class="mini-button" type="button" data-switch-view="power">主将候補を見る</button>
+          </article>
+          <article class="hero-war-card">
+            <span class="hero-war-card__eyebrow">Build</span>
+            <strong>軍勢をその場で組み替える</strong>
+            <p>編成ツールと自動編成で、S3基準の役割バランスと配置を整えます。</p>
+            <button class="mini-button" type="button" data-switch-view="army">自動編成を見る</button>
+          </article>
+          <article class="hero-war-card">
+            <span class="hero-war-card__eyebrow">Share</span>
+            <strong>固定URLでそのまま渡す</strong>
+            <p>比較条件や編成案をURLに閉じ込めて、相手にも同じ画面をそのまま見せられます。</p>
+            <button class="mini-button" type="button" data-switch-view="community">共有導線を見る</button>
+          </article>
+        </div>
         <div class="hero-meta">
           <span>総数 <strong id="datasetCount"></strong></span>
           <span>SSR <strong id="ssrCount"></strong></span>
@@ -6206,6 +8511,8 @@
           <span>更新基準 <strong id="seasonUpdatedAt"></strong></span>
         </div>
       </section>
+
+      <div class="home-portal-layout" data-home-only="true">
 
       <section class="panel tool-directory-panel" data-home-only="true">
         <div class="panel-header">
@@ -6545,14 +8852,16 @@
             <p class="home-utility-note" id="backupMeta"></p>
           </div>
           <div class="home-utility-actions">
-            <button class="secondary-button" id="copyStateLinkButton" type="button">現在のページを共有</button>
+            <button class="secondary-button" id="copyStateLinkButton" type="button">固定URLをコピー</button>
             <button class="secondary-button" id="downloadBackupButton" type="button">JSONを書き出す</button>
             <button class="secondary-button" id="importBackupButton" type="button">JSONを読み込む</button>
-            <button class="secondary-button" id="clearBrowserDataButton" type="button">ブラウザ保存を初期化</button>
+            <button class="secondary-button" id="clearBrowserDataButton" type="button">この端末の保存を初期化</button>
           </div>
         </div>
         <input class="backup-input" id="backupImportInput" type="file" accept="application/json,.json">
       </section>
+
+      </div>
 
       <section class="panel home-faq-panel" data-home-only="true">
         <div class="panel-header">
@@ -6650,10 +8959,16 @@
           <p class="eyebrow" id="toolPageEyebrow">専用ページ</p>
           <h1 id="toolPageTitle">ツール専用ページ</h1>
           <p id="toolPageSummary"></p>
+          <div class="tool-page-banner__badges">
+            <span class="tool-page-badge">共有URLで同じ画面</span>
+            <span class="tool-page-badge">S3基準で整理</span>
+            <span class="tool-page-badge">技能差異はGameWith優先</span>
+          </div>
         </div>
         <div class="tool-page-banner__actions">
-          <a class="button-link secondary-button" href="./index.html">一覧へ戻る</a>
-          <button class="secondary-button" type="button" data-page-action="share">このページを共有</button>
+          <button class="secondary-button" type="button" data-page-action="community-post">編成投稿</button>
+          <a class="button-link secondary-button" href="./index.html">軍議卓へ戻る</a>
+          <button class="secondary-button" type="button" data-page-action="share">固定URLをコピー</button>
           <button class="secondary-button" type="button" data-page-action="backup">JSONを書き出す</button>
           <button class="secondary-button" type="button" data-page-action="import">JSONを読み込む</button>
         </div>
@@ -6852,6 +9167,85 @@
         <div class="builder-overview-grid" id="powerCalcSummaryGrid"></div>
         <p class="field-note" id="powerCalcFormula"></p>
         <p class="field-note" id="powerCalcSampleMeta"></p>
+      </section>
+
+      <section class="panel tool-jump-panel">
+        <div class="panel-header">
+          <div>
+            <h2>武将戦力 仮説比較</h2>
+            <p>
+              提供画像15件と公開情報を突き合わせて、武将1体の戦力が何で決まりやすいかを複数仮説で比べる研究用パネルです。
+              うち5件は同時刻で将星・練達まで追えているため、単なる近似だけでなく「表示ステータスがどう分解されているか」も検証しています。
+            </p>
+          </div>
+        </div>
+        <details class="section-details" open>
+          <summary>比較の前提</summary>
+          <div class="details-body">
+            <ul class="bullet-list">
+              <li>GameWith の「戦力は最大兵力と各ステータスから算出」を出発点に、能力画面で見える値だけでどこまで説明できるかを見ています。</li>
+              <li>仮説は 4戦闘ステのみ / Lv追加 / 天賦追加 / 魅力追加 の順に増やし、LOO誤差で安定度を比較します。</li>
+              <li>同時刻画像では、表示ステータスを「基礎値 + 将星補正 + 練達補正」に分解し、次将星や次練達の伸び方も追跡しています。</li>
+              <li>この比較は、手元の画像サンプルを増やすほど強くなります。今は「魅力が効くか」「天賦が隠れ要素の代理か」「将星と練達がどこまで直接戦力へ効くか」を見る用途向けです。</li>
+            </ul>
+          </div>
+        </details>
+        <div class="builder-select-grid">
+          <div class="field field-span-2">
+            <label for="heroPowerPreset">サンプル呼び出し</label>
+            <select id="heroPowerPreset" aria-label="武将戦力仮説比較のサンプル選択"></select>
+            <p class="field-note">画像から起こした15件をすぐ呼び出せます。楊端和 / シュンメン / 玄峰 / 尚鹿 / バジオウは将星と練達の分解にも対応しています。</p>
+          </div>
+          <div class="field">
+            <label for="heroPowerLevel">Lv</label>
+            <input id="heroPowerLevel" type="number" min="1" step="1" value="32" inputmode="numeric">
+          </div>
+          <div class="field">
+            <label for="heroPowerTenpu">天賦</label>
+            <input id="heroPowerTenpu" type="number" min="0" step="1" value="850" inputmode="numeric">
+          </div>
+        </div>
+        <div class="builder-select-grid">
+          <div class="field">
+            <label for="heroPowerAttack">攻撃</label>
+            <input id="heroPowerAttack" type="number" min="0" step="1" value="704" inputmode="numeric">
+          </div>
+          <div class="field">
+            <label for="heroPowerDefense">防御</label>
+            <input id="heroPowerDefense" type="number" min="0" step="1" value="700" inputmode="numeric">
+          </div>
+          <div class="field">
+            <label for="heroPowerWar">戦威</label>
+            <input id="heroPowerWar" type="number" min="0" step="1" value="622" inputmode="numeric">
+          </div>
+          <div class="field">
+            <label for="heroPowerStrategy">策略</label>
+            <input id="heroPowerStrategy" type="number" min="0" step="1" value="571" inputmode="numeric">
+          </div>
+          <div class="field">
+            <label for="heroPowerCharm">魅力</label>
+            <input id="heroPowerCharm" type="number" min="0" step="1" value="672" inputmode="numeric">
+            <p class="field-note">魅力は比較用です。精度が上がらない場合は「独立寄与が弱い」仮説を後押しします。</p>
+          </div>
+        </div>
+        <div class="button-row">
+          <button class="secondary-button" id="heroPowerResetButton" type="button">初期サンプルに戻す</button>
+        </div>
+        <div class="builder-overview-grid" id="heroPowerSummaryGrid"></div>
+        <div class="builder-overview-grid" id="heroPowerHypothesisGrid"></div>
+        <details class="section-details" open>
+          <summary>同時刻画像で見えた投資分解</summary>
+          <div class="details-body">
+            <p class="field-note">
+              同じタイミングで撮られた将星・練達付き画像から、現在の表示値を基礎値 / 将星 / 練達に分解して表示します。
+              将星画面の緑値は「次に増える量」、練達画面は「白値 - 緑値」で現在補正を戻せるかを検証しています。
+            </p>
+            <div class="builder-overview-grid" id="heroPowerInvestmentGrid"></div>
+            <p class="field-note" id="heroPowerInvestmentConclusion"></p>
+          </div>
+        </details>
+        <p class="field-note" id="heroPowerConclusion"></p>
+        <p class="field-note" id="heroPowerResearchMeta"></p>
       </section>
 
       <section class="panel tool-jump-panel">
@@ -7372,7 +9766,7 @@
                 <div class="field">
                   <strong>盤面の見方</strong>
                   <div class="legend-row" id="builderBoardLegend"></div>
-                  <p class="field-note">タイムライン行を押すとその秒へ移動し、敵マスを押すと単体対象の基準も切り替えられます。</p>
+                  <p class="field-note">秒数ボタン、効果帯、敵マスを押すと表示が連動します。敵マスを変えると単体対象の基準も切り替わります。</p>
                 </div>
               </div>
             </div>
@@ -7407,7 +9801,7 @@
               </div>
             </article>
             <article class="module-card">
-              <h2>その秒の発動一覧</h2>
+              <h2>その秒の影響一覧</h2>
               <div class="builder-active-effects" id="builderActiveEffects"></div>
             </article>
           </div>
@@ -7487,9 +9881,38 @@
                     placeholder="武将名,戦力,攻撃,防御,戦威,策略,魅力,レベル,天賦,秘伝"
                     aria-label="軍勢自動編成の実測戦力CSV"
                   ></textarea>
-                  <p class="field-note">見出しは「武将名, 戦力, 攻撃, 防御, 戦威, 策略, 魅力, レベル, 天賦, 秘伝」を認識します。戦力列が欠けていても、4ステータス + Lv + 秘伝から推定補完します。1体でも反映すると自動編成は手持ち限定で組みます。</p>
+                  <p class="field-note">見出しは「武将名, 戦力, 攻撃, 防御, 戦威, 策略, 魅力, レベル, 天賦, 秘伝」を認識します。戦力列が欠けていても、4戦闘ステ基準の仮説群に Lv / 天賦 / 魅力 / 秘伝を必要に応じて足した中から、最も安定した式で推定補完します。1体でも反映すると自動編成は手持ち限定で組みます。</p>
                 </div>
               </div>
+
+              <section class="army-image-import" aria-labelledby="armyImageImportHeading">
+                <div class="army-image-import__header">
+                  <strong id="armyImageImportHeading">画像から1体ずつ読み取る</strong>
+                  <p class="field-note">CSV がなくても、能力画面や戦力画面の画像を1枚入れて OCR で武将名と数値を抽出できます。解析はブラウザ内で行い、抽出後に確認してから手持ちへ反映します。</p>
+                </div>
+
+                <div class="builder-select-grid">
+                  <div class="field">
+                    <label for="armyImageImportInput">能力画面の画像</label>
+                    <input id="armyImageImportInput" type="file" accept="image/*" aria-label="軍勢自動編成の画像取り込み">
+                    <p class="field-note">推奨: 「戦力 / 攻撃 / 防御 / 戦威 / 策略 / 武将名」が同時に見えている画像。まずは1枚につき1武将で読み取ります。</p>
+                  </div>
+
+                  <div class="field field-span-2">
+                    <div class="button-row">
+                      <button class="secondary-button" id="armyImageImportButton" type="button">画像を解析</button>
+                      <button class="primary-button" id="armyImageImportApplyButton" type="button" disabled>OCR結果を手持ちへ反映</button>
+                      <button class="secondary-button" id="armyImageImportClearButton" type="button">OCR結果をクリア</button>
+                    </div>
+                    <p class="field-note" id="armyImageImportStatus">まだ画像は選択されていません。</p>
+                  </div>
+                </div>
+
+                <div class="army-image-import__preview-grid">
+                  <div class="army-image-import__preview" id="armyImageImportPreview"></div>
+                  <div class="army-image-import__result" id="armyImageImportResult"></div>
+                </div>
+              </section>
 
               <div class="button-row">
                 <button class="primary-button" id="armyPowerImportButton" type="button">CSVを反映して手持ち登録</button>
@@ -7529,7 +9952,12 @@
                 <div class="field">
                   <label for="armyConcept">最適化方針</label>
                   <select id="armyConcept" aria-label="最適化方針"></select>
-                  <p class="field-note">対人勝率、攻城DPS、防衛安定、妨害先手、現在戦力最大、最大見込み戦力、育成効率、世間採用寄りを切り替えます。</p>
+                  <p class="field-note">対人基準、戦力重視、初動20秒、攻城速度、防衛安定、妨害先手、完成形重視、育成効率、採用傾向を切り替えます。</p>
+                </div>
+
+                <div class="field">
+                  <label>S3環境</label>
+                  <p class="field-note">自動編成はS3専用です。共通条件とS2の知見は、必要条件や初動確認の補助だけに内部反映します。</p>
                 </div>
 
                 <div class="field">
@@ -7558,13 +9986,13 @@
                     placeholder="名前、技能、特徴で検索"
                     aria-label="手持ち武将を検索"
                   />
-                  <p class="field-note">画像を1回で仕上がり、2回で実戦投入、3回で未育成の初期状態へ戻します。</p>
+                  <p class="field-note">画像は 仕上がり → 未育成 → 未選択 の順に切り替わります。編成には仕上がりだけを使います。</p>
                 </div>
 
                 <div class="field">
                   <label for="armyDefaultInvestment">新規選択時の育成段階</label>
                   <select id="armyDefaultInvestment" aria-label="新規選択時の育成段階"></select>
-                  <p class="field-note">新しく手持ちに入れた武将へ、ここで選んだ育成段階を初期値として入れます。</p>
+                  <p class="field-note">新しく手持ちに入れた武将へ、ここで選んだ初期段階を入れます。編成候補は仕上がりのみです。</p>
                 </div>
 
                 <div class="field">
@@ -7585,7 +10013,7 @@
               <div class="result-header">
                 <div>
                   <h2>選択済み武将の現在値</h2>
-                  <p>画像タップの簡易入力に加えて、ここでは未育成や装備状態も個別調整できます。</p>
+                  <p>ここでは仕上がり / 未育成 と装備状態を個別調整できます。編成候補には仕上がりだけを使います。</p>
                 </div>
               </div>
               <div class="army-owned-settings" id="armyOwnedSettings"></div>
@@ -7604,7 +10032,7 @@
                 <div class="field army-summary-card">
                   <strong>いまの流れ</strong>
                   <p class="field-note">
-                    手持ちを選ぶ → 主将候補を出す → 主将5体を選ぶ → 残りの副将 / 補佐を組む、の順で進めます。
+                    手持ちを登録 → 仕上がりを整える → 主将5体を選ぶ → 残りの副将 / 補佐を組む、の順で進めます。
                   </p>
                 </div>
               </div>
@@ -7618,7 +10046,7 @@
 
               <div class="builder-overview-grid" id="armyCommanderWizardSummaryGrid"></div>
               <div class="button-row" id="armySelectedCommanderStrip"></div>
-              <p class="field-note" id="armyCommanderHelp">まずは主将候補を出して、採用したい主将を5体選んでください。</p>
+              <p class="field-note" id="armyCommanderHelp">まずは主将候補を出して、仕上がり武将の中から採用したい主将を5体選んでください。</p>
             </div>
           </details>
 
@@ -7628,7 +10056,7 @@
               <div class="button-row">
                 <button class="primary-button" id="armyFinalizeButton" type="button">副将・補佐を組む</button>
               </div>
-              <p class="field-note">陣形バフ / デバフ、列適性、役割カバーを反映しながら、選んだ主将5体の残り20枠を提案します。</p>
+              <p class="field-note">陣形バフ / デバフ、列適性、役割カバーを反映しながら、仕上がり武将だけで残り20枠を提案します。</p>
             </div>
           </details>
 
@@ -7669,6 +10097,30 @@
             </div>
           </div>
           <div class="army-unit-grid" id="armyUnitGrid"></div>
+        </section>
+
+        <section class="result-section partial-section">
+          <div class="result-header">
+            <div>
+              <h2>戦法タイムライン</h2>
+              <p>表示中の部隊について、0〜50秒の戦法発動帯、3×3盤面、継続中の効果を見ます。</p>
+            </div>
+            <span class="count-pill" id="armyTimelineCount">戦法待ち</span>
+          </div>
+          <div class="army-battle-shell">
+            <article class="module-card army-battle-card">
+              <div class="legend-row" id="armyBoardLegend"></div>
+              <div id="armyTimeline"></div>
+            </article>
+            <div class="army-battle-stage">
+              <article class="module-card army-battle-card">
+                <div id="armyBoardGrid"></div>
+              </article>
+              <article class="module-card army-battle-card">
+                <div id="armyActiveEffects"></div>
+              </article>
+            </div>
+          </div>
         </section>
 
         <section class="result-section exact-section">
@@ -7760,12 +10212,12 @@
               <p class="journey-eyebrow">Season 3限定</p>
               <h2>英傑登用シミュレーター</h2>
               <p>
-                シーズン3の英傑登用を、公開されている提供割合と 20回ごとのSSR確定、100回ごとの天賦900確定を反映して再現します。
-                本家の人材結果画面を参考にした10枠表示と、累計回数・概算課金額・武将ごとの獲得回数までまとめて確認できます。
+                シーズン3の英傑登用を基準に、通常バナーと限定バナーのひな形を切り替えられるガチャシミュレーターです。
+                バナーごとの累計回数・概算課金額・10連履歴を分けて持ちつつ、あとから限定提供割合を差し替えられる土台にしています。
               </p>
             </div>
             <div class="status-pills">
-              <span class="count-pill">SSR 3.482%</span>
+              <span class="count-pill">通常 / 限定 切替</span>
               <span class="count-pill">20回ごとSSR確定</span>
               <span class="count-pill">100回ごと天賦900確定</span>
             </div>
