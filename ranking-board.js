@@ -256,21 +256,39 @@
     }
   }
 
+  function getRankingSourceEntries() {
+    return apiState.remoteEntries;
+  }
+
+  function compareEntries(left, right) {
+    if (right.powerValue !== left.powerValue) {
+      return right.powerValue - left.powerValue;
+    }
+    const serverDiff = Number(left.server || 0) - Number(right.server || 0);
+    if (serverDiff) {
+      return serverDiff;
+    }
+    const playerDiff = String(left.playerName || "").localeCompare(String(right.playerName || ""), "ja");
+    if (playerDiff) {
+      return playerDiff;
+    }
+    const postedDiff = String(left.postedAt || "").localeCompare(String(right.postedAt || ""));
+    if (postedDiff) {
+      return postedDiff;
+    }
+    return String(left.id || "").localeCompare(String(right.id || ""));
+  }
+
   function getAllEntries() {
     const merged = new Map();
-    [...apiState.remoteEntries, ...state.localEntries].forEach((entry) => {
+    getRankingSourceEntries().forEach((entry) => {
       merged.set(entry.id, entry);
     });
-    return [...merged.values()];
+    return sortEntries([...merged.values()]);
   }
 
   function sortEntries(entries) {
-    return [...entries].sort((left, right) => {
-      if (right.powerValue !== left.powerValue) {
-        return right.powerValue - left.powerValue;
-      }
-      return String(right.postedAt).localeCompare(String(left.postedAt));
-    });
+    return [...entries].sort(compareEntries);
   }
 
   function getScopedEntries() {
@@ -917,6 +935,91 @@
     }
     syncFormInputsFromDraft();
     syncAuthInputs();
+  }
+
+  function renderAll() {
+    const scopedEntries = getScopedEntries();
+    const visibleEntries = scopedEntries.slice(0, 100);
+    const topTenEntries = visibleEntries.slice(0, 10);
+    const restEntries = visibleEntries.slice(10);
+    const ownedEntry = ownedEntryForServer(state.draft.server);
+
+    ensureSelectedEntry(visibleEntries);
+    const selectedEntry = visibleEntries.find((entry) => entry.id === state.selectedId) ?? null;
+
+    elements.boardTabs.innerHTML = buildViewTabs();
+    elements.boardHelper.textContent = "共有ランキング";
+    elements.statGrid.innerHTML = buildSummaryCards(scopedEntries, visibleEntries);
+    elements.summary.textContent = `${viewMeta(state.filters.viewKey).label} / 表示 ${formatCount(visibleEntries.length)}件 / 全体 ${formatCount(scopedEntries.length)}件`;
+    elements.topTen.innerHTML = buildHeroCards(topTenEntries);
+    elements.restSummary.textContent = restEntries.length ? `11位-${10 + restEntries.length}位` : "11位以下なし";
+    elements.restTable.innerHTML = buildCompactRows(restEntries, 11);
+    elements.proofViewer.innerHTML = buildProofViewer(selectedEntry);
+    elements.draftPreview.innerHTML = buildDraftPreview();
+    elements.formSummary.textContent = apiState.remoteEntries.length
+      ? authState.authenticated
+        ? "共有ランキング表示中。投稿できます。"
+        : "共有ランキング表示中。投稿はログイン後。"
+      : state.localEntries.length
+        ? "ローカル控えを表示中。"
+        : "データ待機中。";
+    elements.deleteButton.disabled = !canDeleteEntry(selectedEntry);
+    elements.submitButton.disabled = !apiState.available || !authState.authenticated;
+    elements.submitButton.textContent = authState.authenticated && ownedEntry ? "更新" : "投稿";
+    if (elements.authSummary) {
+      elements.authSummary.textContent = authState.checked
+        ? authState.authenticated
+          ? `ログイン中: ${authState.user?.loginName || ""}`
+          : apiState.available
+            ? "未ログイン"
+            : "閲覧専用"
+        : "確認中";
+    }
+    if (elements.ownedSummary) {
+      elements.ownedSummary.textContent = authState.authenticated
+        ? authState.ownedEntries.length
+          ? authState.ownedEntries.map((entry) => `S${entry.server}: ${entry.playerName} / ${formatCount(entry.powerValue)}`).join(" | ")
+          : "自分の投稿なし"
+        : apiState.available
+          ? "ログインで投稿できます。"
+          : "共有表示のみ";
+    }
+    if (elements.bridgeActions) {
+      elements.bridgeActions.innerHTML = apiState.dynamicSiteUrl
+        ? `<a class="button-link secondary-button" href="${escapeHtml(apiState.dynamicSiteUrl)}" target="_blank" rel="noreferrer">投稿ページ</a>`
+        : "";
+    }
+    if (elements.bridgeSummary) {
+      elements.bridgeSummary.textContent = apiState.dynamicSiteUrl ? apiState.dynamicSiteUrl : "";
+    }
+    if (elements.loginButton) {
+      elements.loginButton.disabled = !apiState.available;
+      elements.loginButton.textContent = "ログイン";
+    }
+    if (elements.registerButton) {
+      elements.registerButton.disabled = !apiState.available;
+      elements.registerButton.textContent = "新規登録";
+    }
+    if (elements.logoutButton) {
+      elements.logoutButton.disabled = !apiState.available || !authState.authenticated;
+      elements.logoutButton.textContent = "ログアウト";
+    }
+    syncFormInputsFromDraft();
+    syncAuthInputs();
+
+    const sectionHeaders = root.querySelectorAll(".result-section .result-header h2");
+    const sectionBodies = root.querySelectorAll(".result-section .result-header p");
+    if (sectionHeaders[0]) sectionHeaders[0].textContent = "ランキング";
+    if (sectionHeaders[1]) sectionHeaders[1].textContent = "証明画像";
+    if (sectionBodies[0]) sectionBodies[0].textContent = "共有ランキング";
+    if (sectionBodies[1]) sectionBodies[1].textContent = "選択中の画像";
+
+    const sideHeaders = root.querySelectorAll(".ranking-form-panel .result-header h2");
+    const sideBodies = root.querySelectorAll(".ranking-form-panel .result-header p");
+    if (sideHeaders[0]) sideHeaders[0].textContent = "ログイン";
+    if (sideHeaders[1]) sideHeaders[1].textContent = "投稿";
+    if (sideBodies[0]) sideBodies[0].textContent = "投稿用";
+    if (sideBodies[1]) sideBodies[1].textContent = "画像1枚で投稿";
   }
 
   function updateDraft(patch) {
