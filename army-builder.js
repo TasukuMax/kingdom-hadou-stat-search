@@ -13,7 +13,13 @@ const ARMY_SUPPORT_TOOL_NAME_MAP = Object.fromEntries(
   ARMY_SUPPORT_TOOL_CATALOG.map((entry) => [entry.key, entry.name])
 );
 const ARMY_BUILDER_LIMITS = {
-  commanderSeeds: Math.max(ARMY_SEARCH_CONFIG.commanderSeeds ?? 12, 12),
+  commanderSeeds: Math.max(ARMY_SEARCH_CONFIG.commanderSeeds ?? 12, 18),
+  commanderPreviewPool: 24,
+  commanderShortlist: 15,
+  commanderPreviewVicePool: 8,
+  commanderPreviewAidePool: 6,
+  commanderPreviewVicePairKeep: 14,
+  commanderPreviewUnits: 3,
   vicePool: 12,
   aidePool: 9,
   vicePairKeep: 24,
@@ -27,15 +33,18 @@ const ARMY_BUILDER_LIMITS = {
   localSearchCommanderPool: 6,
   localSearchAidePairs: 10
 };
+const ARMY_TIMELINE_DEFAULT_SECOND = 20;
+const ARMY_TIMELINE_MAX_SECOND = 60;
 const ARMY_FORMATION_RECOMMENDATION_BY_CONCEPT = {
-  balanced: "basic",
+  balanced: "kakuyoku",
   siege: "suikou",
-  counter: "basic",
+  counter: "kakuyoku",
   debuff: "sakubou",
+  opener: "sakubou",
   defense: "kakuyoku",
-  growth: "basic",
-  meta: "basic",
-  powermax: "basic"
+  growth: "houjin",
+  meta: "kakuyoku",
+  powermax: "houjin"
 };
 
 const ARMY_SLOT_ROLE_CONDITION = {
@@ -70,10 +79,492 @@ const ARMY_ARMY_WEIGHT_MAP = SEASON3.builderWeights?.armyWeights ?? {};
 const ARMY_PENALTY_MAP = SEASON3.builderWeights?.penalties ?? {};
 const ARMY_ROSTER_STORAGE_KEY = "kh-army-roster-v4";
 const ARMY_POWER_IMPORT_STORAGE_KEY = "kh-army-power-import-v1";
+const ARMY_IMAGE_IMPORT_HEADERS = ["武将名", "戦力", "攻撃", "防御", "戦威", "策略", "魅力", "レベル", "天賦", "秘伝"];
+const ARMY_IMAGE_IMPORT_REQUIRED_FIELDS = ["name", "power", "attack", "defense", "war", "strategy"];
+const ARMY_IMAGE_IMPORT_FIELD_DEFS = [
+  { key: "name", label: "武将名", type: "text" },
+  { key: "power", label: "戦力", type: "number" },
+  { key: "attack", label: "攻撃", type: "number" },
+  { key: "defense", label: "防御", type: "number" },
+  { key: "war", label: "戦威", type: "number" },
+  { key: "strategy", label: "策略", type: "number" },
+  { key: "charm", label: "魅力", type: "number" },
+  { key: "level", label: "Lv", type: "number" },
+  { key: "tenpu", label: "天賦", type: "number" },
+  { key: "secret", label: "秘伝", type: "number" }
+];
+const ARMY_REGRESSION_FEATURE_LABELS = {
+  soldier: "兵力",
+  attack: "攻撃",
+  defense: "防御",
+  war: "戦威",
+  strategy: "策略",
+  charm: "魅力",
+  level: "Lv",
+  tenpu: "天賦",
+  secret: "秘伝"
+};
+const ARMY_OBSERVED_POWER_HYPOTHESIS_DEFS = [
+  {
+    key: "stats4",
+    label: "4戦闘ステ",
+    description: "攻撃・防御・戦威・策略だけで説明する最も単純な仮説です。",
+    featureKeys: ["attack", "defense", "war", "strategy"]
+  },
+  {
+    key: "stats4-level",
+    label: "4戦闘ステ + Lv",
+    description: "表示ステータスに加えて、レベルの独立寄与が残るとみなす仮説です。",
+    featureKeys: ["attack", "defense", "war", "strategy", "level"]
+  },
+  {
+    key: "stats4-tenpu",
+    label: "4戦闘ステ + 天賦",
+    description: "天賦が隠れた兵力差や育成差の代理になっている可能性をみます。",
+    featureKeys: ["attack", "defense", "war", "strategy", "tenpu"]
+  },
+  {
+    key: "stats4-level-secret",
+    label: "4戦闘ステ + Lv + 秘伝",
+    description: "従来のCSV補完と同じ、現在値向けの基準仮説です。",
+    featureKeys: ["attack", "defense", "war", "strategy", "level", "secret"]
+  },
+  {
+    key: "stats4-level-tenpu-secret",
+    label: "4戦闘ステ + Lv + 天賦 + 秘伝",
+    description: "天賦を加え、Lv/秘伝も別枠で評価する仮説です。",
+    featureKeys: ["attack", "defense", "war", "strategy", "level", "tenpu", "secret"]
+  },
+  {
+    key: "stats4-level-tenpu-charm-secret",
+    label: "4戦闘ステ + Lv + 天賦 + 魅力 + 秘伝",
+    description: "魅力も独立項にして、実測の改善があるかを検証する仮説です。",
+    featureKeys: ["attack", "defense", "war", "strategy", "level", "tenpu", "charm", "secret"]
+  }
+];
+const HERO_POWER_HYPOTHESIS_DEFS = [
+  {
+    key: "stats4",
+    label: "仮説A: 4戦闘ステ",
+    description: "攻撃・防御・戦威・策略だけで表示戦力を説明できるとみる仮説です。",
+    featureKeys: ["attack", "defense", "war", "strategy"]
+  },
+  {
+    key: "stats4-level",
+    label: "仮説B: 4戦闘ステ + Lv",
+    description: "レベルに独立加点が残っている可能性を検証します。",
+    featureKeys: ["attack", "defense", "war", "strategy", "level"]
+  },
+  {
+    key: "stats4-tenpu",
+    label: "仮説C: 4戦闘ステ + 天賦",
+    description: "天賦が見えない兵力差や育成差の代理になっているとみる仮説です。",
+    featureKeys: ["attack", "defense", "war", "strategy", "tenpu"]
+  },
+  {
+    key: "stats4-level-tenpu",
+    label: "仮説D: 4戦闘ステ + Lv + 天賦",
+    description: "Lv と天賦がどちらも別枠で残るかを検証します。",
+    featureKeys: ["attack", "defense", "war", "strategy", "level", "tenpu"]
+  },
+  {
+    key: "stats4-level-tenpu-charm",
+    label: "仮説E: 4戦闘ステ + Lv + 天賦 + 魅力",
+    description: "魅力を足すことで精度が上がるかを最後に確認する仮説です。",
+    featureKeys: ["attack", "defense", "war", "strategy", "level", "tenpu", "charm"]
+  }
+];
+const HERO_POWER_RESEARCH_SAMPLE_ROWS = [
+  {
+    key: "sample-ouki",
+    name: "王騎",
+    source: "ユーザー提供画像",
+    power: 4476,
+    attack: 704,
+    defense: 700,
+    war: 622,
+    strategy: 571,
+    charm: 672,
+    level: 36,
+    tenpu: 900
+  },
+  {
+    key: "sample-tou",
+    name: "騰",
+    source: "ユーザー提供画像",
+    power: 4170,
+    attack: 575,
+    defense: 646,
+    war: 669,
+    strategy: 494,
+    charm: 497,
+    level: 32,
+    tenpu: 900
+  },
+  {
+    key: "sample-rokoumi",
+    name: "録嗚未",
+    source: "ユーザー提供画像",
+    power: 3996,
+    attack: 666,
+    defense: 644,
+    war: 482,
+    strategy: 380,
+    charm: 454,
+    level: 32,
+    tenpu: 850
+  },
+  {
+    key: "sample-rankai",
+    name: "ランカイ",
+    source: "ユーザー提供画像",
+    power: 3979,
+    attack: 696,
+    defense: 688,
+    war: 464,
+    strategy: 86,
+    charm: 157,
+    level: 32,
+    tenpu: 850
+  },
+  {
+    key: "sample-shin",
+    name: "信",
+    source: "ユーザー提供画像",
+    power: 3879,
+    attack: 667,
+    defense: 520,
+    war: 596,
+    strategy: 278,
+    charm: 498,
+    level: 32,
+    tenpu: 850
+  },
+  {
+    key: "sample-eisei",
+    name: "嬴政",
+    source: "ユーザー提供画像",
+    power: 3762,
+    attack: 475,
+    defense: 477,
+    war: 561,
+    strategy: 626,
+    charm: 661,
+    level: 32,
+    tenpu: 900
+  },
+  {
+    key: "sample-tajifu",
+    name: "タジフ",
+    source: "ユーザー提供画像",
+    power: 3743,
+    attack: 675,
+    defense: 533,
+    war: 480,
+    strategy: 288,
+    charm: 360,
+    level: 32,
+    tenpu: 850
+  },
+  {
+    key: "sample-kanou",
+    name: "干央",
+    source: "ユーザー提供画像",
+    power: 3538,
+    attack: 575,
+    defense: 580,
+    war: 446,
+    strategy: 338,
+    charm: 403,
+    level: 28,
+    tenpu: 800
+  },
+  {
+    key: "sample-hyou",
+    name: "漂",
+    source: "ユーザー提供画像",
+    power: 3528,
+    attack: 456,
+    defense: 591,
+    war: 455,
+    strategy: 513,
+    charm: 532,
+    level: 32,
+    tenpu: 850
+  },
+  {
+    key: "sample-doukin",
+    name: "同金",
+    source: "ユーザー提供画像",
+    power: 3498,
+    attack: 557,
+    defense: 565,
+    war: 475,
+    strategy: 358,
+    charm: 388,
+    level: 32,
+    tenpu: 800
+  }
+];
+HERO_POWER_RESEARCH_SAMPLE_ROWS.unshift(
+  {
+    key: "sample-yotanwa",
+    name: "楊端和",
+    source: "ユーザー画像 / 2026-03-24 同時刻",
+    investmentSource: "same-time-images",
+    power: 3127,
+    attack: 450,
+    defense: 529,
+    war: 424,
+    strategy: 360,
+    charm: 442,
+    level: 33,
+    tenpu: 900,
+    starBonuses: {
+      attack: 291,
+      defense: 294,
+      war: 285,
+      strategy: 242,
+      charm: 297
+    },
+    nextStarBonuses: {
+      attack: 58,
+      defense: 59,
+      war: 57,
+      strategy: 48,
+      charm: 59
+    },
+    rendanSkill: "枢機",
+    rendanBonuses: {
+      attack: 17,
+      defense: 67,
+      war: 0,
+      strategy: 0,
+      charm: 0
+    },
+    nextRendanBonuses: {
+      attack: 16,
+      defense: 16,
+      war: 16,
+      strategy: 14,
+      charm: 17
+    }
+  },
+  {
+    key: "sample-shunmen",
+    name: "シュンメン",
+    source: "ユーザー画像 / 2026-03-24 同時刻",
+    investmentSource: "same-time-images",
+    power: 3172,
+    attack: 561,
+    defense: 417,
+    war: 435,
+    strategy: 338,
+    charm: 405,
+    level: 33,
+    tenpu: 850,
+    starBonuses: {
+      attack: 352,
+      defense: 276,
+      war: 288,
+      strategy: 224,
+      charm: 268
+    },
+    starStatus: "max",
+    rendanSkill: "攻陣",
+    rendanBonuses: {
+      attack: 30,
+      defense: 0,
+      war: 0,
+      strategy: 0,
+      charm: 0
+    },
+    nextRendanBonuses: {
+      attack: 15,
+      defense: 12,
+      war: 13,
+      strategy: 10,
+      charm: 12
+    }
+  },
+  {
+    key: "sample-genpou",
+    name: "玄峰",
+    source: "ユーザー画像 / 2026-03-24 同時刻",
+    investmentSource: "same-time-images",
+    power: 3121,
+    attack: 322,
+    defense: 404,
+    war: 473,
+    strategy: 526,
+    charm: 305,
+    level: 33,
+    tenpu: 800,
+    starBonuses: {
+      attack: 212,
+      defense: 266,
+      war: 311,
+      strategy: 326,
+      charm: 201
+    },
+    starStatus: "max",
+    rendanSkill: "栄兵",
+    rendanBonuses: {
+      attack: 0,
+      defense: 0,
+      war: 0,
+      strategy: 30,
+      charm: 0
+    },
+    nextRendanBonuses: {
+      attack: 10,
+      defense: 12,
+      war: 14,
+      strategy: 15,
+      charm: 9
+    }
+  },
+  {
+    key: "sample-shoukaku",
+    name: "尚鹿",
+    source: "ユーザー画像 / 2026-03-24 同時刻",
+    investmentSource: "same-time-images",
+    power: 2512,
+    attack: 393,
+    defense: 376,
+    war: 382,
+    strategy: 323,
+    charm: 409,
+    level: 18,
+    tenpu: 800,
+    starBonuses: {
+      attack: 281,
+      defense: 269,
+      war: 273,
+      strategy: 231,
+      charm: 292
+    },
+    starStatus: "max",
+    rendanSkill: "奮戦",
+    rendanBonuses: {
+      attack: 0,
+      defense: 0,
+      war: 0,
+      strategy: 0,
+      charm: 0
+    },
+    nextRendanBonuses: {
+      attack: 13,
+      defense: 12,
+      war: 13,
+      strategy: 11,
+      charm: 13
+    }
+  },
+  {
+    key: "sample-bajio",
+    name: "バジオウ",
+    source: "ユーザー画像 / 2026-03-24 同時刻",
+    investmentSource: "same-time-images",
+    power: 2653,
+    attack: 442,
+    defense: 398,
+    war: 382,
+    strategy: 249,
+    charm: 390,
+    level: 27,
+    tenpu: 900,
+    starBonuses: {
+      attack: 282,
+      defense: 267,
+      war: 261,
+      strategy: 153,
+      charm: 257
+    },
+    nextStarBonuses: {
+      attack: 56,
+      defense: 54,
+      war: 53,
+      strategy: 31,
+      charm: 51
+    },
+    rendanSkill: "扶助",
+    rendanBonuses: {
+      attack: 0,
+      defense: 0,
+      war: 0,
+      strategy: 0,
+      charm: 0
+    },
+    nextRendanBonuses: {
+      attack: 16,
+      defense: 15,
+      war: 15,
+      strategy: 9,
+      charm: 15
+    }
+  }
+);
+const HERO_POWER_RESEARCH_DETAILED_ROWS = HERO_POWER_RESEARCH_SAMPLE_ROWS.filter(
+  (row) => row?.investmentSource === "same-time-images"
+);
+const HERO_POWER_RESEARCH_PRESET_DEFS = [
+  { key: "custom", label: "手入力" },
+  ...HERO_POWER_RESEARCH_SAMPLE_ROWS.map((row) => ({
+    key: row.key,
+    label: `${row.name} / Lv${row.level} / 天賦${row.tenpu}`
+  }))
+];
+const HERO_POWER_RESEARCH_DEFAULTS = {
+  attack: HERO_POWER_RESEARCH_SAMPLE_ROWS[0]?.attack ?? 700,
+  defense: HERO_POWER_RESEARCH_SAMPLE_ROWS[0]?.defense ?? 700,
+  war: HERO_POWER_RESEARCH_SAMPLE_ROWS[0]?.war ?? 600,
+  strategy: HERO_POWER_RESEARCH_SAMPLE_ROWS[0]?.strategy ?? 500,
+  charm: HERO_POWER_RESEARCH_SAMPLE_ROWS[0]?.charm ?? 600,
+  level: HERO_POWER_RESEARCH_SAMPLE_ROWS[0]?.level ?? 32,
+  tenpu: HERO_POWER_RESEARCH_SAMPLE_ROWS[0]?.tenpu ?? 850
+};
+const HERO_POWER_BREAKDOWN_STAT_KEYS = ["attack", "defense", "war", "strategy", "charm"];
+const HERO_POWER_DELTA_FEATURE_KEYS = ["attack", "defense", "war", "strategy"];
+const HERO_POWER_STAR_STEP_RATIO_ANALYSIS = (() => {
+  const ratioRows = [];
+  HERO_POWER_RESEARCH_DETAILED_ROWS.forEach((row) => {
+    const current = row?.starBonuses ?? null;
+    const next = row?.nextStarBonuses ?? null;
+    if (!current || !next) {
+      return;
+    }
+
+    HERO_POWER_BREAKDOWN_STAT_KEYS.forEach((statKey) => {
+      const currentValue = Number(current?.[statKey] ?? 0);
+      const nextValue = Number(next?.[statKey] ?? 0);
+      if (currentValue > 0 && nextValue > 0) {
+        ratioRows.push({
+          statKey,
+          ratio: nextValue / currentValue,
+          roundedFromFifth: Math.round(currentValue / 5)
+        });
+      }
+    });
+  });
+
+  if (!ratioRows.length) {
+    return null;
+  }
+
+  const ratios = ratioRows.map((row) => row.ratio);
+  return {
+    sampleCount: ratioRows.length,
+    meanRatio: averageArmyValues(ratios),
+    minRatio: Math.min(...ratios),
+    maxRatio: Math.max(...ratios)
+  };
+})();
+const ARMY_IMAGE_OCR_SCRIPT_URL = "https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js";
+const ARMY_IMAGE_OCR_LANGUAGE_CANDIDATES = ["jpn+eng", "jpn"];
 const ARMY_INVESTMENT_MULTIPLIER_OVERRIDES = ARMY_POWER_BUILDER_CONFIG.investmentTierMultipliers ?? {};
 const ARMY_INVESTMENT_TIER_DEFS = [
   { key: "trained", label: "仕上がり", multiplier: ARMY_INVESTMENT_MULTIPLIER_OVERRIDES.trained ?? 1 },
-  { key: "usable", label: "実戦投入", multiplier: ARMY_INVESTMENT_MULTIPLIER_OVERRIDES.usable ?? 0.78 },
   { key: "untrained", label: "未育成", multiplier: ARMY_INVESTMENT_MULTIPLIER_OVERRIDES.untrained ?? 0.45 }
 ];
 const ARMY_EQUIPMENT_FIT_DEFS = [
@@ -90,12 +581,12 @@ const ARMY_EQUIPMENT_MULTIPLIERS = Object.fromEntries(
 const ARMY_MAX_CURRENT_MULTIPLIER = ARMY_INVESTMENT_MULTIPLIERS.trained * ARMY_EQUIPMENT_MULTIPLIERS.matched;
 const ARMY_SHARE_TIER_CODES = {
   trained: "t",
-  usable: "u",
   untrained: "n"
 };
-const ARMY_SHARE_TIER_KEYS = Object.fromEntries(
-  Object.entries(ARMY_SHARE_TIER_CODES).map(([key, value]) => [value, key])
-);
+const ARMY_SHARE_TIER_KEYS = {
+  ...Object.fromEntries(Object.entries(ARMY_SHARE_TIER_CODES).map(([key, value]) => [value, key])),
+  u: "untrained"
+};
 const ARMY_SHARE_EQUIPMENT_CODES = {
   none: "n",
   matched: "m",
@@ -315,6 +806,366 @@ const ARMY_META_PRIOR_FACTORS = {
   recency: 0.88,
   softCap: 0.15
 };
+const ARMY_OBSERVED_PROFILE_LABELS = {
+  support: "支援",
+  pressure: "圧力",
+  frontline: "前線",
+  disruptor: "妨害",
+  late: "後半"
+};
+const ARMY_VIDEO_SKILL_PACKAGE_DEFS = [
+  { key: "troop", label: "兵力", pattern: /(兵力).*(上昇|増加|アップ|プラス)|兵力プラ/u },
+  { key: "burst", label: "火力", pattern: /(攻撃|会心|攻撃速度|与ダメージ|戦法威力|威力|破城).*(上昇|増加|アップ)|会心発生|攻撃速度/u },
+  { key: "support", label: "支援", pattern: /(味方|自部隊|同列|縦列|横列).*(上昇|回復|付与|強化)|支援/u },
+  { key: "control", label: "妨害", pattern: /(不利な状態変化|弱化|恐怖|混乱|沈黙|封印|攻撃速度低下|防御低下|通常攻撃).*(低下|停止|止)|攻撃速度低下/u },
+  { key: "cleanse", label: "解除", pattern: /(弱化解除|解除|浄化|回復)/u },
+  { key: "durable", label: "耐久", pattern: /(ダメージカット|被ダメージ|防御).*(上昇|低下)|耐性|反撃/u }
+];
+const ARMY_SEASON_FOCUS_DEFS = [{ key: "s3", label: "S3環境" }];
+const ARMY_SEASON_FOCUS_RULES = {
+  common: {
+    label: "共通補助",
+    summary: "S3の主将軸を保ったまま、seasonを問わず崩れにくい連鎖・役割・配置を補助参照します。",
+    objectiveBlend: 0.54,
+    slotStoredWeight: 0.72,
+    formationBias: { basic: 2, kakuyoku: 1 },
+    profileDelta: {
+      support: [0, 0.1],
+      pressure: [0, 0.1],
+      frontline: [0, 0.1],
+      disruptor: [0, 0.1],
+      late: [0, 0.1]
+    },
+    axisDelta: {
+      burst20s: [0, 4],
+      sustain40s: [0, 4],
+      controlUptime: [0, 4],
+      siegeDps: [0, 4],
+      cleanseCoverage: [0, 4]
+    }
+  },
+  s2: {
+    label: "S2補助",
+    summary: "S3を主軸にしつつ、S2で重かった初動20秒・陣形相性・対基本陣を補助参照します。",
+    objectiveBlend: 0.28,
+    slotStoredWeight: 0.34,
+    formationBias: { suikou: 4, houjin: 4, sakubou: 3, basic: 1, kakuyoku: 1 },
+    profileDelta: {
+      support: [0, 0.15],
+      pressure: [0.25, 0.45],
+      frontline: [0.05, 0.15],
+      disruptor: [0.12, 0.28],
+      late: [-0.05, 0.08]
+    },
+    axisDelta: {
+      burst20s: [10, 16],
+      sustain40s: [-2, 4],
+      controlUptime: [4, 10],
+      siegeDps: [4, 10],
+      cleanseCoverage: [-4, 0]
+    }
+  },
+  s3: {
+    label: "S3主軸",
+    summary: "主将中心で組み、支援・妨害・継戦の密度を高めるSeason 3前提の見方です。",
+    objectiveBlend: 0.9,
+    slotStoredWeight: 1,
+    formationBias: { basic: -6, sakubou: 4, kakuyoku: 3, suikou: 1, houjin: 1 },
+    profileDelta: {
+      support: [0.12, 0.28],
+      pressure: [0, 0.15],
+      frontline: [0.05, 0.18],
+      disruptor: [0.25, 0.45],
+      late: [0.05, 0.15]
+    },
+    axisDelta: {
+      burst20s: [2, 8],
+      sustain40s: [6, 12],
+      controlUptime: [10, 18],
+      siegeDps: [-4, 4],
+      cleanseCoverage: [4, 10]
+    }
+  }
+};
+const ARMY_S3_INTERNAL_REFERENCE_BY_CONCEPT = {
+  balanced: {
+    commonWeight: 0.18,
+    s2Weight: 0.06,
+    objectiveBlend: 0.88,
+    slotStoredWeight: 0.97,
+    summary: "S3専用です。共通土台を重めに、S2の初動20秒と陣形速度は軽く補助参照します。"
+  },
+  powermax: {
+    commonWeight: 0.12,
+    s2Weight: 0.1,
+    objectiveBlend: 0.9,
+    slotStoredWeight: 0.99,
+    summary: "S3専用です。現在戦力と完成済み火力を主軸に、S2の初動圧も少しだけ補助参照します。"
+  },
+  siege: {
+    commonWeight: 0.12,
+    s2Weight: 0.12,
+    objectiveBlend: 0.86,
+    slotStoredWeight: 0.95,
+    summary: "S3専用です。攻城では共通土台に加えて、S2の初動20秒と陣形速度を少し強めに補助参照します。"
+  },
+  counter: {
+    commonWeight: 0.18,
+    s2Weight: 0.08,
+    objectiveBlend: 0.88,
+    slotStoredWeight: 0.97,
+    summary: "S3専用です。共通土台を重めにしつつ、S2の初動応酬は軽く参照します。"
+  },
+  debuff: {
+    commonWeight: 0.17,
+    s2Weight: 0.04,
+    objectiveBlend: 0.92,
+    slotStoredWeight: 1,
+    summary: "S3専用です。妨害密度と継続支援を最重視し、S2知見は最低限だけ使います。"
+  },
+  opener: {
+    commonWeight: 0.16,
+    s2Weight: 0.12,
+    objectiveBlend: 0.93,
+    slotStoredWeight: 1,
+    summary: "S3専用です。初動20秒の先手、支援/妨害の重なり、速い順の主導権を重視します。"
+  },
+  defense: {
+    commonWeight: 0.2,
+    s2Weight: 0.03,
+    objectiveBlend: 0.9,
+    slotStoredWeight: 0.99,
+    summary: "S3専用です。どのseasonでも崩れにくい耐久土台を重視し、S2知見は薄く参照します。"
+  },
+  growth: {
+    commonWeight: 0.2,
+    s2Weight: 0.02,
+    objectiveBlend: 0.84,
+    slotStoredWeight: 0.93,
+    summary: "S3専用です。将来性は共通土台重視で見て、S2知見はほぼ参考止まりにします。"
+  },
+  meta: {
+    commonWeight: 0.16,
+    s2Weight: 0.06,
+    objectiveBlend: 0.9,
+    slotStoredWeight: 0.98,
+    summary: "S3専用です。環境適応はS3主将軸を基準に、共通土台とS2速度感を少しだけ参照します。"
+  }
+};
+const ARMY_OBSERVED_FORMATION_FOCUS_TEXT = {
+  basic: "中央を中核にして、左右へ圧力と補助を散らす並びが多めです。",
+  suikou: "1st/3rd/5thで攻め筋を作り、2nd/4thの支援や妨害で道を開く並びが多めです。",
+  kakuyoku: "支援2枚で前列の圧力役を支え、5thで締める並びが多めです。",
+  houjin: "中央寄せの火力に支援を添え、遅め枠で押し込みを完成させる並びが多めです。",
+  sakubou: "妨害3〜4枚に支援1枚を混ぜ、初動20秒で相手を止める並びが多めです。"
+};
+const ARMY_OBSERVED_FORMATION_SLOT_PROFILES = {
+  basic: {
+    first: { support: 1, pressure: 0.82, frontline: 0.92, disruptor: 0.78, late: 0.74 },
+    second: { support: 1, pressure: 0.72, frontline: 0.55, disruptor: 0.7, late: 0.38 },
+    third: { support: 0.78, pressure: 0.88, frontline: 0.64, disruptor: 0.82, late: 0.44 },
+    fourth: { support: 0.42, pressure: 1, frontline: 0.7, disruptor: 0.62, late: 0.48 },
+    fifth: { support: 0.42, pressure: 0.78, frontline: 0.88, disruptor: 0.4, late: 1 }
+  },
+  suikou: {
+    first: { support: 0.42, pressure: 1, frontline: 0.86, disruptor: 0.58, late: 0.34 },
+    second: { support: 0.62, pressure: 0.72, frontline: 0.54, disruptor: 0.96, late: 0.28 },
+    third: { support: 0.36, pressure: 0.92, frontline: 0.88, disruptor: 0.42, late: 0.62 },
+    fourth: { support: 0.94, pressure: 0.56, frontline: 0.46, disruptor: 0.84, late: 0.36 },
+    fifth: { support: 0.34, pressure: 0.84, frontline: 0.98, disruptor: 0.4, late: 1 }
+  },
+  kakuyoku: {
+    first: { support: 1, pressure: 0.64, frontline: 0.58, disruptor: 0.66, late: 0.36 },
+    second: { support: 0.4, pressure: 0.98, frontline: 0.88, disruptor: 0.46, late: 0.44 },
+    third: { support: 0.94, pressure: 0.72, frontline: 0.56, disruptor: 0.7, late: 0.42 },
+    fourth: { support: 0.34, pressure: 0.94, frontline: 0.86, disruptor: 0.48, late: 0.56 },
+    fifth: { support: 0.28, pressure: 0.82, frontline: 0.92, disruptor: 0.32, late: 1 }
+  },
+  houjin: {
+    first: { support: 0.74, pressure: 0.78, frontline: 0.52, disruptor: 0.62, late: 0.42 },
+    second: { support: 0.88, pressure: 0.72, frontline: 0.46, disruptor: 0.68, late: 0.5 },
+    third: { support: 0.52, pressure: 1, frontline: 0.78, disruptor: 0.42, late: 0.62 },
+    fourth: { support: 0.44, pressure: 0.86, frontline: 0.64, disruptor: 0.48, late: 0.88 },
+    fifth: { support: 0.58, pressure: 0.74, frontline: 0.58, disruptor: 0.56, late: 0.98 }
+  },
+  sakubou: {
+    first: { support: 0.36, pressure: 0.72, frontline: 0.44, disruptor: 1, late: 0.38 },
+    second: { support: 0.44, pressure: 0.64, frontline: 0.42, disruptor: 0.94, late: 0.4 },
+    third: { support: 1, pressure: 0.48, frontline: 0.38, disruptor: 0.66, late: 0.5 },
+    fourth: { support: 0.34, pressure: 0.54, frontline: 0.38, disruptor: 0.94, late: 0.44 },
+    fifth: { support: 0.42, pressure: 0.56, frontline: 0.38, disruptor: 0.92, late: 0.52 }
+  }
+};
+const ARMY_OBSERVED_PATTERN_TARGETS = {
+  generic: {
+    support: [0.8, 2],
+    pressure: [2, 3.8],
+    frontline: [0.7, 1.9],
+    disruptor: [0.3, 1.6],
+    late: [0.8, 2.2]
+  },
+  basic: {
+    support: [1, 2],
+    pressure: [2.4, 4.1],
+    frontline: [0.9, 2],
+    disruptor: [0.2, 1.5],
+    late: [0.9, 2.2]
+  },
+  suikou: {
+    support: [0.5, 1.3],
+    pressure: [2.5, 4.2],
+    frontline: [1, 2.2],
+    disruptor: [0.3, 1.5],
+    late: [0.8, 1.9]
+  },
+  kakuyoku: {
+    support: [1.4, 2.5],
+    pressure: [1.8, 3.5],
+    frontline: [0.8, 2],
+    disruptor: [0.2, 1.2],
+    late: [0.9, 2.2]
+  },
+  houjin: {
+    support: [0.8, 1.8],
+    pressure: [1.8, 3.4],
+    frontline: [0.5, 1.4],
+    disruptor: [0.2, 1.3],
+    late: [0.9, 2.2]
+  },
+  sakubou: {
+    support: [0.6, 1.5],
+    pressure: [0.8, 2.4],
+    frontline: [0.2, 1],
+    disruptor: [1.7, 3.6],
+    late: [0.4, 1.4]
+  }
+};
+const ARMY_COMMUNITY_FORMATION_GUIDES = {
+  generic: {
+    focusText: "主将軸と役割代用を優先し、陣形を無理に押し込んでいないかを見ます。",
+    sourceText: "GameWith優先 / 主将基準 / 役割代用 / 陣形は成立する時だけ使う",
+    fallbackFormationKey: "basic",
+    profileTargets: {
+      support: [0.8, 1.9],
+      pressure: [1.8, 3.6],
+      frontline: [0.7, 1.8],
+      disruptor: [0.2, 1.4],
+      late: [0.8, 2.1]
+    },
+    axisTargets: {
+      burst20s: [46, 82],
+      sustain40s: [46, 82],
+      controlUptime: [36, 74],
+      siegeDps: [24, 78],
+      cleanseCoverage: [0, 40]
+    }
+  },
+  basic: {
+    focusText: "基本陣は迷った時の基準。主将と役割が自然に噛み合う時を優先します。",
+    sourceText: "GameWithの基本陣=バランス型を基準に、主将起点の自然さを重視",
+    fallbackFormationKey: "basic",
+    profileTargets: {
+      support: [0.9, 2.1],
+      pressure: [2.0, 3.7],
+      frontline: [0.8, 1.9],
+      disruptor: [0.3, 1.5],
+      late: [0.9, 2.2]
+    },
+    axisTargets: {
+      burst20s: [48, 80],
+      sustain40s: [48, 84],
+      controlUptime: [40, 72],
+      siegeDps: [28, 72],
+      cleanseCoverage: [4, 42]
+    }
+  },
+  suikou: {
+    focusText: "錐行陣は1st/3rd/5thの攻め筋に、2nd/4thの支援や妨害で橋を掛けられる時だけ自然です。",
+    sourceText: "GameWithの通常攻撃火力特化と、実例画像の攻め3枚+橋渡しパターンを反映",
+    fallbackFormationKey: "basic",
+    profileTargets: {
+      support: [0.5, 1.3],
+      pressure: [2.5, 4.2],
+      frontline: [1.0, 2.2],
+      disruptor: [0.3, 1.5],
+      late: [0.8, 1.9]
+    },
+    axisTargets: {
+      burst20s: [58, 100],
+      sustain40s: [36, 70],
+      controlUptime: [26, 60],
+      siegeDps: [48, 100],
+      cleanseCoverage: [0, 26]
+    }
+  },
+  kakuyoku: {
+    focusText: "鶴翼陣は支援2枚で前列の圧力役を支え、5thで締める形を優先して見ます。",
+    sourceText: "GameWithの耐久特化と、実例画像の支援2枚+前圧3枚パターンを反映",
+    fallbackFormationKey: "basic",
+    profileTargets: {
+      support: [1.4, 2.5],
+      pressure: [1.8, 3.5],
+      frontline: [0.8, 2.0],
+      disruptor: [0.2, 1.1],
+      late: [0.9, 2.2]
+    },
+    axisTargets: {
+      burst20s: [40, 78],
+      sustain40s: [58, 100],
+      controlUptime: [30, 66],
+      siegeDps: [18, 54],
+      cleanseCoverage: [12, 56]
+    }
+  },
+  houjin: {
+    focusText: "方陣は戦法火力と中核支援がある時に自然。中央の遅さを支えられる形を見ます。",
+    sourceText: "GameWithの戦法火力特化と、noteの方陣=押し込み評価を反映",
+    fallbackFormationKey: "basic",
+    profileTargets: {
+      support: [0.8, 1.8],
+      pressure: [2.0, 3.5],
+      frontline: [0.6, 1.5],
+      disruptor: [0.2, 1.2],
+      late: [0.8, 2.0]
+    },
+    axisTargets: {
+      burst20s: [56, 96],
+      sustain40s: [38, 74],
+      controlUptime: [34, 72],
+      siegeDps: [24, 66],
+      cleanseCoverage: [0, 30]
+    }
+  },
+  sakubou: {
+    focusText: "策謀陣は妨害3〜4枚に支援1枚を添えられる時だけ強い前提で評価し、不足時は無理押しを下げます。",
+    sourceText: "GameWithの策略重視と、実例画像の妨害寄せ編成を反映",
+    fallbackFormationKey: "basic",
+    profileTargets: {
+      support: [0.6, 1.5],
+      pressure: [0.8, 2.4],
+      frontline: [0.2, 1.0],
+      disruptor: [1.7, 3.6],
+      late: [0.4, 1.5]
+    },
+    axisTargets: {
+      burst20s: [44, 84],
+      sustain40s: [36, 70],
+      controlUptime: [58, 100],
+      siegeDps: [18, 54],
+      cleanseCoverage: [0, 28]
+    }
+  }
+};
+const ARMY_COMMUNITY_CONCEPT_FORMATION_BONUS = {
+  balanced: { kakuyoku: 6, houjin: 4, sakubou: 3, suikou: 2, basic: -18 },
+  powermax: { houjin: 7, kakuyoku: 4, suikou: 3, sakubou: 1, basic: -24 },
+  siege: { suikou: 8, houjin: 5, kakuyoku: 2, basic: -24 },
+  counter: { kakuyoku: 7, houjin: 3, sakubou: 2, basic: -18 },
+  debuff: { sakubou: 9, houjin: 3, kakuyoku: 2, basic: -20 },
+  defense: { kakuyoku: 8, houjin: 4, sakubou: 2, basic: -20 },
+  growth: { houjin: 6, kakuyoku: 4, suikou: 2, basic: -18 },
+  meta: { kakuyoku: 6, houjin: 5, sakubou: 4, suikou: 2, basic: -22 }
+};
 const ARMY_EXPERT_TEMPLATE_LABELS = {
   "balanced-hybrid": "汎用混成型",
   "support-engine": "支援主将型",
@@ -377,12 +1228,25 @@ const ARMY_IMPORTED_CHARACTER_NAME_INDEX = buildArmyImportedCharacterNameIndex()
 
 let lastArmyPlannerResult = null;
 let activeArmyAlternativeIndex = 0;
+let activeArmyUnitIndex = 0;
+let activeArmyPreviewSecond = ARMY_TIMELINE_DEFAULT_SECOND;
+let activeArmyPreviewGroupId = null;
+let activeArmyTargetSlotKey = null;
 let armyRebuildTimer = null;
 let armyRosterState = loadArmyRosterState();
 let armyObservedPowerState = loadArmyPowerImportState();
+let armyImageImportState = createEmptyArmyImageImportState();
 let armyPowerReferenceCache = null;
 let armySelectedCommanderIds = [];
 let armyCommanderSelectionCache = null;
+let armyOcrLibraryPromise = null;
+let armyOcrWorkerPromise = null;
+let armyPlannerBusy = false;
+let armyQuickEditCharacterId = null;
+let armyRosterLongPressTimer = null;
+let armyRosterLongPressConsumedId = null;
+let armyCommanderPrefetchTimer = null;
+let armyCommanderPrefetchKey = "";
 
 function clampArmyScore(value) {
   return Math.max(0, Math.min(100, value));
@@ -394,6 +1258,206 @@ function sumArmyValues(values) {
 
 function averageArmyValues(values) {
   return values.length ? sumArmyValues(values) / values.length : 0;
+}
+
+function setArmyPlannerBusy(nextBusy) {
+  armyPlannerBusy = Boolean(nextBusy);
+  if (elements.armyFinalizeButton) {
+    elements.armyFinalizeButton.disabled = armyPlannerBusy;
+    elements.armyFinalizeButton.textContent = armyPlannerBusy ? "編成中..." : "副将・補佐を組む";
+  }
+  if (elements.armyAutoSelectCommandersButton) {
+    elements.armyAutoSelectCommandersButton.disabled = armyPlannerBusy;
+  }
+  renderArmyPlannerFloatingUi(lastArmyPlannerResult);
+}
+
+function clearArmyCommanderPrefetchTimer() {
+  if (armyCommanderPrefetchTimer) {
+    window.clearTimeout(armyCommanderPrefetchTimer);
+    armyCommanderPrefetchTimer = null;
+  }
+}
+
+function scheduleArmyCommanderPrefetch(context = null, selectedCommanderIds = null) {
+  clearArmyCommanderPrefetchTimer();
+  const plannerContext = context ?? getArmyPlannerContext();
+  const normalizedIds = sanitizeArmySelectedCommanderIds(
+    selectedCommanderIds ?? armySelectedCommanderIds,
+    plannerContext.allowedMetas
+  );
+  if (normalizedIds.length < 5) {
+    armyCommanderPrefetchKey = "";
+    return;
+  }
+
+  const cacheKey = buildArmyCommanderSelectionCacheKey(plannerContext, normalizedIds);
+  if (armyCommanderPrefetchKey === cacheKey && readArmyCommanderSelectionCache(plannerContext, normalizedIds).length) {
+    return;
+  }
+
+  armyCommanderPrefetchKey = cacheKey;
+  const runPrefetch = () => {
+    armyCommanderPrefetchTimer = null;
+    const latestContext = context ?? getArmyPlannerContext();
+    const latestIds = sanitizeArmySelectedCommanderIds(
+      selectedCommanderIds ?? armySelectedCommanderIds,
+      latestContext.allowedMetas
+    );
+    if (latestIds.length < 5 || armyPlannerBusy) {
+      return;
+    }
+    if (readArmyCommanderSelectionCache(latestContext, latestIds).length) {
+      return;
+    }
+    const selectedCommanderMetas = latestIds
+      .map((characterId) => ARMY_CHARACTER_META_BY_ID.get(characterId))
+      .filter(Boolean);
+    if (selectedCommanderMetas.length < 5) {
+      return;
+    }
+    buildArmiesForSelectedCommanders(
+      selectedCommanderMetas,
+      latestContext.allowedMetas,
+      latestContext.concept,
+      latestContext.seedMeta,
+      latestContext.seedSlots,
+      latestContext.formationChoiceKey,
+      latestContext,
+      latestIds
+    );
+  };
+  armyCommanderPrefetchTimer = window.setTimeout(runPrefetch, 1200);
+}
+
+function ensureArmyPlannerFloatingUi() {
+  if (!elements.armyView) {
+    return null;
+  }
+
+  let shell = elements.armyView.querySelector("#armyFloatingShell");
+  if (!shell) {
+    shell = document.createElement("div");
+    shell.id = "armyFloatingShell";
+    shell.className = "army-floating-shell";
+    shell.innerHTML = `
+      <section class="army-quick-editor" id="armyQuickEditor" hidden></section>
+      <section class="army-floating-dock" id="armyFloatingDock"></section>
+    `;
+    elements.armyView.appendChild(shell);
+  }
+  return shell;
+}
+
+function closeArmyQuickEditor() {
+  armyQuickEditCharacterId = null;
+  renderArmyPlannerFloatingUi(lastArmyPlannerResult);
+}
+
+function openArmyQuickEditor(characterId) {
+  const numericCharacterId = Number(characterId);
+  if (!Number.isFinite(numericCharacterId)) {
+    return;
+  }
+  armyQuickEditCharacterId = numericCharacterId;
+  renderArmyPlannerFloatingUi(lastArmyPlannerResult);
+}
+
+function clearArmyRosterLongPressTimer() {
+  if (armyRosterLongPressTimer) {
+    window.clearTimeout(armyRosterLongPressTimer);
+    armyRosterLongPressTimer = null;
+  }
+}
+
+function renderArmyPlannerFloatingUi(plannerResult = null) {
+  const shell = ensureArmyPlannerFloatingUi();
+  if (!shell) {
+    return;
+  }
+
+  const dock = shell.querySelector("#armyFloatingDock");
+  const quickEditor = shell.querySelector("#armyQuickEditor");
+  const selectedMetas = armySelectedCommanderIds
+    .map((characterId) => ARMY_CHARACTER_META_BY_ID.get(characterId))
+    .filter(Boolean);
+  const commanderText = selectedMetas.length
+    ? selectedMetas.map((meta) => meta.character.name).join(" / ")
+    : "まだ主将を選んでいません";
+  const canFinalize = armySelectedCommanderIds.length >= 5 && !armyPlannerBusy;
+
+  if (dock) {
+    dock.innerHTML = `
+      <div class="army-floating-dock__summary">
+        <strong>主将 ${selectedMetas.length} / 5</strong>
+        <span>${escapeHtml(commanderText)}</span>
+        <small class="army-floating-dock__hint">武将カード長押しで個別設定</small>
+      </div>
+      <div class="army-floating-dock__actions">
+        <button class="mini-button" type="button" data-army-dock-action="auto" ${armyPlannerBusy ? "disabled" : ""}>おすすめ5人</button>
+        <button class="primary-button" type="button" data-army-dock-action="finalize" ${canFinalize ? "" : "disabled"}>${
+          armyPlannerBusy ? "編成中..." : "副将・補佐を組む"
+        }</button>
+      </div>
+    `;
+  }
+
+  if (!quickEditor) {
+    return;
+  }
+
+  const character = preparedCharacters.find((entry) => entry.id === armyQuickEditCharacterId) ?? null;
+  if (!character) {
+    quickEditor.hidden = true;
+    quickEditor.innerHTML = "";
+    return;
+  }
+
+  const profile = getArmyRosterProfile(character.id);
+  const isOwned = profile.owned;
+  const isReady = isArmyCharacterReady(character.id);
+  const isSelectedCommander = armySelectedCommanderIds.includes(character.id);
+  const snapshot = getArmyCharacterPowerSnapshot(character);
+
+  quickEditor.hidden = false;
+  quickEditor.innerHTML = `
+    <div class="army-quick-editor__head">
+      <div>
+        <strong>${escapeHtml(character.name)}</strong>
+        <p>${escapeHtml(character.rarity)} / ${escapeHtml(character.type || "-")} / 天賦 ${escapeHtml(character.tenpu)}</p>
+      </div>
+      <button class="mini-button" type="button" data-army-quick-close="1">閉じる</button>
+    </div>
+    <div class="army-quick-editor__meta">
+      <span class="status-pill ${isReady ? "is-live" : isOwned ? "is-next" : "is-plan"}">${escapeHtml(
+        isReady ? "仕上がり" : isOwned ? "未育成" : "未登録"
+      )}</span>
+      <span class="status-pill is-plan">戦力目安 ${escapeHtml(formatArmyEstimateNumber(snapshot.current))}</span>
+    </div>
+    <div class="army-quick-editor__fields">
+      <label class="field">
+        <span>育成</span>
+        <select data-army-profile-id="${character.id}" data-army-profile-field="investmentTier">
+          ${renderArmySelectOptions(ARMY_INVESTMENT_TIER_DEFS, profile.investmentTier)}
+        </select>
+      </label>
+      <label class="field">
+        <span>装備</span>
+        <select data-army-profile-id="${character.id}" data-army-profile-field="equipmentFit">
+          ${renderArmySelectOptions(ARMY_EQUIPMENT_FIT_DEFS, profile.equipmentFit)}
+        </select>
+      </label>
+    </div>
+    <div class="army-quick-editor__actions">
+      <button class="mini-button" type="button" data-army-quick-owned="${character.id}">${escapeHtml(
+        isOwned ? "手持ちから外す" : "手持ちに入れる"
+      )}</button>
+      <button class="mini-button" type="button" data-army-quick-commander="${character.id}" ${
+        isReady ? "" : "disabled"
+      }>${escapeHtml(isSelectedCommander ? "主将から外す" : "主将に入れる")}</button>
+    </div>
+    <p class="field-note">カード長押しでもこの編集を開けます。主将選択や育成段階の調整を、下まで移動せずに行えます。</p>
+  `;
 }
 
 function normalizeArmyWeightMap(weightMap = {}, fallback = {}) {
@@ -440,11 +1504,222 @@ function getArmyTopAxisEntries(scoreAxes = {}, concept, limit = 4) {
 }
 
 function sanitizeArmyTierKey(value, definitions, fallback) {
+  if (
+    value === "usable" &&
+    definitions === ARMY_INVESTMENT_TIER_DEFS &&
+    !definitions.some((entry) => entry.key === "usable")
+  ) {
+    return "untrained";
+  }
   return definitions.some((entry) => entry.key === value) ? value : fallback;
 }
 
 function sanitizeArmyPowerMode(value) {
   return ARMY_POWER_MODE_DEFS.some((entry) => entry.key === value) ? value : "standard";
+}
+
+function sanitizeArmySeasonFocusKey(value) {
+  return ARMY_SEASON_FOCUS_DEFS.some((entry) => entry.key === value) ? value : "s3";
+}
+
+function getArmySelectedSeasonFocusKey() {
+  return "s3";
+}
+
+function getArmySeasonFocusConceptKey(concept = null) {
+  if (typeof concept === "string" && concept) {
+    return concept;
+  }
+  if (concept?.key) {
+    return concept.key;
+  }
+  return elements.armyConcept?.value ?? "balanced";
+}
+
+function blendArmySeasonFocusValue(primaryValue = 0, referenceValue = 0, referenceWeight = 0) {
+  const safeWeight = Math.min(Math.max(Number(referenceWeight) || 0, 0), 0.45);
+  return primaryValue * (1 - safeWeight) + referenceValue * safeWeight;
+}
+
+function blendArmySeasonFocusRange(primaryRange = [0, 0], referenceRange = [0, 0], referenceWeight = 0) {
+  return [
+    blendArmySeasonFocusValue(primaryRange[0] ?? 0, referenceRange[0] ?? 0, referenceWeight),
+    blendArmySeasonFocusValue(primaryRange[1] ?? 0, referenceRange[1] ?? 0, referenceWeight)
+  ];
+}
+
+function normalizeArmySeasonReferenceMix(referenceMix = {}) {
+  const entries = Object.entries(referenceMix)
+    .map(([key, weight]) => [key, Math.min(Math.max(Number(weight) || 0, 0), 0.25)])
+    .filter(([key, weight]) => weight > 0 && key !== "s3" && ARMY_SEASON_FOCUS_RULES[key]);
+  const total = entries.reduce((sum, [, weight]) => sum + weight, 0);
+  if (total <= 0.45) {
+    return entries;
+  }
+  const scale = 0.45 / total;
+  return entries.map(([key, weight]) => [key, weight * scale]);
+}
+
+function blendArmySeasonFocusMixValue(primaryValue = 0, referenceEntries = []) {
+  const totalWeight = referenceEntries.reduce((sum, [, weight]) => sum + weight, 0);
+  return referenceEntries.reduce(
+    (sum, [value, weight]) => sum + value * weight,
+    primaryValue * Math.max(0, 1 - totalWeight)
+  );
+}
+
+function blendArmySeasonFocusMixRange(primaryRange = [0, 0], referenceEntries = []) {
+  return [
+    blendArmySeasonFocusMixValue(
+      primaryRange[0] ?? 0,
+      referenceEntries.map(([range, weight]) => [range?.[0] ?? 0, weight])
+    ),
+    blendArmySeasonFocusMixValue(
+      primaryRange[1] ?? 0,
+      referenceEntries.map(([range, weight]) => [range?.[1] ?? 0, weight])
+    )
+  ];
+}
+
+function buildArmySeasonFocusConfig(primaryKey = "s3", referenceKey = null, referenceWeight = 0, overrides = {}) {
+  const primary = ARMY_SEASON_FOCUS_RULES[primaryKey] ?? ARMY_SEASON_FOCUS_RULES.s3;
+  const reference = referenceKey ? ARMY_SEASON_FOCUS_RULES[referenceKey] ?? primary : primary;
+  const safeWeight = Math.min(Math.max(Number(referenceWeight) || 0, 0), 0.45);
+
+  if (!referenceKey || referenceKey === primaryKey || safeWeight <= 0) {
+    return {
+      ...primary,
+      key: overrides.key ?? primaryKey,
+      baseKey: primaryKey,
+      referenceKey: null,
+      referenceWeight: 0,
+      mode: overrides.mode ?? "primary"
+    };
+  }
+
+  const formationBias = {};
+  new Set([...Object.keys(primary.formationBias ?? {}), ...Object.keys(reference.formationBias ?? {})]).forEach((key) => {
+    formationBias[key] = blendArmySeasonFocusValue(primary.formationBias?.[key] ?? 0, reference.formationBias?.[key] ?? 0, safeWeight);
+  });
+
+  const profileDelta = {};
+  new Set([...Object.keys(primary.profileDelta ?? {}), ...Object.keys(reference.profileDelta ?? {})]).forEach((key) => {
+    profileDelta[key] = blendArmySeasonFocusRange(primary.profileDelta?.[key] ?? [0, 0], reference.profileDelta?.[key] ?? [0, 0], safeWeight);
+  });
+
+  const axisDelta = {};
+  new Set([...Object.keys(primary.axisDelta ?? {}), ...Object.keys(reference.axisDelta ?? {})]).forEach((key) => {
+    axisDelta[key] = blendArmySeasonFocusRange(primary.axisDelta?.[key] ?? [0, 0], reference.axisDelta?.[key] ?? [0, 0], safeWeight);
+  });
+
+  return {
+    ...primary,
+    key: overrides.key ?? referenceKey,
+    baseKey: primaryKey,
+    referenceKey,
+    referenceWeight: safeWeight,
+    mode: overrides.mode ?? "reference",
+    label: overrides.label ?? primary.label,
+    summary: overrides.summary ?? primary.summary,
+    objectiveBlend: blendArmySeasonFocusValue(primary.objectiveBlend ?? 0, reference.objectiveBlend ?? 0, safeWeight),
+    slotStoredWeight: blendArmySeasonFocusValue(primary.slotStoredWeight ?? 0, reference.slotStoredWeight ?? 0, safeWeight),
+    formationBias,
+    profileDelta,
+    axisDelta
+  };
+}
+
+function buildArmySeasonFocusConfigFromMix(primaryKey = "s3", referenceMix = {}, overrides = {}) {
+  const primary = ARMY_SEASON_FOCUS_RULES[primaryKey] ?? ARMY_SEASON_FOCUS_RULES.s3;
+  const normalizedMix = normalizeArmySeasonReferenceMix(referenceMix);
+  const referenceRules = normalizedMix.map(([key, weight]) => [ARMY_SEASON_FOCUS_RULES[key] ?? primary, weight]);
+  const referenceMixMap = Object.fromEntries(normalizedMix);
+  const totalReferenceWeight = normalizedMix.reduce((sum, [, weight]) => sum + weight, 0);
+  const formationBias = {};
+  const profileDelta = {};
+  const axisDelta = {};
+  const formationKeys = new Set([
+    ...Object.keys(primary.formationBias ?? {}),
+    ...referenceRules.flatMap(([rule]) => Object.keys(rule.formationBias ?? {}))
+  ]);
+  const profileKeys = new Set([
+    ...Object.keys(primary.profileDelta ?? {}),
+    ...referenceRules.flatMap(([rule]) => Object.keys(rule.profileDelta ?? {}))
+  ]);
+  const axisKeys = new Set([
+    ...Object.keys(primary.axisDelta ?? {}),
+    ...referenceRules.flatMap(([rule]) => Object.keys(rule.axisDelta ?? {}))
+  ]);
+
+  formationKeys.forEach((key) => {
+    formationBias[key] = blendArmySeasonFocusMixValue(
+      primary.formationBias?.[key] ?? 0,
+      referenceRules.map(([rule, weight]) => [rule.formationBias?.[key] ?? 0, weight])
+    );
+  });
+  profileKeys.forEach((key) => {
+    profileDelta[key] = blendArmySeasonFocusMixRange(
+      primary.profileDelta?.[key] ?? [0, 0],
+      referenceRules.map(([rule, weight]) => [rule.profileDelta?.[key] ?? [0, 0], weight])
+    );
+  });
+  axisKeys.forEach((key) => {
+    axisDelta[key] = blendArmySeasonFocusMixRange(
+      primary.axisDelta?.[key] ?? [0, 0],
+      referenceRules.map(([rule, weight]) => [rule.axisDelta?.[key] ?? [0, 0], weight])
+    );
+  });
+
+  return {
+    ...primary,
+    key: overrides.key ?? "s3",
+    baseKey: primaryKey,
+    referenceKey: null,
+    referenceWeight: totalReferenceWeight,
+    referenceMix: referenceMixMap,
+    mode: overrides.mode ?? "s3-fixed",
+      label: overrides.label ?? "S3環境",
+    summary: overrides.summary ?? primary.summary,
+    objectiveBlend:
+      overrides.objectiveBlend ??
+      blendArmySeasonFocusMixValue(
+        primary.objectiveBlend ?? 0,
+        referenceRules.map(([rule, weight]) => [rule.objectiveBlend ?? 0, weight])
+      ),
+    slotStoredWeight:
+      overrides.slotStoredWeight ??
+      blendArmySeasonFocusMixValue(
+        primary.slotStoredWeight ?? 1,
+        referenceRules.map(([rule, weight]) => [rule.slotStoredWeight ?? 1, weight])
+      ),
+    formationBias,
+    profileDelta,
+    axisDelta
+  };
+}
+
+function getArmyS3InternalReferencePreset(concept = null) {
+  const conceptKey = getArmySeasonFocusConceptKey(concept);
+  return ARMY_S3_INTERNAL_REFERENCE_BY_CONCEPT[conceptKey] ?? ARMY_S3_INTERNAL_REFERENCE_BY_CONCEPT.balanced;
+}
+
+function getArmySeasonFocusConfig(seasonFocusKey = getArmySelectedSeasonFocusKey(), concept = null) {
+  const preset = getArmyS3InternalReferencePreset(concept);
+  return buildArmySeasonFocusConfigFromMix(
+    "s3",
+    {
+      common: preset.commonWeight,
+      s2: preset.s2Weight
+    },
+    {
+      key: "s3",
+      label: "S3専用",
+      summary: preset.summary,
+      objectiveBlend: preset.objectiveBlend,
+      slotStoredWeight: preset.slotStoredWeight,
+      mode: "s3-fixed"
+    }
+  );
 }
 
 function invalidateArmyPowerCaches() {
@@ -548,6 +1823,521 @@ function resolveArmyImportedCharacter(name) {
   });
 
   return best?.candidate ?? null;
+}
+
+function createEmptyArmyImageImportFields() {
+  return {
+    name: "",
+    power: null,
+    attack: null,
+    defense: null,
+    war: null,
+    strategy: null,
+    charm: null,
+    level: null,
+    tenpu: null,
+    secret: 0
+  };
+}
+
+function createEmptyArmyImageImportState() {
+  return {
+    file: null,
+    fileName: "",
+    previewUrl: "",
+    busy: false,
+    status: "まだ画像は選択されていません。",
+    error: "",
+    rawText: "",
+    confidence: null,
+    parsed: null,
+    suggestions: []
+  };
+}
+
+function revokeArmyImageImportPreviewUrl() {
+  if (!armyImageImportState.previewUrl) {
+    return;
+  }
+  URL.revokeObjectURL(armyImageImportState.previewUrl);
+  armyImageImportState.previewUrl = "";
+}
+
+function clearArmyImageImportState() {
+  revokeArmyImageImportPreviewUrl();
+  armyImageImportState = createEmptyArmyImageImportState();
+}
+
+function extractArmyOcrNumbers(text) {
+  return Array.from(String(text ?? "").matchAll(/\d[\d,]*/gu), (match) => parseArmyImportNumber(match[0])).filter(
+    (value) => value != null
+  );
+}
+
+function escapeArmyRegExp(value) {
+  return String(value ?? "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function buildArmyOcrNameFragments(text) {
+  const lines = String(text ?? "")
+    .split(/\r?\n/gu)
+    .map((line) => normalizeArmyImportedName(line).replace(/\d+/gu, ""))
+    .filter(Boolean);
+  const fragments = new Set();
+  lines.forEach((line) => {
+    const tokens = line.split(/[ 　/／|｜:：]+/gu).filter(Boolean);
+    if (!tokens.length) {
+      tokens.push(line);
+    }
+    tokens.forEach((token) => {
+      if (!token || token.length > 8) {
+        return;
+      }
+      if (/(戦力|攻撃|防御|戦威|策略|魅力|天賦|秘伝|lv|レベル)/iu.test(token)) {
+        return;
+      }
+      fragments.add(token);
+    });
+  });
+  return [...fragments];
+}
+
+function buildArmyOcrCharacterSuggestions(text, limit = 5) {
+  const normalizedText = normalizeArmyImportedName(text);
+  if (!normalizedText) {
+    return [];
+  }
+
+  const suggestions = [];
+  const seen = new Set();
+
+  preparedCharacters
+    .slice()
+    .sort((left, right) => right.name.length - left.name.length)
+    .forEach((character) => {
+      const normalizedName = normalizeArmyImportedName(character.name);
+      if (normalizedName && normalizedText.includes(normalizedName) && !seen.has(character.name)) {
+        suggestions.push({ character, score: 1.5 });
+        seen.add(character.name);
+      }
+    });
+
+  const fragments = buildArmyOcrNameFragments(text);
+  fragments.forEach((fragment) => {
+    preparedCharacters.forEach((character) => {
+      if (seen.has(character.name)) {
+        return;
+      }
+      const score = scoreArmyNameSimilarity(fragment, character.name);
+      if (score < 0.45) {
+        return;
+      }
+      suggestions.push({ character, score });
+      seen.add(character.name);
+    });
+  });
+
+  return suggestions
+    .sort((left, right) => right.score - left.score || left.character.name.length - right.character.name.length)
+    .slice(0, limit);
+}
+
+function detectArmyOcrCharacter(text) {
+  const suggestions = buildArmyOcrCharacterSuggestions(text, 5);
+  const best = suggestions[0] ?? null;
+  const matchedCharacter = best && best.score >= 0.68 ? best.character : null;
+  return {
+    character: matchedCharacter,
+    suggestions: suggestions.map((entry) => entry.character.name)
+  };
+}
+
+function extractArmyOcrNumber(text, labels, options = {}) {
+  const labelPatterns = Array.isArray(labels) ? labels : [labels];
+  const escaped = labelPatterns.map(escapeArmyRegExp).join("|");
+  const minDigits = options.minDigits ?? 1;
+  const candidates = [];
+  const patterns = [
+    new RegExp(`(?:${escaped})[^\\d]{0,10}\\+?([\\d,]{${minDigits},})`, "iu"),
+    new RegExp(`(?:${escaped})\\s*[:：/／|｜]?\\s*([\\d,]{${minDigits},})`, "iu")
+  ];
+  patterns.forEach((pattern) => {
+    const match = pattern.exec(text);
+    if (match?.[1]) {
+      const parsed = parseArmyImportNumber(match[1]);
+      if (parsed != null) {
+        candidates.push(parsed);
+      }
+    }
+  });
+  return candidates[0] ?? null;
+}
+
+function parseArmyImageOcrText(rawText, confidence = null) {
+  const normalizedText = String(rawText ?? "")
+    .normalize("NFKC")
+    .replace(/\u3000/gu, " ")
+    .replace(/[“”]/gu, '"');
+  const fields = createEmptyArmyImageImportFields();
+  const nameDetection = detectArmyOcrCharacter(normalizedText);
+  fields.name = nameDetection.character?.name ?? "";
+  fields.power = extractArmyOcrNumber(normalizedText, ["戦力", "戦闘力"], { minDigits: 3 });
+  fields.attack = extractArmyOcrNumber(normalizedText, ["攻撃"], { minDigits: 2 });
+  fields.defense = extractArmyOcrNumber(normalizedText, ["防御"], { minDigits: 2 });
+  fields.war = extractArmyOcrNumber(normalizedText, ["戦威"], { minDigits: 2 });
+  fields.strategy = extractArmyOcrNumber(normalizedText, ["策略"], { minDigits: 2 });
+  fields.charm = extractArmyOcrNumber(normalizedText, ["魅力"], { minDigits: 2 });
+  fields.level = extractArmyOcrNumber(normalizedText, ["Lv", "レベル"], { minDigits: 1 });
+  fields.tenpu = extractArmyOcrNumber(normalizedText, ["天賦"], { minDigits: 2 });
+  fields.secret = extractArmyOcrNumber(normalizedText, ["秘伝"], { minDigits: 1 }) ?? 0;
+  const readyCount = ARMY_IMAGE_IMPORT_REQUIRED_FIELDS.filter((key) => fields[key] !== null && fields[key] !== "").length;
+  return {
+    fields,
+    confidence,
+    suggestions: nameDetection.suggestions,
+    readyCount
+  };
+}
+
+function countArmyImageImportReadyFields(parsed = null) {
+  return ARMY_IMAGE_IMPORT_REQUIRED_FIELDS.filter((key) => parsed?.fields?.[key] != null && parsed?.fields?.[key] !== "").length;
+}
+
+function canApplyArmyImageImport() {
+  return countArmyImageImportReadyFields(armyImageImportState.parsed) === ARMY_IMAGE_IMPORT_REQUIRED_FIELDS.length;
+}
+
+function setArmyImageImportFile(file) {
+  revokeArmyImageImportPreviewUrl();
+  armyImageImportState.file = file ?? null;
+  armyImageImportState.fileName = file?.name ?? "";
+  armyImageImportState.previewUrl = file ? URL.createObjectURL(file) : "";
+  armyImageImportState.busy = false;
+  armyImageImportState.error = "";
+  armyImageImportState.rawText = "";
+  armyImageImportState.confidence = null;
+  armyImageImportState.parsed = null;
+  armyImageImportState.suggestions = [];
+  armyImageImportState.status = file
+    ? `${file.name} を選択しました。画像を解析するとOCR結果を確認できます。`
+    : "まだ画像は選択されていません。";
+}
+
+function updateArmyImageImportField(key, value) {
+  if (!armyImageImportState.parsed?.fields || !Object.prototype.hasOwnProperty.call(armyImageImportState.parsed.fields, key)) {
+    return;
+  }
+  const fieldDef = ARMY_IMAGE_IMPORT_FIELD_DEFS.find((entry) => entry.key === key);
+  armyImageImportState.parsed.fields[key] =
+    fieldDef?.type === "number" ? parseArmyImportNumber(value) : String(value ?? "").trim();
+  renderArmyImageImportUi();
+}
+
+function escapeArmyCsvCell(value) {
+  const text = String(value ?? "");
+  if (!/[",\r\n]/u.test(text)) {
+    return text;
+  }
+  return `"${text.replace(/"/gu, '""')}"`;
+}
+
+function buildArmyObservedPowerCsvText(rowsById = {}) {
+  const rows = Object.values(rowsById)
+    .filter((row) => row?.name)
+    .sort((left, right) => String(left.name).localeCompare(String(right.name), "ja"));
+  const lines = [ARMY_IMAGE_IMPORT_HEADERS.join(",")];
+  rows.forEach((row) => {
+    const values = [
+      row.name,
+      row.power,
+      row.attack,
+      row.defense,
+      row.war,
+      row.strategy,
+      row.charm,
+      row.level,
+      row.tenpu,
+      row.secret
+    ];
+    lines.push(values.map(escapeArmyCsvCell).join(","));
+  });
+  return lines.join("\n");
+}
+
+async function loadArmyOcrLibrary() {
+  if (window.Tesseract) {
+    return window.Tesseract;
+  }
+  if (!armyOcrLibraryPromise) {
+    armyOcrLibraryPromise = new Promise((resolve, reject) => {
+      const script = document.createElement("script");
+      script.src = ARMY_IMAGE_OCR_SCRIPT_URL;
+      script.async = true;
+      script.onload = () => {
+        if (window.Tesseract) {
+          resolve(window.Tesseract);
+          return;
+        }
+        reject(new Error("army-ocr-library-unavailable"));
+      };
+      script.onerror = () => reject(new Error("army-ocr-library-load-failed"));
+      document.head.appendChild(script);
+    }).catch((error) => {
+      armyOcrLibraryPromise = null;
+      throw error;
+    });
+  }
+  return armyOcrLibraryPromise;
+}
+
+async function getArmyOcrWorker() {
+  if (!armyOcrWorkerPromise) {
+    armyOcrWorkerPromise = (async () => {
+      const tesseract = await loadArmyOcrLibrary();
+      let lastError = null;
+      for (const language of ARMY_IMAGE_OCR_LANGUAGE_CANDIDATES) {
+        try {
+          return await tesseract.createWorker(language);
+        } catch (error) {
+          lastError = error;
+        }
+      }
+      throw lastError ?? new Error("army-ocr-worker-init-failed");
+    })().catch((error) => {
+      armyOcrWorkerPromise = null;
+      throw error;
+    });
+  }
+  return armyOcrWorkerPromise;
+}
+
+function readArmyImageFileAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(new Error("army-ocr-file-read-failed"));
+    reader.readAsDataURL(file);
+  });
+}
+
+function loadArmyImageElement(sourceUrl) {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error("army-ocr-image-load-failed"));
+    image.src = sourceUrl;
+  });
+}
+
+async function preprocessArmyOcrImage(file) {
+  const sourceUrl = await readArmyImageFileAsDataUrl(file);
+  const image = await loadArmyImageElement(sourceUrl);
+  const scale = Math.min(1, 1800 / Math.max(image.width, image.height, 1));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.round(image.width * scale));
+  canvas.height = Math.max(1, Math.round(image.height * scale));
+  const context = canvas.getContext("2d", { willReadFrequently: true });
+  if (!context) {
+    throw new Error("army-ocr-canvas-unavailable");
+  }
+  context.drawImage(image, 0, 0, canvas.width, canvas.height);
+  const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+  const data = imageData.data;
+  for (let index = 0; index < data.length; index += 4) {
+    const gray = data[index] * 0.299 + data[index + 1] * 0.587 + data[index + 2] * 0.114;
+    const boosted = Math.max(0, Math.min(255, (gray - 128) * 1.55 + 128));
+    const output = boosted > 188 ? 255 : boosted < 76 ? 0 : Math.round(boosted);
+    data[index] = output;
+    data[index + 1] = output;
+    data[index + 2] = output;
+  }
+  context.putImageData(imageData, 0, 0);
+  return canvas.toDataURL("image/png");
+}
+
+async function runArmyImageOcr() {
+  if (!armyImageImportState.file) {
+    throw new Error("army-ocr-file-missing");
+  }
+  armyImageImportState.busy = true;
+  armyImageImportState.error = "";
+  armyImageImportState.status = "画像を解析しています。初回はOCR辞書の読み込みで少し時間がかかります。";
+  renderArmyImageImportUi();
+
+  try {
+    const worker = await getArmyOcrWorker();
+    const processedSource = await preprocessArmyOcrImage(armyImageImportState.file);
+    const processedResult = await worker.recognize(processedSource);
+    let bestResult = {
+      text: String(processedResult?.data?.text || ""),
+      confidence: Number(processedResult?.data?.confidence || 0)
+    };
+    let parsed = parseArmyImageOcrText(bestResult.text, bestResult.confidence);
+
+    if (parsed.readyCount < 4 && armyImageImportState.previewUrl) {
+      const rawResult = await worker.recognize(armyImageImportState.previewUrl);
+      const rawCandidate = {
+        text: String(rawResult?.data?.text || ""),
+        confidence: Number(rawResult?.data?.confidence || 0)
+      };
+      const rawParsed = parseArmyImageOcrText(rawCandidate.text, rawCandidate.confidence);
+      if (rawParsed.readyCount > parsed.readyCount) {
+        bestResult = rawCandidate;
+        parsed = rawParsed;
+      }
+    }
+
+    armyImageImportState.rawText = bestResult.text;
+    armyImageImportState.confidence = bestResult.confidence;
+    armyImageImportState.parsed = parsed;
+    armyImageImportState.suggestions = parsed.suggestions ?? [];
+    armyImageImportState.status = parsed.readyCount
+      ? `OCRが完了しました。必須 ${parsed.readyCount}/${ARMY_IMAGE_IMPORT_REQUIRED_FIELDS.length} 項目を抽出しています。`
+      : "OCRは完了しましたが、数値の抽出が足りません。画像を変えるか、結果を手で補正してください。";
+  } catch (error) {
+    armyImageImportState.error = error.message;
+    armyImageImportState.status =
+      error.message === "army-ocr-file-missing"
+        ? "画像を選択してから解析してください。"
+        : "OCRの読み取りに失敗しました。能力画面の画像を選び直して再度試してください。";
+  } finally {
+    armyImageImportState.busy = false;
+    renderArmyImageImportUi();
+  }
+}
+
+function applyArmyImageImportFields() {
+  const fields = armyImageImportState.parsed?.fields;
+  if (!fields) {
+    throw new Error("army-ocr-fields-missing");
+  }
+  const character = resolveArmyImportedCharacter(fields.name);
+  if (!character) {
+    throw new Error("army-ocr-character-mismatch");
+  }
+  const missingField = ARMY_IMAGE_IMPORT_REQUIRED_FIELDS.find((key) => fields[key] == null || fields[key] === "");
+  if (missingField) {
+    throw new Error("army-ocr-required-fields-missing");
+  }
+
+  const nextRows = { ...(armyObservedPowerState.rowsById ?? {}) };
+  nextRows[character.id] = {
+    name: character.name,
+    power: Math.round(Number(fields.power)),
+    attack: Number(fields.attack),
+    defense: Number(fields.defense),
+    war: Number(fields.war),
+    strategy: Number(fields.strategy),
+    charm: fields.charm,
+    level: fields.level,
+    tenpu: fields.tenpu,
+    secret: fields.secret ?? 0
+  };
+  const nextText = buildArmyObservedPowerCsvText(nextRows);
+  if (elements.armyPowerImportInput) {
+    elements.armyPowerImportInput.value = nextText;
+  }
+  applyArmyObservedPowerImport(nextText, { showToast: false });
+  armyImageImportState.status = `${character.name} のOCR結果を手持ち実測へ反映しました。`;
+  renderArmyImageImportUi();
+}
+
+function renderArmyImageImportUi() {
+  if (!elements.armyImageImportStatus) {
+    return;
+  }
+
+  const hasFile = Boolean(armyImageImportState.file);
+  const parsed = armyImageImportState.parsed;
+  elements.armyImageImportStatus.textContent = armyImageImportState.status;
+  if (elements.armyImageImportButton) {
+    elements.armyImageImportButton.disabled = !hasFile || armyImageImportState.busy;
+  }
+  if (elements.armyImageImportApplyButton) {
+    elements.armyImageImportApplyButton.disabled = !canApplyArmyImageImport() || armyImageImportState.busy;
+  }
+  if (elements.armyImageImportClearButton) {
+    elements.armyImageImportClearButton.disabled = !hasFile && !parsed && !armyImageImportState.rawText;
+  }
+
+  if (elements.armyImageImportPreview) {
+    elements.armyImageImportPreview.innerHTML = hasFile
+      ? `
+          <div class="army-image-import__meta">
+            <span>${escapeHtml(armyImageImportState.fileName || "選択中")}</span>
+          </div>
+          <img src="${escapeHtml(armyImageImportState.previewUrl)}" alt="OCR読み取り対象の画像">
+        `
+      : '<div class="army-image-import__empty"><p>ここに選択した画像のプレビューを表示します。</p></div>';
+  }
+
+  if (!elements.armyImageImportResult) {
+    return;
+  }
+
+  if (!parsed) {
+    const statusLabel = armyImageImportState.busy ? "OCR準備中" : "未解析";
+    elements.armyImageImportResult.innerHTML = `
+      <div class="army-image-import__result-head">
+        <strong>OCR抽出結果</strong>
+        <span class="toolbar-summary">${escapeHtml(statusLabel)}</span>
+      </div>
+      <div class="army-image-import__empty">
+        <p>画像を解析すると、ここに武将名とステータスの候補を表示します。</p>
+      </div>
+    `;
+    return;
+  }
+
+  const fieldsMarkup = ARMY_IMAGE_IMPORT_FIELD_DEFS.map((field) => {
+    const value = parsed.fields[field.key];
+    return `
+      <label>
+        <span>${escapeHtml(field.label)}</span>
+        <input
+          type="${escapeHtml(field.type)}"
+          value="${escapeHtml(value ?? "")}"
+          data-army-image-field="${escapeHtml(field.key)}"
+          ${field.type === "number" ? 'inputmode="numeric"' : ""}
+        >
+      </label>
+    `;
+  }).join("");
+  const suggestionsMarkup =
+    parsed.suggestions?.length && !resolveArmyImportedCharacter(parsed.fields.name)
+      ? `
+          <div class="army-image-import__raw">
+            <strong>武将名候補</strong>
+            <div class="army-image-import__suggestions">
+              ${parsed.suggestions
+                .map(
+                  (name) =>
+                    `<button type="button" data-army-image-suggest="${escapeHtml(name)}">${escapeHtml(name)}</button>`
+                )
+                .join("")}
+            </div>
+          </div>
+        `
+      : "";
+  const rawTextMarkup = armyImageImportState.rawText
+    ? `
+        <details class="army-image-import__raw">
+          <summary>OCRテキストを確認</summary>
+          <pre>${escapeHtml(armyImageImportState.rawText)}</pre>
+        </details>
+      `
+    : "";
+  elements.armyImageImportResult.innerHTML = `
+    <div class="army-image-import__result-head">
+      <strong>OCR抽出結果</strong>
+      <span class="toolbar-summary">必須 ${countArmyImageImportReadyFields(parsed)}/${ARMY_IMAGE_IMPORT_REQUIRED_FIELDS.length}${
+        armyImageImportState.confidence != null ? ` / 信頼度目安 ${Math.round(armyImageImportState.confidence)}%` : ""
+      }</span>
+    </div>
+    <div class="army-image-import__field-grid">${fieldsMarkup}</div>
+    ${suggestionsMarkup}
+    ${rawTextMarkup}
+  `;
 }
 
 function parseArmyDelimitedLine(line, delimiter) {
@@ -685,6 +2475,151 @@ function fitArmyRidgeRegression(features, targets, lambda = 4) {
     intercept,
     coefficients
   };
+}
+
+function getArmyRegressionFeatureLabel(featureKey) {
+  return ARMY_REGRESSION_FEATURE_LABELS[featureKey] ?? featureKey;
+}
+
+function buildArmyRegressionFeatureRows(rows, featureKeys, targetKey = "power") {
+  return rows.filter((row) =>
+    Number.isFinite(Number(row?.[targetKey])) &&
+    featureKeys.every((featureKey) => Number.isFinite(Number(row?.[featureKey])))
+  );
+}
+
+function predictArmyRegressionModel(model, row) {
+  if (!model) {
+    return null;
+  }
+
+  const featureKeys = Array.isArray(model.featureKeys) ? model.featureKeys : [];
+  if (!featureKeys.length) {
+    return null;
+  }
+
+  const values = featureKeys.map((featureKey) => Number(row?.[featureKey]));
+  if (values.some((value) => !Number.isFinite(value))) {
+    return null;
+  }
+
+  return Math.round(
+    Number(model.intercept ?? 0) +
+      sumArmyValues(values.map((value, index) => value * Number(model.coefficients?.[featureKeys[index]] ?? 0)))
+  );
+}
+
+function compareArmyRegressionModels(left, right) {
+  const leftHoldout = Number.isFinite(Number(left?.holdoutMae)) ? Number(left.holdoutMae) : Number.POSITIVE_INFINITY;
+  const rightHoldout = Number.isFinite(Number(right?.holdoutMae)) ? Number(right.holdoutMae) : Number.POSITIVE_INFINITY;
+  if (leftHoldout !== rightHoldout) {
+    return leftHoldout - rightHoldout;
+  }
+
+  const leftMae = Number.isFinite(Number(left?.mae)) ? Number(left.mae) : Number.POSITIVE_INFINITY;
+  const rightMae = Number.isFinite(Number(right?.mae)) ? Number(right.mae) : Number.POSITIVE_INFINITY;
+  if (leftMae !== rightMae) {
+    return leftMae - rightMae;
+  }
+
+  const leftFeatureCount = Array.isArray(left?.featureKeys) ? left.featureKeys.length : Number.POSITIVE_INFINITY;
+  const rightFeatureCount = Array.isArray(right?.featureKeys) ? right.featureKeys.length : Number.POSITIVE_INFINITY;
+  if (leftFeatureCount !== rightFeatureCount) {
+    return leftFeatureCount - rightFeatureCount;
+  }
+
+  return String(left?.label ?? "").localeCompare(String(right?.label ?? ""), "ja");
+}
+
+function buildArmyRegressionModel(rows, definition, options = {}) {
+  const featureKeys = [...(definition?.featureKeys ?? [])];
+  const targetKey = options.targetKey ?? "power";
+  const lambda = Number.isFinite(Number(options.lambda)) ? Number(options.lambda) : 0;
+  const modeledRows = buildArmyRegressionFeatureRows(rows, featureKeys, targetKey);
+  const minRows = Math.max(options.minRows ?? 8, featureKeys.length + 2);
+  if (!featureKeys.length || modeledRows.length < minRows) {
+    return null;
+  }
+
+  const features = modeledRows.map((row) => featureKeys.map((featureKey) => Number(row[featureKey])));
+  const targets = modeledRows.map((row) => Number(row[targetKey]));
+  const fitted = fitArmyRidgeRegression(features, targets, lambda);
+  if (!fitted) {
+    return null;
+  }
+
+  const coefficientMap = Object.fromEntries(
+    featureKeys.map((featureKey, index) => [featureKey, fitted.coefficients[index]])
+  );
+  const baseModel = {
+    key: definition?.key ?? featureKeys.join("-"),
+    label:
+      definition?.label ??
+      featureKeys.map((featureKey) => getArmyRegressionFeatureLabel(featureKey)).join(" + "),
+    description: definition?.description ?? "",
+    featureKeys,
+    intercept: fitted.intercept,
+    coefficients: coefficientMap
+  };
+  const predictions = modeledRows.map((row) => predictArmyRegressionModel(baseModel, row));
+  const meanTarget = averageArmyValues(targets);
+  const ssResidual = sumArmyValues(targets.map((value, index) => (value - predictions[index]) ** 2));
+  const ssTotal = sumArmyValues(targets.map((value) => (value - meanTarget) ** 2));
+  const holdoutErrors = [];
+
+  modeledRows.forEach((row, rowIndex) => {
+    const trainRows = modeledRows.filter((_, index) => index !== rowIndex);
+    if (trainRows.length < Math.max(6, featureKeys.length + 1)) {
+      return;
+    }
+
+    const trainFeatures = trainRows.map((entry) => featureKeys.map((featureKey) => Number(entry[featureKey])));
+    const trainTargets = trainRows.map((entry) => Number(entry[targetKey]));
+    const holdoutFit = fitArmyRidgeRegression(trainFeatures, trainTargets, lambda);
+    if (!holdoutFit) {
+      return;
+    }
+
+    const holdoutModel = {
+      featureKeys,
+      intercept: holdoutFit.intercept,
+      coefficients: Object.fromEntries(
+        featureKeys.map((featureKey, index) => [featureKey, holdoutFit.coefficients[index]])
+      )
+    };
+    const prediction = predictArmyRegressionModel(holdoutModel, row);
+    if (prediction == null) {
+      return;
+    }
+    holdoutErrors.push(Math.abs(prediction - Number(row[targetKey])));
+  });
+
+  return {
+    ...baseModel,
+    sampleCount: modeledRows.length,
+    mae: averageArmyValues(targets.map((value, index) => Math.abs(value - predictions[index]))),
+    holdoutMae: holdoutErrors.length ? averageArmyValues(holdoutErrors) : null,
+    rSquared: ssTotal ? 1 - ssResidual / ssTotal : 0
+  };
+}
+
+function formatArmyRegressionFormula(model) {
+  if (!model) {
+    return "";
+  }
+
+  const featureKeys = Array.isArray(model.featureKeys) ? model.featureKeys : [];
+  if (!featureKeys.length) {
+    return "";
+  }
+
+  const parts = featureKeys.map((featureKey) => {
+    const coefficient = Number(model.coefficients?.[featureKey] ?? 0);
+    return `${coefficient.toFixed(2)}×${getArmyRegressionFeatureLabel(featureKey)}`;
+  });
+  const intercept = Number(model.intercept ?? 0);
+  const interceptText = `${intercept >= 0 ? "+" : "-"} ${Math.abs(intercept).toFixed(1)}`;
+  return `戦力 ≒ ${parts.join(" + ")} ${interceptText}`;
 }
 
 function buildArmyS3UnitPowerModel(samples = []) {
@@ -858,6 +2793,381 @@ function renderArmyS3PowerCalculator() {
   }
 }
 
+const HERO_POWER_RESEARCH_MODELS = HERO_POWER_HYPOTHESIS_DEFS.map((definition) =>
+  buildArmyRegressionModel(HERO_POWER_RESEARCH_SAMPLE_ROWS, definition, {
+    targetKey: "power",
+    lambda: 0,
+    minRows: Math.max(8, definition.featureKeys.length + 2)
+  })
+)
+  .filter(Boolean)
+  .sort(compareArmyRegressionModels);
+
+function findHeroPowerResearchSample(sampleKey) {
+  return HERO_POWER_RESEARCH_SAMPLE_ROWS.find((row) => row.key === sampleKey) ?? null;
+}
+
+function readHeroPowerResearchNumber(input, fallback = 0) {
+  return readArmyNumericValue(input?.value, fallback);
+}
+
+function buildHeroPowerResearchState() {
+  return {
+    attack: readHeroPowerResearchNumber(elements.heroPowerAttack, HERO_POWER_RESEARCH_DEFAULTS.attack),
+    defense: readHeroPowerResearchNumber(elements.heroPowerDefense, HERO_POWER_RESEARCH_DEFAULTS.defense),
+    war: readHeroPowerResearchNumber(elements.heroPowerWar, HERO_POWER_RESEARCH_DEFAULTS.war),
+    strategy: readHeroPowerResearchNumber(elements.heroPowerStrategy, HERO_POWER_RESEARCH_DEFAULTS.strategy),
+    charm: readHeroPowerResearchNumber(elements.heroPowerCharm, HERO_POWER_RESEARCH_DEFAULTS.charm),
+    level: readHeroPowerResearchNumber(elements.heroPowerLevel, HERO_POWER_RESEARCH_DEFAULTS.level),
+    tenpu: readHeroPowerResearchNumber(elements.heroPowerTenpu, HERO_POWER_RESEARCH_DEFAULTS.tenpu)
+  };
+}
+
+function applyHeroPowerResearchValues(values = {}, options = {}) {
+  const fieldMap = {
+    heroPowerAttack: values.attack,
+    heroPowerDefense: values.defense,
+    heroPowerWar: values.war,
+    heroPowerStrategy: values.strategy,
+    heroPowerCharm: values.charm,
+    heroPowerLevel: values.level,
+    heroPowerTenpu: values.tenpu
+  };
+  Object.entries(fieldMap).forEach(([key, value]) => {
+    if (elements[key] && value != null) {
+      elements[key].value = `${value}`;
+    }
+  });
+  if (elements.heroPowerPreset && options.presetKey) {
+    elements.heroPowerPreset.value = options.presetKey;
+  }
+}
+
+function applyHeroPowerResearchPreset(sampleKey) {
+  if (!sampleKey || sampleKey === "custom") {
+    return;
+  }
+
+  const sample = findHeroPowerResearchSample(sampleKey);
+  if (!sample) {
+    return;
+  }
+
+  applyHeroPowerResearchValues(sample, { presetKey: sample.key });
+}
+
+function resetHeroPowerResearchInputs() {
+  const defaultSample = HERO_POWER_RESEARCH_SAMPLE_ROWS[0] ?? HERO_POWER_RESEARCH_DEFAULTS;
+  applyHeroPowerResearchValues(defaultSample, {
+    presetKey: defaultSample.key ?? "custom"
+  });
+}
+
+function getHeroPowerSelectedSample() {
+  const sampleKey = elements.heroPowerPreset?.value ?? "";
+  return findHeroPowerResearchSample(sampleKey);
+}
+
+function hasHeroPowerInvestmentData(sample) {
+  return Boolean(sample?.starBonuses && sample?.rendanBonuses);
+}
+
+function normalizeHeroPowerInvestmentBundle(bundle = {}) {
+  return Object.fromEntries(
+    HERO_POWER_BREAKDOWN_STAT_KEYS.map((statKey) => [statKey, readArmyNumericValue(bundle?.[statKey], 0)])
+  );
+}
+
+function sumHeroPowerInvestmentBundle(bundle = {}) {
+  return sumArmyValues(
+    HERO_POWER_BREAKDOWN_STAT_KEYS.map((statKey) => readArmyNumericValue(bundle?.[statKey], 0))
+  );
+}
+
+function formatHeroPowerInvestmentBundle(bundle = {}, options = {}) {
+  const includeCharm = options.includeCharm !== false;
+  const statKeys = includeCharm ? HERO_POWER_BREAKDOWN_STAT_KEYS : HERO_POWER_DELTA_FEATURE_KEYS;
+  return statKeys
+    .map((statKey) => `${getArmyRegressionFeatureLabel(statKey)}${formatArmyEstimateNumber(readArmyNumericValue(bundle?.[statKey], 0))}`)
+    .join(" / ");
+}
+
+function deriveHeroPowerBaseBundle(sample) {
+  if (!hasHeroPowerInvestmentData(sample)) {
+    return null;
+  }
+
+  const starBonuses = normalizeHeroPowerInvestmentBundle(sample.starBonuses);
+  const rendanBonuses = normalizeHeroPowerInvestmentBundle(sample.rendanBonuses);
+  return {
+    attack: readArmyNumericValue(sample.attack) - starBonuses.attack - rendanBonuses.attack,
+    defense: readArmyNumericValue(sample.defense) - starBonuses.defense - rendanBonuses.defense,
+    war: readArmyNumericValue(sample.war) - starBonuses.war - rendanBonuses.war,
+    strategy: readArmyNumericValue(sample.strategy) - starBonuses.strategy - rendanBonuses.strategy,
+    charm: readArmyNumericValue(sample.charm) - starBonuses.charm - rendanBonuses.charm
+  };
+}
+
+function getHeroPowerDeltaModel(models = HERO_POWER_RESEARCH_MODELS) {
+  return models.find((model) => model.key === "stats4") ?? models[0] ?? null;
+}
+
+function estimateHeroPowerBundleDeltaPower(bundle = {}, model = getHeroPowerDeltaModel()) {
+  if (!model) {
+    return null;
+  }
+
+  const coefficientKeys = HERO_POWER_DELTA_FEATURE_KEYS.filter((featureKey) =>
+    Number.isFinite(Number(model.coefficients?.[featureKey]))
+  );
+  if (!coefficientKeys.length) {
+    return null;
+  }
+
+  const rawDelta = sumArmyValues(
+    coefficientKeys.map(
+      (featureKey) =>
+        readArmyNumericValue(bundle?.[featureKey], 0) * Number(model.coefficients?.[featureKey] ?? 0)
+    )
+  );
+  return Math.max(0, Math.round(rawDelta));
+}
+
+function buildHeroPowerInvestmentConclusion(sample, model = getHeroPowerDeltaModel()) {
+  if (!hasHeroPowerInvestmentData(sample)) {
+    const names = HERO_POWER_RESEARCH_DETAILED_ROWS.map((row) => row.name).join(" / ");
+    return `同時刻画像付きサンプルのみ、将星と練達の分解を表示しています。現状は ${names} に対応しています。`;
+  }
+
+  const starBonuses = normalizeHeroPowerInvestmentBundle(sample.starBonuses);
+  const rendanBonuses = normalizeHeroPowerInvestmentBundle(sample.rendanBonuses);
+  const nextStarBonuses = sample.nextStarBonuses ? normalizeHeroPowerInvestmentBundle(sample.nextStarBonuses) : null;
+  const nextRendanBonuses = sample.nextRendanBonuses ? normalizeHeroPowerInvestmentBundle(sample.nextRendanBonuses) : null;
+  const ratioText =
+    HERO_POWER_STAR_STEP_RATIO_ANALYSIS
+      ? `今回の非最大サンプル ${HERO_POWER_STAR_STEP_RATIO_ANALYSIS.sampleCount}項目では、次将星 / 現将星 = ${HERO_POWER_STAR_STEP_RATIO_ANALYSIS.meanRatio.toFixed(3)} 前後でした`
+      : "次将星の倍率はまだ十分に検証できていません";
+  const starText = nextStarBonuses
+    ? `将星画面の緑値は白値の約20%で、${sample.name}では次将星で${formatHeroPowerInvestmentBundle(nextStarBonuses)}と伸びます`
+    : `${sample.name}の将星は最大まで進んでいるため、次将星プレビューはありません`;
+  const rendanText = nextRendanBonuses
+    ? `練達画面では「白値 - 緑値」で現在補正を戻せます。${sample.rendanSkill}の次回プレビューは${formatHeroPowerInvestmentBundle(
+        nextRendanBonuses
+      )}です`
+    : "練達プレビューは未登録です";
+  const deltaModelText = model
+    ? `戦力増分の試算には${getArmyRegressionFeatureLabel("attack")}〜${getArmyRegressionFeatureLabel("strategy")}の近似係数を使っています`
+    : "戦力増分モデルはまだ構築中です";
+  return `表示ステータス = 基礎値 + 将星補正 + 練達補正 と読むのが最も自然です。${starText}。${ratioText}。${rendanText}。${deltaModelText}。`;
+}
+
+function renderHeroPowerInvestmentBreakdown(sample = getHeroPowerSelectedSample(), models = HERO_POWER_RESEARCH_MODELS) {
+  if (!elements.heroPowerInvestmentGrid) {
+    return;
+  }
+
+  if (!hasHeroPowerInvestmentData(sample)) {
+    elements.heroPowerInvestmentGrid.innerHTML = renderEmptyState(
+      "同時刻画像付きサンプルを選ぶと、将星と練達を分解して基礎値まで逆算します。"
+    );
+    if (elements.heroPowerInvestmentConclusion) {
+      elements.heroPowerInvestmentConclusion.textContent = buildHeroPowerInvestmentConclusion(null, getHeroPowerDeltaModel(models));
+    }
+    return;
+  }
+
+  const baseBundle = deriveHeroPowerBaseBundle(sample);
+  const starBonuses = normalizeHeroPowerInvestmentBundle(sample.starBonuses);
+  const rendanBonuses = normalizeHeroPowerInvestmentBundle(sample.rendanBonuses);
+  const nextStarBonuses = sample.nextStarBonuses ? normalizeHeroPowerInvestmentBundle(sample.nextStarBonuses) : null;
+  const nextRendanBonuses = sample.nextRendanBonuses ? normalizeHeroPowerInvestmentBundle(sample.nextRendanBonuses) : null;
+  const deltaModel = getHeroPowerDeltaModel(models);
+  const nextStarDelta = estimateHeroPowerBundleDeltaPower(nextStarBonuses, deltaModel);
+  const nextRendanDelta = estimateHeroPowerBundleDeltaPower(nextRendanBonuses, deltaModel);
+  const currentStarSum = sumHeroPowerInvestmentBundle(starBonuses);
+  const currentRendanSum = sumHeroPowerInvestmentBundle(rendanBonuses);
+  const currentBaseSum = sumHeroPowerInvestmentBundle(baseBundle);
+  const ratioSummary = nextStarBonuses
+    ? HERO_POWER_DELTA_FEATURE_KEYS.map((statKey) => {
+        const currentValue = readArmyNumericValue(starBonuses?.[statKey], 0);
+        const nextValue = readArmyNumericValue(nextStarBonuses?.[statKey], 0);
+        return currentValue > 0 ? `${getArmyRegressionFeatureLabel(statKey)} ${nextValue}/${currentValue}` : null;
+      })
+        .filter(Boolean)
+        .join(" / ")
+    : "将星最大";
+  const cards = [
+    {
+      title: "基礎値の逆算",
+      body: formatHeroPowerInvestmentBundle(baseBundle),
+      detail: `表示値 ${formatHeroPowerInvestmentBundle({
+        attack: sample.attack,
+        defense: sample.defense,
+        war: sample.war,
+        strategy: sample.strategy,
+        charm: sample.charm
+      })} から、将星 ${formatArmyEstimateNumber(currentStarSum)} と練達 ${formatArmyEstimateNumber(currentRendanSum)} を引いた推定基礎値です`
+    },
+    {
+      title: "現在の投資内訳",
+      body: `将星 ${formatArmyEstimateNumber(currentStarSum)} / 練達 ${formatArmyEstimateNumber(currentRendanSum)}`,
+      detail: `将星 ${formatHeroPowerInvestmentBundle(starBonuses)} / 練達 ${formatHeroPowerInvestmentBundle(rendanBonuses)} / 基礎値合計 ${formatArmyEstimateNumber(currentBaseSum)}`
+    },
+    {
+      title: nextStarBonuses ? "次の将星プレビュー" : "将星の状態",
+      body: nextStarBonuses ? `+${formatArmyEstimateNumber(nextStarDelta ?? 0)} 戦力前後` : "最大まで到達",
+      detail: nextStarBonuses
+        ? `${formatHeroPowerInvestmentBundle(nextStarBonuses)} / 緑値は白値の約20% (${ratioSummary})`
+        : "将星画面の白値が現在補正そのものと読めます"
+    },
+    {
+      title: "次の練達プレビュー",
+      body: nextRendanBonuses ? `+${formatArmyEstimateNumber(nextRendanDelta ?? 0)} 戦力前後` : "未登録",
+      detail: nextRendanBonuses
+        ? `${sample.rendanSkill} / ${formatHeroPowerInvestmentBundle(nextRendanBonuses)} / 白値 - 緑値 = 現在補正`
+        : "練達画像が不足しています"
+    }
+  ];
+
+  elements.heroPowerInvestmentGrid.innerHTML = cards
+    .map(
+      (card) => `
+        <article class="army-summary-card">
+          <h3>${escapeHtml(card.title)}</h3>
+          <p class="toolbar-summary">${escapeHtml(card.body)}</p>
+          <p class="field-note">${escapeHtml(card.detail)}</p>
+        </article>
+      `
+    )
+    .join("");
+
+  if (elements.heroPowerInvestmentConclusion) {
+    elements.heroPowerInvestmentConclusion.textContent = buildHeroPowerInvestmentConclusion(sample, deltaModel);
+  }
+}
+
+function buildHeroPowerResearchConclusion(models = HERO_POWER_RESEARCH_MODELS) {
+  const best = models[0] ?? null;
+  const second = models[1] ?? null;
+  if (!best) {
+    return "研究用サンプルが不足しているため、仮説比較をまだ出せません。";
+  }
+
+  const charmModel = models.find((model) => model.key === "stats4-level-tenpu-charm") ?? null;
+  const readableModel = getHeroPowerDeltaModel(models);
+  const bestReading = best.featureKeys.map((featureKey) => getArmyRegressionFeatureLabel(featureKey)).join(" + ");
+  const comparisonText =
+    second && Number.isFinite(Number(best.holdoutMae)) && Number.isFinite(Number(second.holdoutMae))
+      ? `次点の${second.label}よりLOO誤差が${(second.holdoutMae - best.holdoutMae).toFixed(1)}小さい`
+      : "他仮説より安定している";
+  const charmText =
+    charmModel && Number.isFinite(Number(charmModel.holdoutMae)) && Number.isFinite(Number(best.holdoutMae))
+      ? `魅力を足した仮説はLOO誤差${charmModel.holdoutMae.toFixed(1)}で、最有力仮説より${(charmModel.holdoutMae - best.holdoutMae).toFixed(1)}悪化しているため`
+      : "魅力を足した改善は今のサンプルでは限定的なため";
+  const readableText =
+    readableModel && readableModel.key !== best.key
+      ? `人が追いやすい増分近似としては${readableModel.label}も有効で、将星や練達の一段分を戦力へ換算する目安に使えます`
+      : "";
+  return `${best.label}が最も安定しました。${comparisonText}ため、現時点では「${bestReading}」で読むのが自然です。同時刻画像の分解では「表示ステータス = 基礎値 + 将星補正 + 練達補正」と読むのが最も素直です。${charmText}、魅力の独立寄与は弱いか、未表示の兵力/将星/練達に埋もれている可能性があります。${readableText}${readableText ? "。" : ""}`.trim();
+}
+
+function renderHeroPowerResearch() {
+  if (!elements.heroPowerSummaryGrid || !elements.heroPowerHypothesisGrid) {
+    return;
+  }
+
+  if (!HERO_POWER_RESEARCH_MODELS.length) {
+    elements.heroPowerSummaryGrid.innerHTML = renderEmptyState("武将戦力の研究サンプルがまだ不足しています。");
+    elements.heroPowerHypothesisGrid.innerHTML = "";
+    if (elements.heroPowerInvestmentGrid) {
+      elements.heroPowerInvestmentGrid.innerHTML = "";
+    }
+    if (elements.heroPowerConclusion) {
+      elements.heroPowerConclusion.textContent = "";
+    }
+    if (elements.heroPowerInvestmentConclusion) {
+      elements.heroPowerInvestmentConclusion.textContent = "";
+    }
+    if (elements.heroPowerResearchMeta) {
+      elements.heroPowerResearchMeta.textContent = "";
+    }
+    return;
+  }
+
+  const state = buildHeroPowerResearchState();
+  const bestModel = HERO_POWER_RESEARCH_MODELS[0];
+  const secondModel = HERO_POWER_RESEARCH_MODELS[1] ?? null;
+  const estimatedPower = predictArmyRegressionModel(bestModel, state);
+  const residuals = HERO_POWER_RESEARCH_SAMPLE_ROWS.map((row) => {
+    const predicted = predictArmyRegressionModel(bestModel, row);
+    return {
+      name: row.name,
+      actual: row.power,
+      predicted,
+      diff: predicted == null ? null : predicted - row.power
+    };
+  })
+    .filter((row) => row.diff != null)
+    .sort((left, right) => Math.abs(right.diff) - Math.abs(left.diff));
+  const cards = [
+    {
+      title: "入力中の推定戦力",
+      body: estimatedPower != null ? formatArmyEstimateNumber(estimatedPower) : "入力不足",
+      detail: `${bestModel.label} / LOO ${Number(bestModel.holdoutMae ?? 0).toFixed(1)} / R² ${bestModel.rSquared.toFixed(3)}`
+    },
+    {
+      title: "最有力仮説",
+      body: bestModel.label,
+      detail: secondModel
+        ? `次点 ${secondModel.label} より検証誤差 ${(Number(secondModel.holdoutMae ?? 0) - Number(bestModel.holdoutMae ?? 0)).toFixed(1)} 改善`
+        : `検証誤差 ${Number(bestModel.holdoutMae ?? 0).toFixed(1)}`
+    },
+    {
+      title: "誤差が大きい武将",
+      body: residuals
+        .slice(0, 3)
+        .map((row) => `${row.name} ${row.diff >= 0 ? "+" : ""}${row.diff}`)
+        .join(" / "),
+      detail: "未表示の最大兵力、将星、練達差が残差として残っている可能性があります。"
+    }
+  ];
+
+  elements.heroPowerSummaryGrid.innerHTML = cards
+    .map(
+      (card) => `
+        <article class="army-summary-card">
+          <h3>${escapeHtml(card.title)}</h3>
+          <p class="toolbar-summary">${escapeHtml(card.body)}</p>
+          <p class="field-note">${escapeHtml(card.detail)}</p>
+        </article>
+      `
+    )
+    .join("");
+
+  elements.heroPowerHypothesisGrid.innerHTML = HERO_POWER_RESEARCH_MODELS.map(
+    (model, index) => `
+      <article class="army-summary-card">
+        <h3>${escapeHtml(`${index + 1}位 ${model.label}`)}</h3>
+        <p class="toolbar-summary">${escapeHtml(
+          `LOO ${Number(model.holdoutMae ?? 0).toFixed(1)} / MAE ${model.mae.toFixed(1)} / R² ${model.rSquared.toFixed(3)}`
+        )}</p>
+        <p class="field-note">${escapeHtml(formatArmyRegressionFormula(model))}</p>
+        <p class="field-note">${escapeHtml(model.description || "サンプル画像からの仮説です。")}</p>
+      </article>
+    `
+  ).join("");
+
+  renderHeroPowerInvestmentBreakdown(getHeroPowerSelectedSample(), HERO_POWER_RESEARCH_MODELS);
+
+  if (elements.heroPowerConclusion) {
+    elements.heroPowerConclusion.textContent = buildHeroPowerResearchConclusion();
+  }
+  if (elements.heroPowerResearchMeta) {
+    elements.heroPowerResearchMeta.textContent =
+      `研究サンプル ${HERO_POWER_RESEARCH_SAMPLE_ROWS.length}件、うち同時刻で将星と練達まで追えた詳細サンプル ${HERO_POWER_RESEARCH_DETAILED_ROWS.length}件。GameWith の「戦力は最大兵力と各ステータスから算出」を前提に、提供画像の数値で仮説比較しています。未表示の最大兵力は残差に残るため、これは公開式ではなく検証用の近似です。`;
+  }
+}
+
 function createEmptyArmyPowerImportState() {
   return {
     mode: "standard",
@@ -869,6 +3179,69 @@ function createEmptyArmyPowerImportState() {
     rowsById: {},
     model: null
   };
+}
+
+function hydrateArmyRegressionModel(rawModel, hypothesisDefs = ARMY_OBSERVED_POWER_HYPOTHESIS_DEFS) {
+  if (!rawModel) {
+    return null;
+  }
+
+  const fallbackDefinition =
+    hypothesisDefs.find((definition) => definition.key === rawModel?.key) ?? hypothesisDefs[0] ?? null;
+  const normalizeSingleModel = (entry, fallback = fallbackDefinition) => {
+    if (!entry || !Number.isFinite(Number(entry.intercept))) {
+      return null;
+    }
+
+    const featureKeys = Array.isArray(entry.featureKeys) && entry.featureKeys.length
+      ? entry.featureKeys.filter((featureKey) => Object.prototype.hasOwnProperty.call(ARMY_REGRESSION_FEATURE_LABELS, featureKey))
+      : [...(fallback?.featureKeys ?? ["attack", "defense", "war", "strategy", "level", "secret"])];
+    if (!featureKeys.length) {
+      return null;
+    }
+
+    return {
+      key: String(entry.key ?? fallback?.key ?? featureKeys.join("-")),
+      label:
+        String(entry.label ?? fallback?.label ?? featureKeys.map((featureKey) => getArmyRegressionFeatureLabel(featureKey)).join(" + ")),
+      description: String(entry.description ?? fallback?.description ?? ""),
+      featureKeys,
+      intercept: Number(entry.intercept),
+      coefficients: Object.fromEntries(
+        featureKeys.map((featureKey) => [featureKey, Number(entry.coefficients?.[featureKey] ?? 0)])
+      ),
+      rSquared: Number(entry.rSquared ?? 0),
+      mae: Number(entry.mae ?? 0),
+      holdoutMae: Number(entry.holdoutMae ?? entry.validationMae ?? 0),
+      sampleCount: Number(entry.sampleCount ?? 0)
+    };
+  };
+
+  const hypotheses = Array.isArray(rawModel.hypotheses)
+    ? rawModel.hypotheses
+        .map((entry) =>
+          normalizeSingleModel(entry, hypothesisDefs.find((definition) => definition.key === entry?.key) ?? fallbackDefinition)
+        )
+        .filter(Boolean)
+        .sort(compareArmyRegressionModels)
+    : [];
+  const normalizedPrimary = normalizeSingleModel(rawModel, fallbackDefinition);
+  if (!normalizedPrimary && !hypotheses.length) {
+    return null;
+  }
+
+  const normalizedHypotheses = hypotheses.length
+    ? hypotheses
+    : normalizedPrimary
+      ? [normalizedPrimary]
+      : [];
+  const best = normalizedHypotheses[0] ?? normalizedPrimary;
+  return best
+    ? {
+        ...best,
+        hypotheses: normalizedHypotheses
+      }
+    : null;
 }
 
 function hydrateArmyPowerImportState(state) {
@@ -913,22 +3286,7 @@ function hydrateArmyPowerImportState(state) {
   next.rowCount = Number.isFinite(Number(state?.rowCount)) ? Number(state.rowCount) : Object.keys(next.rowsById).length;
   next.matchedCount = Object.keys(next.rowsById).length;
 
-  if (state?.model && Number.isFinite(Number(state.model.intercept))) {
-    next.model = {
-      intercept: Number(state.model.intercept),
-      coefficients: {
-        attack: Number(state.model.coefficients?.attack ?? 0),
-        defense: Number(state.model.coefficients?.defense ?? 0),
-        war: Number(state.model.coefficients?.war ?? 0),
-        strategy: Number(state.model.coefficients?.strategy ?? 0),
-        level: Number(state.model.coefficients?.level ?? 0),
-        secret: Number(state.model.coefficients?.secret ?? 0)
-      },
-      rSquared: Number(state.model.rSquared ?? 0),
-      mae: Number(state.model.mae ?? 0),
-      sampleCount: Number(state.model.sampleCount ?? 0)
-    };
-  }
+  next.model = hydrateArmyRegressionModel(state?.model, ARMY_OBSERVED_POWER_HYPOTHESIS_DEFS);
 
   if (!next.matchedCount) {
     next.mode = "standard";
@@ -966,43 +3324,22 @@ function exportArmyPowerImportState() {
 }
 
 function buildArmyObservedPowerModel(rows) {
-  const modeledRows = rows.filter(
-    (row) =>
-      row.power != null &&
-      [row.attack, row.defense, row.war, row.strategy, row.level, row.secret].every((value) => value != null)
-  );
-
-  if (modeledRows.length < 8) {
+  const hypotheses = ARMY_OBSERVED_POWER_HYPOTHESIS_DEFS.map((definition) =>
+    buildArmyRegressionModel(rows, definition, {
+      targetKey: "power",
+      lambda: 2,
+      minRows: Math.max(8, definition.featureKeys.length + 2)
+    })
+  )
+    .filter(Boolean)
+    .sort(compareArmyRegressionModels);
+  if (!hypotheses.length) {
     return null;
   }
-
-  const features = modeledRows.map((row) => [row.attack, row.defense, row.war, row.strategy, row.level, row.secret]);
-  const targets = modeledRows.map((row) => row.power);
-  const fitted = fitArmyRidgeRegression(features, targets, 4);
-  if (!fitted) {
-    return null;
-  }
-
-  const predictions = features.map(
-    (featureRow) => fitted.intercept + sumArmyValues(featureRow.map((value, index) => value * fitted.coefficients[index]))
-  );
-  const meanTarget = averageArmyValues(targets);
-  const ssResidual = sumArmyValues(targets.map((value, index) => (value - predictions[index]) ** 2));
-  const ssTotal = sumArmyValues(targets.map((value) => (value - meanTarget) ** 2));
 
   return {
-    intercept: fitted.intercept,
-    coefficients: {
-      attack: fitted.coefficients[0],
-      defense: fitted.coefficients[1],
-      war: fitted.coefficients[2],
-      strategy: fitted.coefficients[3],
-      level: fitted.coefficients[4],
-      secret: fitted.coefficients[5]
-    },
-    rSquared: ssTotal ? 1 - ssResidual / ssTotal : 0,
-    mae: averageArmyValues(targets.map((value, index) => Math.abs(value - predictions[index]))),
-    sampleCount: modeledRows.length
+    ...hypotheses[0],
+    hypotheses
   };
 }
 
@@ -1011,20 +3348,14 @@ function predictArmyObservedPower(model, row) {
     return null;
   }
 
-  const values = [row.attack, row.defense, row.war, row.strategy, row.level, row.secret];
-  if (values.some((value) => value == null)) {
-    return null;
+  const hypotheses = Array.isArray(model.hypotheses) && model.hypotheses.length ? model.hypotheses : [model];
+  for (const hypothesis of hypotheses) {
+    const prediction = predictArmyRegressionModel(hypothesis, row);
+    if (prediction != null) {
+      return prediction;
+    }
   }
-
-  return Math.round(
-    model.intercept +
-      values[0] * model.coefficients.attack +
-      values[1] * model.coefficients.defense +
-      values[2] * model.coefficients.war +
-      values[3] * model.coefficients.strategy +
-      values[4] * model.coefficients.level +
-      values[5] * model.coefficients.secret
-  );
+  return null;
 }
 
 function parseArmyObservedPowerText(text) {
@@ -1136,28 +3467,41 @@ function getArmyObservedPowerRow(characterOrMeta) {
   return armyObservedPowerState.rowsById?.[character.id] ?? null;
 }
 
+function getArmyObservedPowerModelInsightText(model) {
+  if (!model) {
+    return "戦力列付きの行が8体以上あると、複数仮説から安定した式を選べます。";
+  }
+
+  const featureLabels = model.featureKeys.map((featureKey) => getArmyRegressionFeatureLabel(featureKey));
+  const includesTenpu = model.featureKeys.includes("tenpu");
+  const includesCharm = model.featureKeys.includes("charm");
+  const includesSecret = model.featureKeys.includes("secret");
+  const holdoutText = Number.isFinite(Number(model.holdoutMae))
+    ? `検証誤差 ${model.holdoutMae.toFixed(1)}`
+    : "検証誤差は未算出";
+  return `${model.label} を採用。使った項目: ${featureLabels.join(" / ")}。${holdoutText}。${
+    includesTenpu && !includesCharm
+      ? "天賦を足すと安定し、魅力は今回は採用されませんでした。"
+      : includesCharm
+        ? "魅力まで含めた方が安定したCSVです。"
+        : includesSecret
+          ? "Lvや秘伝込みの現在値補完に寄せた式です。"
+          : "表示4ステータスだけで説明しやすいCSVです。"
+  }`;
+}
+
 function getArmyPowerModelSummaryText() {
   if (!armyObservedPowerState.model) {
     return "係数を出すには、戦力列付きの行を8体以上読み込んでください。";
   }
 
-  const { coefficients, intercept } = armyObservedPowerState.model;
-  const parts = [
-    `${coefficients.attack.toFixed(2)}×攻撃`,
-    `${coefficients.defense.toFixed(2)}×防御`,
-    `${coefficients.war.toFixed(2)}×戦威`,
-    `${coefficients.strategy.toFixed(2)}×策略`,
-    `${coefficients.level.toFixed(2)}×Lv`,
-    `${coefficients.secret.toFixed(2)}×秘伝`
-  ];
-  const interceptText = `${intercept >= 0 ? "+" : "-"} ${Math.abs(intercept).toFixed(1)}`;
-  return `戦力 ≒ ${parts.join(" + ")} ${interceptText}`;
+  return `${armyObservedPowerState.model.label}: ${formatArmyRegressionFormula(armyObservedPowerState.model)}`;
 }
 
 function createEmptyArmyRosterState() {
   return {
     profiles: {},
-    defaultInvestmentTier: "usable",
+    defaultInvestmentTier: "trained",
     defaultEquipmentFit: "none",
     ownedCount: 0
   };
@@ -1169,7 +3513,7 @@ function hydrateArmyRosterState(state) {
     defaultInvestmentTier: sanitizeArmyTierKey(
       state?.defaultInvestmentTier,
       ARMY_INVESTMENT_TIER_DEFS,
-      "usable"
+      "trained"
     ),
     defaultEquipmentFit: sanitizeArmyTierKey(
       state?.defaultEquipmentFit,
@@ -1244,13 +3588,13 @@ function serializeArmyRosterForShare() {
     .filter(([, profile]) => profile?.owned)
     .map(([id, profile]) => [
       Number(id),
-      ARMY_SHARE_TIER_CODES[profile.investmentTier] ?? ARMY_SHARE_TIER_CODES.usable,
+      ARMY_SHARE_TIER_CODES[profile.investmentTier] ?? ARMY_SHARE_TIER_CODES.untrained,
       ARMY_SHARE_EQUIPMENT_CODES[profile.equipmentFit] ?? ARMY_SHARE_EQUIPMENT_CODES.none
     ]);
 
   if (
     !entries.length &&
-    armyRosterState.defaultInvestmentTier === "usable" &&
+    armyRosterState.defaultInvestmentTier === "trained" &&
     armyRosterState.defaultEquipmentFit === "none"
   ) {
     return undefined;
@@ -1258,7 +3602,7 @@ function serializeArmyRosterForShare() {
 
   return {
     d: [
-      ARMY_SHARE_TIER_CODES[armyRosterState.defaultInvestmentTier] ?? ARMY_SHARE_TIER_CODES.usable,
+      ARMY_SHARE_TIER_CODES[armyRosterState.defaultInvestmentTier] ?? ARMY_SHARE_TIER_CODES.untrained,
       ARMY_SHARE_EQUIPMENT_CODES[armyRosterState.defaultEquipmentFit] ?? ARMY_SHARE_EQUIPMENT_CODES.none
     ],
     p: entries
@@ -1296,7 +3640,7 @@ function importArmyRosterShareState(state, options = {}) {
   }
 
   const nextState = createEmptyArmyRosterState();
-  nextState.defaultInvestmentTier = ARMY_SHARE_TIER_KEYS[state.d?.[0]] ?? "usable";
+  nextState.defaultInvestmentTier = ARMY_SHARE_TIER_KEYS[state.d?.[0]] ?? "untrained";
   nextState.defaultEquipmentFit = ARMY_SHARE_EQUIPMENT_KEYS[state.d?.[1]] ?? "none";
 
   for (const entry of state.p ?? []) {
@@ -1382,6 +3726,7 @@ function clearArmyObservedPowerImport(options = {}) {
 
 function renderArmyPowerImportUi() {
   if (!elements.armyPowerImportSummaryGrid) {
+    renderArmyImageImportUi();
     return;
   }
 
@@ -1391,6 +3736,7 @@ function renderArmyPowerImportUi() {
   if (elements.armyPowerImportInput && document.activeElement !== elements.armyPowerImportInput) {
     elements.armyPowerImportInput.value = armyObservedPowerState.rawText ?? "";
   }
+  renderArmyImageImportUi();
 
   const cards = [];
   const statusBody = armyObservedPowerState.matchedCount
@@ -1431,10 +3777,14 @@ function renderArmyPowerImportUi() {
     body: armyObservedPowerState.model
       ? `回帰サンプル ${armyObservedPowerState.model.sampleCount}体 / R² ${armyObservedPowerState.model.rSquared.toFixed(
           3
-        )} / MAE ${armyObservedPowerState.model.mae.toFixed(1)}`
+        )} / MAE ${armyObservedPowerState.model.mae.toFixed(1)}${
+          Number.isFinite(Number(armyObservedPowerState.model.holdoutMae))
+            ? ` / LOO ${armyObservedPowerState.model.holdoutMae.toFixed(1)}`
+            : ""
+        }`
       : "戦力列を含む行が8体以上ある時だけ係数を計算します。",
     detail: getArmyPowerModelSummaryText(),
-    extra: "天賦と魅力は現在ステータスへ強く内包されるため、表示式は4ステータス + Lv + 秘伝の圧縮形です。"
+    extra: getArmyObservedPowerModelInsightText(armyObservedPowerState.model)
   });
 
   elements.armyPowerImportSummaryGrid.innerHTML = cards
@@ -1512,7 +3862,7 @@ function cycleArmyRosterQuickState(characterId) {
   if (current.investmentTier === "trained") {
     patchArmyRosterProfile(characterId, {
       owned: true,
-      investmentTier: "usable",
+      investmentTier: "untrained",
       equipmentFit: current.equipmentFit || armyRosterState.defaultEquipmentFit
     });
     return;
@@ -1529,7 +3879,7 @@ function setArmyRosterDefaults(nextDefaults) {
   armyRosterState.defaultInvestmentTier = sanitizeArmyTierKey(
     nextDefaults.defaultInvestmentTier ?? armyRosterState.defaultInvestmentTier,
     ARMY_INVESTMENT_TIER_DEFS,
-    "usable"
+    "untrained"
   );
   armyRosterState.defaultEquipmentFit = sanitizeArmyTierKey(
     nextDefaults.defaultEquipmentFit ?? armyRosterState.defaultEquipmentFit,
@@ -1544,7 +3894,7 @@ function setArmyRosterBatchByRarity(rarity) {
     const profile = getArmyRosterProfile(character.id);
     armyRosterState.profiles[character.id] = {
       owned: true,
-      investmentTier: profile.investmentTier || armyRosterState.defaultInvestmentTier,
+      investmentTier: "trained",
       equipmentFit: profile.equipmentFit || armyRosterState.defaultEquipmentFit
     };
   }
@@ -1558,6 +3908,15 @@ function clearArmyRosterSelection() {
 
 function getOwnedArmyCharacters() {
   return preparedCharacters.filter((character) => isArmyCharacterOwned(character.id)).sort(compareCharactersBase);
+}
+
+function isArmyCharacterReady(characterId) {
+  const profile = getArmyRosterProfile(characterId);
+  return Boolean(profile.owned) && profile.investmentTier === "trained";
+}
+
+function getReadyArmyCharacters() {
+  return preparedCharacters.filter((character) => isArmyCharacterReady(character.id)).sort(compareCharactersBase);
 }
 
 function getArmyAvailabilityProfile(characterOrMeta) {
@@ -2431,10 +4790,233 @@ function getArmyObjectiveFallbackScores(character, roleTags) {
   };
 }
 
+const ARMY_ROW_TEXT_RULES = {
+  front: [
+    { pattern: /(軍勢の)?前列で使うのがおすすめ|前列に配置して使うのがおすすめ/u, score: 24, reason: "前列推奨" },
+    { pattern: /前列[^。]*軍勢全体|前列[^。]*全体に付与/u, score: 30, reason: "前列で全体化" },
+    { pattern: /前列[^。]*(威力上昇|効果上昇|追加効果|兵力回復|付与)/u, score: 22, reason: "前列で効果増" }
+  ],
+  middle: [
+    { pattern: /(軍勢の)?中列で使うのがおすすめ|中列に配置して使うのがおすすめ/u, score: 24, reason: "中列推奨" },
+    { pattern: /中列[^。]*軍勢全体|中列[^。]*全体に付与/u, score: 28, reason: "中列で全体化" },
+    { pattern: /中列[^。]*(威力上昇|効果上昇|追加効果|兵力回復|付与)/u, score: 22, reason: "中列で効果増" }
+  ],
+  back: [
+    { pattern: /(軍勢の)?後列で使うのがおすすめ|後列に配置して使うのがおすすめ/u, score: 24, reason: "後列推奨" },
+    { pattern: /後列[^。]*軍勢全体|後列[^。]*全体に付与/u, score: 28, reason: "後列で全体化" },
+    { pattern: /後列[^。]*(威力上昇|効果上昇|追加効果|兵力回復|付与)/u, score: 22, reason: "後列で効果増" }
+  ]
+};
+
+function createArmyPositionProfile() {
+  return {
+    scores: { front: 0, middle: 0, back: 0 },
+    reasons: { front: [], middle: [], back: [] },
+    dominantRow: "",
+    dominantScore: 0,
+    dominantGap: 0,
+    focusText: "",
+    summaryText: ""
+  };
+}
+
+function getArmyRowTextRules() {
+  if (getArmyRowTextRules.cache) {
+    return getArmyRowTextRules.cache;
+  }
+
+  getArmyRowTextRules.cache = {
+    front: [
+      { pattern: /(軍勢の)?前列で使うのがおすすめ|前列に配置して使うのがおすすめ/u, score: 24, reason: "前列推奨" },
+      { pattern: /前列[^。]*軍勢全体|前列[^。]*全体に付与/u, score: 30, reason: "前列で全体化" },
+      { pattern: /前列[^。]*(威力上昇|効果上昇|追加効果|兵力回復|付与)/u, score: 22, reason: "前列で効果増" }
+    ],
+    middle: [
+      { pattern: /(軍勢の)?中列で使うのがおすすめ|中列に配置して使うのがおすすめ/u, score: 24, reason: "中列推奨" },
+      { pattern: /中列[^。]*軍勢全体|中列[^。]*全体に付与/u, score: 28, reason: "中列で全体化" },
+      { pattern: /中列[^。]*(威力上昇|効果上昇|追加効果|兵力回復|付与)/u, score: 22, reason: "中列で効果増" }
+    ],
+    back: [
+      { pattern: /(軍勢の)?後列で使うのがおすすめ|後列に配置して使うのがおすすめ/u, score: 24, reason: "後列推奨" },
+      { pattern: /後列[^。]*軍勢全体|後列[^。]*全体に付与/u, score: 28, reason: "後列で全体化" },
+      { pattern: /後列[^。]*(威力上昇|効果上昇|追加効果|兵力回復|付与)/u, score: 22, reason: "後列で効果増" }
+    ]
+  };
+
+  return getArmyRowTextRules.cache;
+}
+
+function addArmyPositionSignal(profile, rowKey, score, reason) {
+  if (!profile?.scores || !ARMY_BUILDER_ROW_KEYS.includes(rowKey) || !Number.isFinite(score) || score <= 0) {
+    return;
+  }
+
+  profile.scores[rowKey] += score;
+  if (reason && !profile.reasons[rowKey].includes(reason)) {
+    profile.reasons[rowKey].push(reason);
+  }
+}
+
+function applyArmyExplicitPositionGuideSignals(profile, referenceText) {
+  const text = `${referenceText ?? ""}`;
+  if (!text) {
+    return;
+  }
+
+  const explicitRules = [
+    {
+      rowKey: "front",
+      score: 26,
+      reason: "前列推奨",
+      patterns: [/軍勢の前列で使うのがおすすめ/u, /陣形の前列で使うのがおすすめ/u, /前列で使うのがおすすめ/u]
+    },
+    {
+      rowKey: "middle",
+      score: 24,
+      reason: "中列推奨",
+      patterns: [/軍勢の中列で使うのがおすすめ/u, /陣形の中列で使うのがおすすめ/u, /中列で使うのがおすすめ/u]
+    },
+    {
+      rowKey: "back",
+      score: 24,
+      reason: "後列推奨",
+      patterns: [/軍勢の後列で使うのがおすすめ/u, /陣形の後列で使うのがおすすめ/u, /後列で使うのがおすすめ/u]
+    }
+  ];
+
+  explicitRules.forEach((rule) => {
+    if (rule.patterns.some((pattern) => pattern.test(text))) {
+      addArmyPositionSignal(profile, rule.rowKey, rule.score, rule.reason);
+    }
+  });
+
+  const rowConditionRules = [
+    { rowKey: "front", label: "前列" },
+    { rowKey: "middle", label: "中列" },
+    { rowKey: "back", label: "後列" }
+  ];
+
+  rowConditionRules.forEach(({ rowKey, label }) => {
+    if (new RegExp(`${label}にいる場合[^。]*?(軍勢全体|全体に付与)`, "u").test(text)) {
+      addArmyPositionSignal(profile, rowKey, 34, `${label}で全体化`);
+    }
+    if (new RegExp(`${label}にいる場合[^。]*?(効果上昇|威力上昇|効果最大)`, "u").test(text)) {
+      addArmyPositionSignal(profile, rowKey, 20, `${label}条件強化`);
+    }
+    if (new RegExp(`${label}[^。]*?(攻撃|防御|戦威|策略|会心|対物|回復|反撃)`, "u").test(text)) {
+      addArmyPositionSignal(profile, rowKey, 8, `${label}条件技能`);
+    }
+  });
+}
+
+function finalizeArmyPositionProfile(profile) {
+  const ranked = [...ARMY_BUILDER_ROW_KEYS]
+    .map((rowKey) => ({ rowKey, score: profile.scores[rowKey] ?? 0 }))
+    .sort((left, right) => right.score - left.score);
+  const top = ranked[0] ?? { rowKey: "", score: 0 };
+  const second = ranked[1] ?? { score: 0 };
+  const topReason = top.rowKey ? profile.reasons[top.rowKey]?.[0] ?? "" : "";
+
+  profile.dominantRow = top.score > 0 ? top.rowKey : "";
+  profile.dominantScore = top.score;
+  profile.dominantGap = top.score - (second.score ?? 0);
+  profile.focusText =
+    profile.dominantRow && profile.dominantScore >= 14
+      ? `${builderRowLabelFor(profile.dominantRow)}寄り${topReason ? ` / ${topReason}` : ""}`
+      : "";
+  profile.summaryText =
+    ranked
+      .filter((entry) => entry.score >= 12)
+      .map((entry) => {
+        const reason = profile.reasons[entry.rowKey]?.[0] ?? "";
+        return `${builderRowLabelFor(entry.rowKey)} ${Math.round(entry.score)}${reason ? ` (${reason})` : ""}`;
+      })
+      .slice(0, 2)
+      .join(" / ") || "";
+  return profile;
+}
+
+function getArmyCharacterPositionProfile(character) {
+  if (!character) {
+    return createArmyPositionProfile();
+  }
+
+  if (character.armyPositionProfile) {
+    return character.armyPositionProfile;
+  }
+
+  const profile = createArmyPositionProfile();
+  const guideText = [
+    ...(character.guide?.evaluationPoints ?? []),
+    ...(character.guide?.latestFormation?.focusTitles ?? [])
+  ].join(" ");
+  const tacticText = [character.battleArtText ?? "", ...(character.battleArtEffects ?? [])].join(" ");
+  const referenceText = [
+    guideText,
+    tacticText,
+    character.season3?.roleSummary ?? "",
+    ...(character.season3?.strengths ?? []),
+    ...(character.season3?.bestUseCases ?? [])
+  ]
+    .filter(Boolean)
+    .join(" ");
+  const rowTextRules = getArmyRowTextRules();
+
+  for (const rowKey of ARMY_BUILDER_ROW_KEYS) {
+    for (const rule of rowTextRules[rowKey] ?? []) {
+      if (rule.pattern.test(referenceText)) {
+        addArmyPositionSignal(profile, rowKey, rule.score, rule.reason);
+      }
+    }
+  }
+
+  applyArmyExplicitPositionGuideSignals(profile, referenceText);
+
+  for (const rowKey of character.battleArtMeta?.rowBoosts ?? []) {
+    addArmyPositionSignal(profile, rowKey, 12, `${builderRowLabelFor(rowKey)}条件の戦法`);
+  }
+
+  for (const rowKey of character.conditionKeys ?? []) {
+    if (ARMY_BUILDER_ROW_KEYS.includes(rowKey)) {
+      addArmyPositionSignal(profile, rowKey, 10, `${builderRowLabelFor(rowKey)}条件の技能`);
+    }
+  }
+
+  if (/横列の味方を強化/u.test(referenceText) && /前列/u.test(referenceText)) {
+    addArmyPositionSignal(profile, "front", 8, "前列横列支援");
+  }
+  if (/横列の味方を強化/u.test(referenceText) && /中列/u.test(referenceText)) {
+    addArmyPositionSignal(profile, "middle", 8, "中列横列支援");
+  }
+  if (/縦列の味方を強化/u.test(referenceText) && /中列/u.test(referenceText)) {
+    addArmyPositionSignal(profile, "middle", 8, "中列縦列支援");
+  }
+  if (/後列[^。]*(威力上昇|効果上昇)/u.test(tacticText) && character.type === "援") {
+    addArmyPositionSignal(profile, "back", 8, "後列支援火力");
+  }
+
+  character.armyPositionProfile = finalizeArmyPositionProfile(profile);
+  return character.armyPositionProfile;
+}
+
+function getArmyDominantRowInfo(rowScores = {}, fallbackRow = "") {
+  const ranked = [...ARMY_BUILDER_ROW_KEYS]
+    .map((rowKey) => ({ rowKey, score: rowScores?.[rowKey] ?? 0 }))
+    .sort((left, right) => right.score - left.score);
+  const top = ranked[0] ?? { rowKey: fallbackRow || "middle", score: rowScores?.[fallbackRow] ?? 0 };
+  const second = ranked[1] ?? { score: 0 };
+  return {
+    rowKey: top.rowKey || fallbackRow || "middle",
+    score: top.score ?? 0,
+    gap: (top.score ?? 0) - (second.score ?? 0)
+  };
+}
+
 function getArmyRowScores(character, roleTags) {
   const scores = { ...ARMY_BASE_ROW_SCORE };
   const rowBoosts = new Set(character.battleArtMeta?.rowBoosts ?? []);
   const conditionSet = new Set(character.conditionKeys);
+  const positionProfile = getArmyCharacterPositionProfile(character);
 
   for (const rowKey of ARMY_BUILDER_ROW_KEYS) {
     if (conditionSet.has(rowKey)) {
@@ -2476,6 +5058,19 @@ function getArmyRowScores(character, roleTags) {
     scores.back += 12;
   }
 
+  for (const rowKey of ARMY_BUILDER_ROW_KEYS) {
+    scores[rowKey] += positionProfile.scores[rowKey] ?? 0;
+  }
+
+  if (positionProfile.dominantRow && positionProfile.dominantScore >= 20 && positionProfile.dominantGap >= 8) {
+    for (const rowKey of ARMY_BUILDER_ROW_KEYS) {
+      if (rowKey === positionProfile.dominantRow) {
+        continue;
+      }
+      scores[rowKey] -= positionProfile.dominantScore >= 32 ? 8 : 4;
+    }
+  }
+
   return Object.fromEntries(
     Object.entries(scores).map(([rowKey, value]) => [rowKey, clampArmyScore(value)])
   );
@@ -2490,6 +5085,7 @@ function deriveArmyCharacterMeta(character) {
     character,
     roleTags,
     roleTagSet: new Set(roleTags),
+    positionProfile: getArmyCharacterPositionProfile(character),
     rowScores,
     groupScores: {
       offense: getArmyFeatureGroupScore(character, "offense"),
@@ -2526,15 +5122,17 @@ function getArmyMeta(characterOrMeta) {
 
 function getArmyAllowedMetas(selectedRarities, seedCharacter) {
   const usingRoster = hasArmyRosterSelection();
-  const baseCharacters = usingRoster ? getOwnedArmyCharacters() : preparedCharacters;
-  const allowedCharacters = baseCharacters.filter(
+  const ownedCharacters = usingRoster ? getOwnedArmyCharacters() : preparedCharacters;
+  const readyCharacters = usingRoster ? getReadyArmyCharacters() : preparedCharacters;
+  const allowedCharacters = readyCharacters.filter(
     (character) =>
       selectedRarities.includes(character.rarity) || (seedCharacter && character.id === seedCharacter.id)
   );
 
   return {
     usingRoster,
-    ownedCount: armyRosterState.ownedCount ?? 0,
+    ownedCount: usingRoster ? ownedCharacters.length : preparedCharacters.length,
+    readyCount: usingRoster ? readyCharacters.length : preparedCharacters.length,
     allowedCharacters,
     allowedMetas: allowedCharacters.map((character) => getArmyMeta(character))
   };
@@ -2567,6 +5165,18 @@ function getArmyUnitWeights(concept) {
       utilityScore: 0.02,
       investmentScore: 0.01,
       powerScore: 0.38
+    });
+  } else if (concept.key === "opener") {
+    Object.assign(baseWeights, {
+      slotFitScore: 0.15,
+      objectiveFitScore: 0.12,
+      synergyScore: 0.18,
+      tempoScore: 0.2,
+      pressureScore: 0.12,
+      sustainScore: 0.07,
+      utilityScore: 0.08,
+      investmentScore: 0.01,
+      powerScore: 0.07
     });
   } else {
     baseWeights.powerScore = baseWeights.powerScore ?? fallback.powerScore;
@@ -2613,6 +5223,18 @@ function getArmyCompositionWeights(concept, withFormation = false) {
     baseWeights.objectivePurityScore = (baseWeights.objectivePurityScore ?? fallback.objectivePurityScore) * 0.65;
     baseWeights.investmentEfficiencyScore =
       (baseWeights.investmentEfficiencyScore ?? fallback.investmentEfficiencyScore) * 0.72;
+  } else if (concept.key === "opener") {
+    baseWeights.armyPowerScore = (baseWeights.armyPowerScore ?? fallback.armyPowerScore) * 0.78;
+    baseWeights.roleCoverageScore = (baseWeights.roleCoverageScore ?? fallback.roleCoverageScore) * 0.94;
+    baseWeights.commanderQualityScore = (baseWeights.commanderQualityScore ?? fallback.commanderQualityScore) * 1.08;
+    baseWeights.synergyCoverageScore = (baseWeights.synergyCoverageScore ?? fallback.synergyCoverageScore) * 1.16;
+    baseWeights.stabilityScore = (baseWeights.stabilityScore ?? fallback.stabilityScore) * 0.78;
+    if (withFormation) {
+      baseWeights.formationFitScore = (baseWeights.formationFitScore ?? fallback.formationFitScore) * 1.24;
+    }
+    baseWeights.objectivePurityScore = (baseWeights.objectivePurityScore ?? fallback.objectivePurityScore) * 1.26;
+    baseWeights.investmentEfficiencyScore =
+      (baseWeights.investmentEfficiencyScore ?? fallback.investmentEfficiencyScore) * 0.68;
   }
 
   const totalWeight = Math.max(sumArmyValues(Object.values(baseWeights)), 1);
@@ -2624,7 +5246,7 @@ function getArmyReferenceUnitPower() {
     return armyPowerReferenceCache;
   }
 
-  const sourceCharacters = hasArmyRosterSelection() ? getOwnedArmyCharacters() : preparedCharacters;
+  const sourceCharacters = hasArmyRosterSelection() ? getReadyArmyCharacters() : preparedCharacters;
   const topPowers = sourceCharacters
     .map((character) => getArmyCharacterPowerSnapshot(character).current)
     .sort((left, right) => right - left)
@@ -3051,10 +5673,10 @@ function renderArmyRosterSummaryCards() {
   }
 
   const ownedCharacters = getOwnedArmyCharacters();
+  const readyCharacters = getReadyArmyCharacters();
   const usingRoster = ownedCharacters.length > 0;
   const tierCounts = {
     trained: 0,
-    usable: 0,
     untrained: 0
   };
   const equipmentCounts = {
@@ -3074,12 +5696,16 @@ function renderArmyRosterSummaryCards() {
     {
       title: "手持ち選択",
       body: usingRoster ? `${ownedCharacters.length} 体を編成対象にしています。` : "未入力なら全武将から仮組みします。",
-      detail: usingRoster ? `SSR/SR 合計 ${ownedCharacters.length} / 25 体以上で軍勢生成` : "手持ち入力なし"
+      detail: usingRoster
+        ? `仕上がり ${readyCharacters.length} / 登録 ${ownedCharacters.length} / 25 体以上で軍勢生成`
+        : "手持ち入力なし"
     },
     {
       title: "育成段階",
-      body: `仕上がり ${tierCounts.trained} / 実戦投入 ${tierCounts.usable} / 未育成 ${tierCounts.untrained}`,
-      detail: usingRoster ? `平均完成度 ${averageArmyValues(completeness).toFixed(1)} / 100` : "未入力"
+      body: `仕上がり ${tierCounts.trained} / 未育成 ${tierCounts.untrained}`,
+      detail: usingRoster
+        ? `編成候補は仕上がりのみ / 平均完成度 ${averageArmyValues(completeness).toFixed(1)} / 100`
+        : "未入力"
     },
     {
       title: "装備状態",
@@ -3137,8 +5763,8 @@ function renderArmyRosterGrid() {
       const isOwned = profile.owned;
       const statusLabel = isOwned
         ? getArmyProfileLabel(ARMY_INVESTMENT_TIER_DEFS, profile.investmentTier)
-        : "未育成";
-      const stateClass = isOwned ? `is-tier-${profile.investmentTier}` : "is-tier-untrained";
+        : "未選択";
+      const stateClass = isOwned ? `is-tier-${profile.investmentTier}` : "is-tier-unselected";
 
       return `
         <button
@@ -3166,7 +5792,7 @@ function renderArmyOwnedSettings() {
   const ownedCharacters = getOwnedArmyCharacters();
   if (!ownedCharacters.length) {
     elements.armyOwnedSettings.innerHTML = renderEmptyState(
-      "手持ち武将を選ぶと、ここで育成段階と装備状態を個別入力できます。"
+      "手持ち武将を選ぶと、ここで仕上がり / 未育成 と装備状態を個別入力できます。"
     );
     return;
   }
@@ -3232,6 +5858,7 @@ function renderArmyRosterUi() {
   renderArmyRosterSummaryCards();
   renderArmyRosterGrid();
   renderArmyOwnedSettings();
+  renderArmyPlannerFloatingUi(lastArmyPlannerResult);
 }
 
 function scheduleArmyPlannerRebuild(immediate = false) {
@@ -3246,12 +5873,18 @@ function scheduleArmyPlannerRebuild(immediate = false) {
     return;
   }
 
-  armyRebuildTimer = window.setTimeout(rerender, 120);
+  armyRebuildTimer = window.setTimeout(rerender, 180);
 }
 
-function getArmyMixedObjectiveScore(meta, objectiveMix) {
+function getArmyMixedObjectiveScore(meta, objectiveMix, concept = null) {
+  const seasonFocus = getArmySeasonFocusConfig("s3", concept);
+  const fallbackScores = getArmyObjectiveFallbackScores(meta.character, meta.roleTags);
   return Object.entries(objectiveMix).reduce((sum, [objectiveKey, weight]) => {
-    return sum + (meta.objectiveScores[objectiveKey] ?? 0) * weight;
+    const seasonValue = meta.character.season3?.objectiveScores?.[objectiveKey];
+    const fallbackValue = fallbackScores[objectiveKey] ?? meta.objectiveScores[objectiveKey] ?? 0;
+    const blend = seasonValue == null ? 0 : seasonFocus.objectiveBlend ?? 0.54;
+    const value = seasonValue == null ? fallbackValue : seasonValue * blend + fallbackValue * (1 - blend);
+    return sum + value * weight;
   }, 0);
 }
 
@@ -3270,13 +5903,14 @@ function getArmyConceptAffinity(meta, concept) {
   const tagMax = Math.max(sumArmyValues(Object.values(concept.tagWeights ?? {})), 1);
 
   return clampArmyScore(
-    getArmyMixedObjectiveScore(meta, concept.objectiveMix) * 0.46 +
+    getArmyMixedObjectiveScore(meta, concept.objectiveMix, concept) * 0.46 +
       (featureScore / featureMax) * 100 * 0.28 +
       (tagScore / tagMax) * 100 * 0.26
   );
 }
 
 function getArmySlotBaseScore(meta, slotKey, concept) {
+  const seasonFocus = getArmySeasonFocusConfig("s3", concept);
   const rarityBase = meta.character.rarity === "SSR" ? 100 : 86;
   const tenpuRatio = (meta.character.tenpu / 900) * 100;
   const guideBonus =
@@ -3290,10 +5924,13 @@ function getArmySlotBaseScore(meta, slotKey, concept) {
 
   if (slotKey === "commander") {
     const stored = meta.slotScores.commander;
+    const storedWeight = stored == null ? 0 : 0.42 * (seasonFocus.slotStoredWeight ?? 1);
     const commanderBias = concept.commanderTypeBias?.[meta.character.type] ?? 0;
+    const positionPotential = getArmySlotPositionPotential(meta, slotKey);
     rawScore = clampArmyScore(
-      (stored ?? 0) * 0.42 +
+      (stored ?? 0) * storedWeight +
         getArmyConceptAffinity(meta, concept) * 0.2 +
+        positionPotential.score * 0.12 +
         meta.groupScores.offense * 0.12 +
         meta.groupScores.defense * 0.12 +
         meta.groupScores.control * 0.06 +
@@ -3307,9 +5944,12 @@ function getArmySlotBaseScore(meta, slotKey, concept) {
 
   if (slotKey.startsWith("vice")) {
     const stored = meta.slotScores.vice;
+    const storedWeight = stored == null ? 0 : 0.34 * (seasonFocus.slotStoredWeight ?? 1);
+    const positionPotential = getArmySlotPositionPotential(meta, slotKey);
     rawScore = clampArmyScore(
-      (stored ?? 0) * 0.34 +
+      (stored ?? 0) * storedWeight +
         getArmyConceptAffinity(meta, concept) * 0.22 +
+        positionPotential.score * 0.1 +
         meta.groupScores.offense * 0.14 +
         meta.groupScores.control * 0.14 +
         meta.chainPotential * 0.08 +
@@ -3321,15 +5961,32 @@ function getArmySlotBaseScore(meta, slotKey, concept) {
   }
 
   const stored = meta.slotScores.aide;
+  const storedWeight = stored == null ? 0 : 0.34 * (seasonFocus.slotStoredWeight ?? 1);
   const srAideBonus = meta.character.rarity === "SR" ? 4 : 0;
+  const powerSnapshot = getArmyCharacterPowerSnapshot(meta);
+  const powerNowScore = clampArmyScore(
+    (powerSnapshot.current / Math.max(getArmyReferenceUnitPower() * 0.3, 1)) * 100
+  );
+  const skillActivation = getArmyActiveSkillRatio(
+    meta.character,
+    "aide1",
+    meta.positionProfile?.dominantRow ?? "middle"
+  );
+  const nonTacticScore = clampArmyScore(
+    meta.groupScores.support * 0.34 +
+      meta.groupScores.defense * 0.22 +
+      meta.groupScores.control * 0.14 +
+      powerNowScore * 0.18 +
+      skillActivation * 0.12
+  );
   rawScore = clampArmyScore(
-    (stored ?? 0) * 0.34 +
-      getArmyConceptAffinity(meta, concept) * 0.18 +
-      meta.groupScores.support * 0.2 +
-      meta.groupScores.defense * 0.1 +
-      meta.groupScores.control * 0.08 +
+    (stored ?? 0) * Math.min(storedWeight, 0.24) +
+      getArmyConceptAffinity(meta, concept) * 0.08 +
+      nonTacticScore * 0.42 +
+      powerNowScore * 0.1 +
+      skillActivation * 0.08 +
       rarityBase * 0.03 +
-      tenpuRatio * 0.03 +
+      tenpuRatio * 0.05 +
       guideBonus +
       srAideBonus
   );
@@ -3360,9 +6017,57 @@ function getArmyTacticSupportScore(commanderMeta, partnerMeta, desiredSlot) {
   );
 }
 
+function getArmyManualGuidePairBonus(leftCharacter, rightCharacter) {
+  if (!leftCharacter || !rightCharacter) {
+    return 0;
+  }
+
+  const names = new Set([leftCharacter.name, rightCharacter.name]);
+  let bonus = 0;
+
+  if (names.has("桓騎") && (names.has("李牧") || names.has("王翦"))) {
+    bonus += 0.9;
+  }
+  if (names.has("張唐") && (names.has("汗明") || names.has("臨武君"))) {
+    bonus += 0.8;
+  }
+  if (names.has("張唐") && names.has("信(臨時千人将)")) {
+    bonus += 0.7;
+  }
+
+  return bonus;
+}
+
+function getArmyManualGuideSlotBonus(commander, slotLabel, targetCharacter) {
+  if (!commander || !targetCharacter) {
+    return 0;
+  }
+
+  const slotKey = normalizeArmyGuideSlotKey(slotLabel);
+  let bonus = 0;
+
+  if (targetCharacter.name === "桓騎" && slotKey.startsWith("vice") && ["李牧", "王翦"].includes(commander.name)) {
+    bonus += 1.4;
+  }
+  if (targetCharacter.name === "張唐" && slotKey.startsWith("vice") && ["汗明", "臨武君"].includes(commander.name)) {
+    bonus += 1.25;
+  }
+  if (targetCharacter.name === "張唐" && slotKey.startsWith("aide") && commander.name === "信(臨時千人将)") {
+    bonus += 1.1;
+  }
+
+  return bonus;
+}
+
 function getArmyGuideBonus(commanderMeta, targetMeta, slotLabel) {
-  const pairBonus = getArmyGuidePairScore(commanderMeta.character, targetMeta.character) * 10;
-  const slotBonus = getArmyGuideSlotScore(commanderMeta.character, slotLabel, targetMeta.character) * 18;
+  const pairBonus =
+    (getArmyGuidePairScore(commanderMeta.character, targetMeta.character) +
+      getArmyManualGuidePairBonus(commanderMeta.character, targetMeta.character)) *
+    10;
+  const slotBonus =
+    (getArmyGuideSlotScore(commanderMeta.character, slotLabel, targetMeta.character) +
+      getArmyManualGuideSlotBonus(commanderMeta.character, slotLabel, targetMeta.character)) *
+    18;
   return clampArmyScore(pairBonus + slotBonus);
 }
 
@@ -3375,18 +6080,21 @@ function getArmyViceFitness(commanderMeta, viceMeta, concept, slotKey) {
     slotKey === "vice1" ? "副将1" : "副将2"
   );
   const supportScore = getArmyTacticSupportScore(commanderMeta, viceMeta, slotKey);
+  const positionPotential = getArmySlotPositionPotential(viceMeta, slotKey);
 
   return {
     score: clampArmyScore(
       getArmySlotBaseScore(viceMeta, slotKey, concept) * 0.44 +
         chainScore * 0.24 +
         getArmyConceptAffinity(viceMeta, concept) * 0.16 +
+        positionPotential.score * 0.08 +
         guideBonus * 0.04 +
         supportScore * 0.12
     ),
     chainStats,
     guideBonus,
-    supportScore
+    supportScore,
+    positionPotential
   };
 }
 
@@ -3396,6 +6104,239 @@ function getArmyNewRoleCount(existingTags, incomingTags) {
 
 function getArmySkillTextBlob(skill) {
   return [skill?.name, skill?.summary, skill?.initialEffect, skill?.maxEffect].filter(Boolean).join(" ");
+}
+
+function getArmyCharacterSkillCorpus(character) {
+  return [
+    character?.battleArtText,
+    character?.battleArtMeta?.name,
+    ...(character?.battleArtMeta?.tags ?? []),
+    ...(character?.featureTags ?? []),
+    ...(character?.personalities ?? []),
+    ...(character?.skillRecords ?? []).flatMap((skill) => [
+      skill?.name,
+      skill?.summary,
+      skill?.initialEffect,
+      skill?.maxEffect
+    ])
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
+
+function getArmyVideoPackageLabel(packageKey) {
+  return ARMY_VIDEO_SKILL_PACKAGE_DEFS.find((entry) => entry.key === packageKey)?.label ?? packageKey;
+}
+
+function getArmyCharacterVideoPackages(character, roleTags = getArmyRoleTags(character)) {
+  const corpus = getArmyCharacterSkillCorpus(character);
+  const roleSet = new Set(roleTags);
+  const packages = new Set();
+
+  ARMY_VIDEO_SKILL_PACKAGE_DEFS.forEach((entry) => {
+    if (entry.pattern.test(corpus)) {
+      packages.add(entry.key);
+    }
+  });
+
+  if (
+    roleSet.has("role.burst-commander") ||
+    roleSet.has("role.siege-breaker") ||
+    roleSet.has("tempo.attack-speed-up")
+  ) {
+    packages.add("burst");
+  }
+  if (
+    roleSet.has("role.flex-support") ||
+    roleSet.has("support.heal") ||
+    roleSet.has("support.cleanse")
+  ) {
+    packages.add("support");
+  }
+  if (
+    roleSet.has("role.disruptor") ||
+    roleSet.has("control.fear") ||
+    roleSet.has("control.buff-strip") ||
+    roleSet.has("control.dot") ||
+    roleSet.has("tempo.attack-speed-down")
+  ) {
+    packages.add("control");
+  }
+  if (roleSet.has("support.cleanse")) {
+    packages.add("cleanse");
+  }
+  if (
+    roleSet.has("role.frontline-anchor") ||
+    roleSet.has("def.damage-cut") ||
+    roleSet.has("def.debuff-immunity") ||
+    roleSet.has("support.heal")
+  ) {
+    packages.add("durable");
+  }
+
+  return [...packages];
+}
+
+function getArmyUnitVideoTheoryProfile(unitMembers, commanderMeta, concept) {
+  const seasonFocus = getArmySeasonFocusConfig("s3", concept);
+  const s2ReferencePriority = seasonFocus.referenceMix?.s2 ?? 0;
+  const commonReferencePriority = seasonFocus.referenceMix?.common ?? 0;
+  const s3Priority = Math.max(0.55, 1 - s2ReferencePriority - commonReferencePriority);
+  const memberProfiles = unitMembers.map((member) => ({
+    ...member,
+    chainStats:
+      member.chainStats ??
+      (member.slotKey.startsWith("vice") ? getChainStats(commanderMeta.character, member.meta.character) : null),
+    videoPackages: getArmyCharacterVideoPackages(member.meta.character, member.meta.roleTags)
+  }));
+  const viceProfiles = memberProfiles.filter((member) => member.slotKey.startsWith("vice"));
+  const aideProfiles = memberProfiles.filter((member) => member.slotKey.startsWith("aide"));
+  const commanderPackages = new Set(
+    memberProfiles.find((member) => member.slotKey === "commander")?.videoPackages ?? []
+  );
+  const packageCounts = memberProfiles.reduce((result, member) => {
+    member.videoPackages.forEach((packageKey) => {
+      result[packageKey] = (result[packageKey] ?? 0) + 1;
+    });
+    return result;
+  }, {});
+  const packageKeys = Object.keys(packageCounts).sort((left, right) => {
+    return (packageCounts[right] ?? 0) - (packageCounts[left] ?? 0);
+  });
+  const packageSet = new Set(packageKeys);
+  const chainRateScore = clampArmyScore(
+    averageArmyValues(viceProfiles.map((member) => normalizeChainRate(member.chainStats?.rate)))
+  );
+  const personalityScore = clampArmyScore(
+    averageArmyValues(
+      viceProfiles.map((member) =>
+        clampArmyScore((member.chainStats?.shared?.length ?? 0) * 24 + (member.chainStats?.bonus ?? 0) * 1.2)
+      )
+    )
+  );
+  const linkScore = clampArmyScore(
+    averageArmyValues([
+      ...viceProfiles.map((member) => getArmyTacticSupportScore(commanderMeta, member.meta, member.slotKey)),
+      ...aideProfiles.map((member) => member.slotBaseScore ?? 50)
+    ])
+  );
+  const commanderOverlap = clampArmyScore(
+    averageArmyValues(
+      memberProfiles
+        .filter((member) => member.slotKey !== "commander")
+        .map((member) => {
+          const sharedCount = member.videoPackages.filter((packageKey) => commanderPackages.has(packageKey)).length;
+          if (!commanderPackages.size) {
+            return sharedCount ? 100 : 54;
+          }
+          return (sharedCount / commanderPackages.size) * 100;
+        })
+    )
+  );
+
+  let commanderPlanScore = clampArmyScore(34 + commanderOverlap * 0.5 + linkScore * 0.2);
+  if (commanderPackages.has("burst")) {
+    commanderPlanScore += (packageSet.has("support") ? 14 : 0) + (packageSet.has("control") ? 10 : 0) + (packageSet.has("troop") ? 8 : 0);
+  }
+  if (commanderPackages.has("control")) {
+    commanderPlanScore += (packageSet.has("burst") ? 14 : 0) + (packageSet.has("support") ? 10 : 0);
+  }
+  if (commanderPackages.has("support")) {
+    commanderPlanScore += (packageSet.has("burst") ? 12 : 0) + (packageSet.has("durable") ? 10 : 0);
+  }
+  commanderPlanScore = clampArmyScore(commanderPlanScore);
+
+  let packageScore = 28;
+  packageScore += packageSet.has("burst") ? 18 : 0;
+  packageScore += packageSet.has("support") ? 18 : 0;
+  packageScore += packageSet.has("durable") ? 14 : 0;
+  packageScore += packageSet.has("control") ? 12 : 0;
+  packageScore += packageSet.has("troop") ? 10 : 0;
+  packageScore += packageSet.has("cleanse") ? 8 : 0;
+  packageScore += packageSet.has("burst") && packageSet.has("support") ? 8 : 0;
+  packageScore += packageSet.has("control") && packageSet.has("support") ? 6 : 0;
+  packageScore += Math.min(packageCounts.support ?? 0, 2) * (4 + s3Priority * 2 + commonReferencePriority * 1);
+  packageScore += Math.min(packageCounts.control ?? 0, 2) * (3 + s3Priority * 3 + s2ReferencePriority * 1);
+  packageScore += Math.min(packageCounts.durable ?? 0, 2) * (2 + s3Priority * 2);
+  packageScore += Math.min(packageCounts.burst ?? 0, 2) * (2 + s2ReferencePriority * 4 + commonReferencePriority * 1);
+  packageScore += packageSet.has("troop") ? s2ReferencePriority * 8 : 0;
+  packageScore = clampArmyScore(packageScore);
+  const densityScore = clampArmyScore(
+    Math.min(packageCounts.support ?? 0, 2) * 18 +
+      Math.min(packageCounts.control ?? 0, 2) * 18 +
+      Math.min(packageCounts.durable ?? 0, 2) * 14 +
+      Math.min(
+        aideProfiles.filter((member) =>
+          member.videoPackages.some((packageKey) =>
+            ["support", "control", "durable", "cleanse", "troop"].includes(packageKey)
+          )
+        ).length,
+        2
+      ) *
+        12 +
+      (packageSet.has("cleanse") ? 8 : 0) +
+      (packageSet.has("support") && packageSet.has("control") ? 8 : 0)
+  );
+
+  const openerScore = clampArmyScore(
+    getArmyTempoOrderValue(commanderMeta.character, concept) * 0.4 +
+      averageArmyValues(viceProfiles.map((member) => getArmyTempoOrderValue(member.meta.character, concept))) * 0.26 +
+      chainRateScore * 0.18 +
+      (packageSet.has("control") ? 10 : 0) +
+      (packageSet.has("burst") ? 10 : 0) +
+      (packageSet.has("troop") ? s2ReferencePriority * 8 : 0)
+  );
+
+  const weights = {
+    commander: 0.24 - s2ReferencePriority * 0.02,
+    chain: 0.13 + commonReferencePriority * 0.02 + s2ReferencePriority * 0.01,
+    personality: 0.08,
+    link: 0.14 - s2ReferencePriority * 0.02,
+    package: 0.18,
+    opener: 0.11 + s2ReferencePriority * 0.05 + commonReferencePriority * 0.01,
+    density: 0.12 + s3Priority * 0.02
+  };
+  const score = clampArmyScore(
+    commanderPlanScore * weights.commander +
+      chainRateScore * weights.chain +
+      personalityScore * weights.personality +
+      linkScore * weights.link +
+      packageScore * weights.package +
+      openerScore * weights.opener +
+      densityScore * weights.density
+  );
+  const focusTags = [
+    commanderPlanScore >= 62 ? "主将中心" : "",
+    chainRateScore >= 58 ? "連鎖" : "",
+    packageScore >= 62 ? "技能噛み合い" : "",
+    densityScore >= 60 ? "S3密度" : "",
+    openerScore >= 60 ? "初動" : ""
+  ].filter(Boolean);
+  const warnings = [
+    commanderPlanScore < 54 ? "主将起点が弱め" : "",
+    chainRateScore < 50 ? "副将連鎖が弱め" : "",
+    !packageSet.has("support") ? "支援不足" : "",
+    !packageSet.has("burst") ? "火力不足" : "",
+    densityScore < 56 ? "支援/妨害/継戦が薄い" : "",
+    s2ReferencePriority >= 0.12 && openerScore < 56 ? "S2参照だと初動20秒が弱め" : "",
+    s3Priority >= 0.72 && !packageSet.has("control") ? "S3向け妨害密度が不足" : ""
+  ].filter(Boolean);
+
+  return {
+    score,
+    packages: packageKeys,
+    commanderPackages: [...commanderPackages],
+    focusText: focusTags.join(" / ") || "主将起点は弱め",
+    summaryText: `${commanderMeta.character.name}起点 / 連鎖 ${chainRateScore.toFixed(0)} / S3密度 ${densityScore.toFixed(0)}`,
+    warningText: warnings.join(" / "),
+    packageText: packageKeys.length
+      ? packageKeys.map((packageKey) => `${getArmyVideoPackageLabel(packageKey)}x${packageCounts[packageKey]}`).join(" / ")
+      : "汎用寄り",
+    chainRateScore,
+    commanderPlanScore,
+    openerScore,
+    densityScore
+  };
 }
 
 function getArmySkillOverlapImpact(unitCore, aideMeta) {
@@ -3436,6 +6377,22 @@ function getArmyAideFitness(unitCore, aideMeta, concept, slotKey) {
   const newRoleCount = getArmyNewRoleCount(unitTags, aideMeta.roleTags);
   const guideBonus = getArmyGuideBonus(unitCore[0], aideMeta, slotKey === "aide1" ? "補佐1" : "補佐2");
   const duplicateSkills = getArmySkillOverlapImpact(unitCore, aideMeta);
+  const powerSnapshot = getArmyCharacterPowerSnapshot(aideMeta);
+  const powerNowScore = clampArmyScore(
+    (powerSnapshot.current / Math.max(getArmyReferenceUnitPower() * 0.3, 1)) * 100
+  );
+  const skillActivation = getArmyActiveSkillRatio(
+    aideMeta.character,
+    slotKey,
+    aideMeta.positionProfile?.dominantRow ?? unitCore[0]?.positionProfile?.dominantRow ?? "middle"
+  );
+  const nonTacticValue = clampArmyScore(
+    powerNowScore * 0.4 +
+      skillActivation * 0.24 +
+      aideMeta.groupScores.support * 0.2 +
+      aideMeta.groupScores.defense * 0.1 +
+      aideMeta.groupScores.control * 0.06
+  );
   const supportMatch = clampArmyScore(
     (aideMeta.roleTagSet.has("role.flex-support") ? 26 : 0) +
       (aideMeta.roleTagSet.has("support.heal") ? 22 : 0) +
@@ -3447,14 +6404,20 @@ function getArmyAideFitness(unitCore, aideMeta, concept, slotKey) {
 
   return {
     score: clampArmyScore(
-      getArmySlotBaseScore(aideMeta, slotKey, concept) * 0.48 +
-        getArmyConceptAffinity(aideMeta, concept) * 0.18 +
-        supportMatch * 0.24 +
-        guideBonus * 0.05
+      getArmySlotBaseScore(aideMeta, slotKey, concept) * 0.38 +
+        getArmyConceptAffinity(aideMeta, concept) * 0.08 +
+        supportMatch * 0.2 +
+        nonTacticValue * 0.22 +
+        powerNowScore * 0.08 +
+        skillActivation * 0.04 +
+        guideBonus * 0.04
     ),
     guideBonus,
     duplicateSkills,
-    supportMatch
+    supportMatch,
+    powerNowScore,
+    skillActivation,
+    nonTacticValue
   };
 }
 
@@ -3483,6 +6446,36 @@ function getArmyActiveSkillRatio(character, slotKey, rowKey) {
   }
 
   return (activeCount / skillRecords.length) * 100;
+}
+
+function getArmySlotPositionPotential(meta, slotKey, preferredRow = "") {
+  const rowKey = preferredRow || meta.positionProfile?.dominantRow || "middle";
+  const rowScore = meta.rowScores?.[rowKey] ?? 50;
+  const activation = getArmyActiveSkillRatio(meta.character, slotKey, rowKey);
+  const text = [
+    meta.character.battleArtText ?? "",
+    ...(meta.character.battleArtEffects ?? []),
+    ...(meta.character.guide?.evaluationPoints ?? []),
+    ...(meta.character.guide?.latestFormation?.focusTitles ?? [])
+  ]
+    .filter(Boolean)
+    .join(" ");
+  const rowLabel = builderRowLabelFor(rowKey);
+  let specialBonus = 0;
+
+  if (!slotKey.startsWith("aide") && new RegExp(`${rowLabel}にいる場合[^。]*?(軍勢全体|全体に付与)`, "u").test(text)) {
+    specialBonus += 12;
+  }
+  if (new RegExp(`${rowLabel}にいる場合[^。]*?(効果上昇|威力上昇|効果最大)`, "u").test(text)) {
+    specialBonus += slotKey.startsWith("aide") ? 4 : 8;
+  }
+
+  return {
+    rowKey,
+    rowScore,
+    activation,
+    score: clampArmyScore(rowScore * 0.58 + activation * 0.32 + specialBonus)
+  };
 }
 
 function getArmyTempoOrderValue(character, concept) {
@@ -3610,6 +6603,498 @@ function buildArmyUnitTimelineEntries(unit, formation, formationSlotKey) {
     });
 }
 
+function clampArmyTimelinePreviewSecond(value) {
+  const maxSecond = Number.isFinite(ARMY_TIMELINE_MAX_SECOND) ? ARMY_TIMELINE_MAX_SECOND : 60;
+  const numericValue = Number(value);
+  const safeValue = Number.isFinite(numericValue) ? numericValue : ARMY_TIMELINE_DEFAULT_SECOND;
+  return Math.max(0, Math.min(maxSecond, safeValue));
+}
+
+function getArmyDefaultTimelineTargetSlotKey(formation) {
+  return formation?.slots?.[2]?.key ?? formation?.slots?.[0]?.key ?? "third";
+}
+
+function resetArmyBattlePreviewState() {
+  activeArmyUnitIndex = 0;
+  activeArmyPreviewSecond = clampArmyTimelinePreviewSecond(ARMY_TIMELINE_DEFAULT_SECOND);
+  activeArmyPreviewGroupId = null;
+  activeArmyTargetSlotKey = null;
+}
+
+function buildArmyTimelineTriggerGroups(timelineEntries, formation, formationSlotKey, targetSlotKey) {
+  const sourceOrderMap = {
+    commander: 0,
+    vice1: 1,
+    vice2: 2
+  };
+
+  return timelineEntries
+    .flatMap((entry) => {
+      const triggerSeconds = uniqueValues(entry.windows.map((effect) => effect.startSecond)).sort((left, right) => left - right);
+      return triggerSeconds.map((triggerSecond, cycleIndex) => {
+        const effects = entry.windows
+          .filter((effect) => effect.startSecond === triggerSecond)
+          .map((effect) => ({
+            ...effect,
+            clippedStart: Math.max(0, Math.min(ARMY_TIMELINE_MAX_SECOND, effect.startSecond)),
+            clippedEnd: Math.max(0, Math.min(ARMY_TIMELINE_MAX_SECOND, effect.endSecond)),
+            targetSlotKeys: resolveBuilderEffectTargetSlots(effect, formation, formationSlotKey, targetSlotKey)
+          }))
+          .filter((effect) => effect.clippedEnd > effect.clippedStart)
+          .sort(compareBuilderEffects);
+
+        if (!effects.length) {
+          return null;
+        }
+
+        const startSecond = effects[0].clippedStart;
+        const endSecond = effects.reduce((maxSecond, effect) => Math.max(maxSecond, effect.clippedEnd), startSecond);
+        const tone = getBuilderTimelinePrimaryTone(effects);
+        const targetLabels = uniqueValues(
+          effects.flatMap((effect) => effect.targetSlotKeys.map((slotKey) => formationSlotLabelFor(slotKey)))
+        );
+
+        return {
+          id: `army-trigger-${entry.key}-${entry.character.id}-${triggerSecond}-${cycleIndex}`,
+          entryKey: entry.key,
+          sourceLabel: entry.label,
+          characterName: entry.character.name,
+          battleArtName: entry.character.battleArtName || entry.character.name,
+          battleArtType: entry.character.battleArtMeta?.type || "",
+          activationRate: getBuilderActivationRateForEntry(entry),
+          triggerSecond,
+          previewSecond: clampArmyTimelinePreviewSecond(triggerSecond),
+          startSecond,
+          endSecond,
+          estimated: effects.some((effect) => effect.estimated),
+          tone,
+          effectCount: effects.length,
+          effects,
+          targetLabels,
+          summaryText: uniqueValues(effects.map((effect) => effect.shortLabel)).join(" / "),
+          sortOrder:
+            triggerSecond * 10 +
+            (sourceOrderMap[entry.key] ?? 9) +
+            (effects[0].side === "enemy" ? 0.1 : 0)
+        };
+      });
+    })
+    .filter(Boolean)
+    .sort((left, right) => left.sortOrder - right.sortOrder || left.characterName.localeCompare(right.characterName, "ja"));
+}
+
+function pickArmyTimelineSelectedGroup(timelineGroups, previewSecond) {
+  if (!timelineGroups.length) {
+    return null;
+  }
+
+  const explicitGroup = timelineGroups.find((group) => group.id === activeArmyPreviewGroupId);
+  if (explicitGroup) {
+    return explicitGroup;
+  }
+
+  const activeGroups = timelineGroups
+    .filter(
+      (group) =>
+        previewSecond >= group.startSecond &&
+        (previewSecond < group.endSecond ||
+          (group.endSecond === ARMY_TIMELINE_MAX_SECOND && previewSecond === ARMY_TIMELINE_MAX_SECOND))
+    )
+    .sort((left, right) => left.triggerSecond - right.triggerSecond || right.effectCount - left.effectCount);
+  if (activeGroups.length) {
+    return activeGroups[0];
+  }
+
+  const futureGroup = timelineGroups.find((group) => group.triggerSecond >= previewSecond);
+  return futureGroup ?? timelineGroups[timelineGroups.length - 1];
+}
+
+function getArmyTimelineGroupMetaLabel(group) {
+  return [
+    `${group.triggerSecond}秒`,
+    group.sourceLabel === "主将" ? "100%" : formatPercent(group.activationRate),
+    group.estimated ? "推定含む" : "確定"
+  ].join(" / ");
+}
+
+function getArmyTimelineEffectBadgeLabel(effect) {
+  if (effect.kind === "damage") {
+    return "ダメ";
+  }
+  if (effect.kind === "debuff") {
+    return "弱化";
+  }
+  if (effect.kind === "heal") {
+    return "回復";
+  }
+  if (effect.kind === "utility") {
+    return "補助";
+  }
+  return "強化";
+}
+
+function formatArmyTimelineEffectSummary(effect) {
+  const percentMatch = `${effect.text ?? ""}`.match(/(-?\d+(?:\.\d+)?)\s*[％%]/u);
+  const percentText = percentMatch ? `${percentMatch[1]}%` : "";
+  const durationText = effect.kind === "damage" ? "即時" : `${Math.max(1, effect.clippedEnd - effect.clippedStart)}秒`;
+  const targetText = effect.targetSlotKeys?.length
+    ? effect.targetSlotKeys.map((slotKey) => formationSlotLabelFor(slotKey)).join(" / ")
+    : getBuilderEffectScopeLabel(effect);
+
+  return {
+    badge: getArmyTimelineEffectBadgeLabel(effect),
+    main: [effect.shortLabel, percentText, durationText].filter(Boolean).join(" "),
+    sub: `${effect.side === "ally" ? "味方" : "敵"} / ${getBuilderEffectScopeLabel(effect)} / ${targetText}`,
+    raw: effect.text
+  };
+}
+
+function renderArmyTimelineLikeReference(state) {
+  if (!state.commander) {
+    return renderEmptyState("主将を選ぶと、戦法の流れをここに表示します。");
+  }
+
+  if (!state.timelineGroups.length) {
+    return renderEmptyState("戦法を表示できる武将がまだ選ばれていません。");
+  }
+
+  const axisMarkup = Array.from(
+    { length: ARMY_TIMELINE_MAX_SECOND / 10 + 1 },
+    (_, index) => `<span>${index * 10}s</span>`
+  ).join("");
+
+  const rowMarkup = state.timelineGroups
+    .map((group) => {
+      const isSelected = state.selectedGroup?.id === group.id;
+      const isCurrent =
+        state.previewSecond >= group.startSecond &&
+        (state.previewSecond < group.endSecond ||
+          (group.endSecond === ARMY_TIMELINE_MAX_SECOND && state.previewSecond === ARMY_TIMELINE_MAX_SECOND));
+      const barMarkup = group.effects
+        .map(
+          (effect, index) => `
+            <button
+              type="button"
+              class="army-ref-track-bar tone-${escapeHtml(effect.tone || "utility")} ${effect.estimated ? "is-estimated" : ""}"
+              style="--start:${effect.clippedStart}; --end:${effect.clippedEnd}; --lane:${index}"
+              title="${escapeHtml(`${effect.shortLabel} / ${effect.text}`)}"
+              data-army-preview-second="${group.previewSecond}"
+              data-army-select-group="${escapeHtml(group.id)}"
+            >
+              <span class="army-ref-track-bar-label">${escapeHtml(effect.shortLabel)}</span>
+              <small>${escapeHtml(formatArmyTimelineEffectSummary(effect).badge)}</small>
+            </button>
+          `
+        )
+        .join("");
+      const noteMarkup = group.effects
+        .map((effect) => {
+          const summary = formatArmyTimelineEffectSummary(effect);
+          return `
+            <span class="army-ref-note tone-${escapeHtml(effect.tone || "utility")}">
+              <strong>${escapeHtml(summary.main)}</strong>
+              <small>${escapeHtml(summary.sub)}</small>
+            </span>
+          `;
+        })
+        .join("");
+
+      return `
+        <button
+          type="button"
+          class="army-ref-row ${isSelected ? "is-selected" : ""} ${isCurrent ? "is-current" : ""}"
+          data-army-preview-second="${group.previewSecond}"
+          data-army-select-group="${escapeHtml(group.id)}"
+        >
+          <div class="army-ref-row-head">
+            <div class="army-ref-row-title">
+              <div class="army-ref-source-line">
+                <span class="army-ref-source-badge">${escapeHtml(group.sourceLabel)}</span>
+                ${group.battleArtType ? `<span class="army-ref-type-chip">${escapeHtml(group.battleArtType)}</span>` : ""}
+                <span class="army-ref-meta-text">${escapeHtml(group.characterName)}</span>
+              </div>
+              <strong class="army-ref-tactic-name">${escapeHtml(group.battleArtName)}</strong>
+            </div>
+            <div class="army-ref-row-meta">
+              <span>${escapeHtml(getArmyTimelineGroupMetaLabel(group))}</span>
+              <span>${escapeHtml(group.targetLabels.join(" / ") || "対象なし")}</span>
+            </div>
+          </div>
+          <div class="army-ref-track" style="--lanes:${Math.max(group.effects.length, 1)}">
+            ${barMarkup}
+            <div class="army-ref-now" style="--at:${state.previewSecond}"></div>
+          </div>
+          <div class="army-ref-row-notes">${noteMarkup}</div>
+        </button>
+      `;
+    })
+    .join("");
+
+  return `
+    <div class="army-ref-shell">
+      <div class="army-ref-axis">${axisMarkup}</div>
+      <div class="army-ref-list">${rowMarkup}</div>
+    </div>
+  `;
+}
+
+function renderArmyBattleBoardPanel(title, caption, cells, side) {
+  return `
+    <article class="army-ref-faction ${side === "ally" ? "is-ally" : "is-enemy"}">
+      <div class="army-ref-faction-head">
+        <strong>${escapeHtml(title)}</strong>
+        <span>${escapeHtml(caption)}</span>
+      </div>
+      <div class="army-ref-grid">
+        ${cells
+          .map((cell) => {
+            const classes = [
+              "army-ref-cell",
+              cell.occupied ? "is-occupied" : "is-empty",
+              cell.isSelf ? "is-self" : "",
+              cell.isTarget ? "is-target" : "",
+              cell.effectSummary ? `tone-${cell.tone || "utility"}` : ""
+            ]
+              .filter(Boolean)
+              .join(" ");
+
+            return `
+              <div class="${classes}">
+                ${
+                  side === "enemy" && cell.slotKey
+                    ? `<button type="button" data-army-target-slot="${escapeHtml(cell.slotKey)}" aria-label="${escapeHtml(`${cell.slotLabel}を基準敵にする`)}"></button>`
+                    : ""
+                }
+                ${
+                  cell.occupied
+                    ? `
+                      <div class="army-ref-cell-slot">${escapeHtml(cell.slotLabel)}</div>
+                      <div class="army-ref-cell-title">${escapeHtml(cell.displayTitle || cell.slotLabel || "")}</div>
+                      <div class="army-ref-cell-note">${escapeHtml(cell.displayNote || cell.rowLabel || "")}</div>
+                      <div class="army-ref-cell-effect">${escapeHtml(cell.effectSummary || "効果なし")}</div>
+                    `
+                    : `<div class="army-ref-cell-empty">空き</div>`
+                }
+              </div>
+            `;
+          })
+          .join("")}
+      </div>
+    </article>
+  `;
+}
+
+function renderArmyBoardLikeReference(state) {
+  const selectedGroup = state.selectedGroup;
+  const headTitle = selectedGroup
+    ? `${selectedGroup.characterName}「${selectedGroup.battleArtName}」`
+    : `${state.previewSecond}秒時点`;
+  const headMeta = selectedGroup
+    ? `${selectedGroup.triggerSecond}秒発動 / 基準敵 ${formationSlotLabelFor(state.targetSlotKey)}`
+    : `基準敵 ${formationSlotLabelFor(state.targetSlotKey)}`;
+
+  return `
+    <div class="army-ref-board-shell">
+      <div class="army-ref-board-head">
+        <strong>${escapeHtml(headTitle)}</strong>
+        <span>${escapeHtml(headMeta)}</span>
+      </div>
+      <div class="army-ref-board-duo">
+        ${renderArmyBattleBoardPanel("味方", "戦法対象マス", state.boardCells.allyCells, "ally")}
+        ${renderArmyBattleBoardPanel("敵", "敵マスを押して単体対象を変更", state.boardCells.enemyCells, "enemy")}
+      </div>
+    </div>
+  `;
+}
+
+function renderArmyEffectsLikeReference(state) {
+  if (!state.selectedGroup) {
+    return renderEmptyState("タイムライン行を選ぶと、ここに戦法と継続効果を表示します。");
+  }
+
+  const selectedItems = state.selectedGroup.effects
+    .map((effect) => {
+      const summary = formatArmyTimelineEffectSummary(effect);
+      return `
+        <article class="army-ref-summary-item tone-${escapeHtml(effect.tone || "utility")}">
+          <div class="army-ref-summary-item-head">
+            <span class="army-ref-summary-badge">${escapeHtml(summary.badge)}</span>
+            <strong>${escapeHtml(summary.main)}</strong>
+          </div>
+          <div class="army-ref-summary-sub">${escapeHtml(summary.sub)}</div>
+          <div class="army-ref-summary-raw">${escapeHtml(summary.raw)}</div>
+        </article>
+      `;
+    })
+    .join("");
+
+  const activeItems = state.activeEffects.length
+    ? state.activeEffects
+        .map((effect) => `
+          <span class="army-ref-current-chip tone-${escapeHtml(effect.tone || "utility")}">
+            <strong>${escapeHtml(effect.characterName)}</strong>
+            <small>${escapeHtml(`${effect.shortLabel} / ${effect.startSecond}～${effect.endSecond}秒`)}</small>
+          </span>
+        `)
+        .join("")
+    : `<p class="field-note">${escapeHtml(`${state.previewSecond}秒時点で残っている効果はありません。`)}</p>`;
+
+  return `
+    <div class="army-ref-detail-shell">
+      <div class="army-ref-detail-head">
+        <div>
+          <div class="army-ref-detail-kicker">${escapeHtml(`${state.selectedGroup.characterName}の戦法`)}</div>
+          <strong class="army-ref-detail-title">${escapeHtml(`「${state.selectedGroup.battleArtName}」`)}</strong>
+        </div>
+        <div class="army-ref-row-meta">
+          <span>${escapeHtml(getArmyTimelineGroupMetaLabel(state.selectedGroup))}</span>
+          <span>${escapeHtml(state.selectedGroup.summaryText || "効果あり")}</span>
+        </div>
+      </div>
+      <div class="army-ref-summary-list">${selectedItems}</div>
+      <div class="army-ref-current-shell">
+        <div class="army-ref-current-head">
+          <strong>${escapeHtml(`${state.previewSecond}秒時点の継続効果 ${state.activeEffects.length}件`)}</strong>
+          <span>${escapeHtml(`基準敵 ${formationSlotLabelFor(state.targetSlotKey)}`)}</span>
+        </div>
+        <div class="army-ref-current-list">${activeItems}</div>
+      </div>
+    </div>
+  `;
+}
+
+function renderArmyBattleLegend() {
+  return `
+    <span class="legend-chip"><span class="legend-swatch is-buff"></span>味方強化</span>
+    <span class="legend-chip"><span class="legend-swatch is-debuff"></span>敵弱化 / ダメージ</span>
+    <span class="legend-chip"><span class="legend-swatch is-heal"></span>回復</span>
+    <span class="legend-chip"><span class="legend-swatch is-utility"></span>補助 / 解除</span>
+  `;
+}
+
+function buildArmyBattlePreviewState(army, unit) {
+  if (
+    !army ||
+    !unit ||
+    typeof resolveBuilderEffectTargetSlots !== "function" ||
+    typeof buildBuilderBoardSnapshot !== "function"
+  ) {
+    return null;
+  }
+
+  const formation = FORMATION_MAP[army.formation?.key] ?? army.formation ?? FORMATION_DEFS[0];
+  const formationSlotKey =
+    unit.assignedFormationSlot?.key ?? army.units?.[0]?.assignedFormationSlot?.key ?? formation.slots?.[0]?.key;
+  const formationSlot = getFormationSlotMeta(formation, formationSlotKey);
+  const validTargetSlotKey = formation.slots.some((slot) => slot.key === activeArmyTargetSlotKey)
+    ? activeArmyTargetSlotKey
+    : getArmyDefaultTimelineTargetSlotKey(formation);
+  const previewSecond = clampArmyTimelinePreviewSecond(activeArmyPreviewSecond);
+  const timelineEntries = buildArmyUnitTimelineEntries(unit, formation, formationSlot.key);
+  const timelineWindows = timelineEntries.flatMap((entry) => entry.windows).sort(compareBuilderEffects);
+  const timelineGroups = buildArmyTimelineTriggerGroups(timelineEntries, formation, formationSlot.key, validTargetSlotKey);
+  const activeEffects = timelineWindows
+    .filter(
+      (effect) =>
+        previewSecond >= Math.max(0, Math.min(ARMY_TIMELINE_MAX_SECOND, effect.startSecond)) &&
+        (previewSecond < Math.max(0, Math.min(ARMY_TIMELINE_MAX_SECOND, effect.endSecond)) ||
+          (Math.max(0, Math.min(ARMY_TIMELINE_MAX_SECOND, effect.endSecond)) === ARMY_TIMELINE_MAX_SECOND &&
+            previewSecond === ARMY_TIMELINE_MAX_SECOND))
+    )
+    .map((effect) => ({
+      ...effect,
+      clippedStart: Math.max(0, Math.min(ARMY_TIMELINE_MAX_SECOND, effect.startSecond)),
+      clippedEnd: Math.max(0, Math.min(ARMY_TIMELINE_MAX_SECOND, effect.endSecond)),
+      targetSlotKeys: resolveBuilderEffectTargetSlots(effect, formation, formationSlot.key, validTargetSlotKey)
+    }))
+    .sort(compareBuilderEffects);
+  const selectedGroup = pickArmyTimelineSelectedGroup(timelineGroups, previewSecond);
+  activeArmyPreviewGroupId = selectedGroup?.id ?? null;
+  const boardEffects = selectedGroup?.effects?.length ? selectedGroup.effects : activeEffects;
+
+  activeArmyTargetSlotKey = validTargetSlotKey;
+
+  return {
+    commander: unit.commander,
+    formation,
+    formationSlot,
+    targetSlotKey: validTargetSlotKey,
+    previewSecond,
+    timelineEntries,
+    timelineGroups,
+    selectedGroup,
+    activeEffects,
+    boardCells: buildBuilderBoardSnapshot({
+      formation,
+      formationSlot,
+      targetSlotKey: validTargetSlotKey,
+      commander: unit.commander,
+      activeEffects: boardEffects
+    })
+  };
+}
+
+function renderArmyBattlePreviewEmptyState(timelineMessage, boardMessage, effectMessage, countLabel = "戦法待ち") {
+  if (elements.armyTimelineCount) {
+    elements.armyTimelineCount.textContent = countLabel;
+  }
+  if (elements.armyBoardLegend) {
+    elements.armyBoardLegend.innerHTML = "";
+  }
+  if (elements.armyTimeline) {
+    elements.armyTimeline.innerHTML = renderEmptyState(timelineMessage);
+  }
+  if (elements.armyBoardGrid) {
+    elements.armyBoardGrid.innerHTML = renderEmptyState(boardMessage);
+  }
+  if (elements.armyActiveEffects) {
+    elements.armyActiveEffects.innerHTML = renderEmptyState(effectMessage);
+  }
+}
+
+function renderArmyBattlePreviewPanel(activeArmy, powerEstimate = null) {
+  if (!elements.armyTimeline || !elements.armyBoardGrid || !elements.armyActiveEffects) {
+    return;
+  }
+
+  const unitList = activeArmy?.units?.length ? activeArmy.units : powerEstimate?.units ?? [];
+  if (!activeArmy || !unitList.length) {
+    renderArmyBattlePreviewEmptyState(
+      "部隊が決まると、ここに0〜50秒の戦法タイムラインを表示します。",
+      "部隊が決まると、ここに味方盤面と敵盤面を表示します。",
+      "部隊が決まると、ここに継続中のバフ / デバフを表示します。"
+    );
+    return;
+  }
+
+  activeArmyUnitIndex = Math.max(0, Math.min(unitList.length - 1, Number(activeArmyUnitIndex) || 0));
+  const activeUnit = unitList[activeArmyUnitIndex] ?? unitList[0];
+  const state = buildArmyBattlePreviewState(activeArmy, activeUnit);
+
+  if (!state) {
+    renderArmyBattlePreviewEmptyState(
+      "戦法タイムラインを作れませんでした。",
+      "盤面を作れませんでした。",
+      "継続効果を作れませんでした。",
+      "表示失敗"
+    );
+    return;
+  }
+
+  if (elements.armyTimelineCount) {
+    const countText = state.selectedGroup
+      ? `${activeUnit.commander.name} / ${state.selectedGroup.triggerSecond}秒`
+      : `${activeUnit.commander.name} / ${state.previewSecond}秒`;
+    elements.armyTimelineCount.textContent = countText;
+  }
+  if (elements.armyBoardLegend) {
+    elements.armyBoardLegend.innerHTML = renderArmyBattleLegend();
+  }
+  elements.armyTimeline.innerHTML = renderArmyTimelineLikeReference(state);
+  elements.armyBoardGrid.innerHTML = renderArmyBoardLikeReference(state);
+  elements.armyActiveEffects.innerHTML = renderArmyEffectsLikeReference(state);
+}
+
 function getArmyUnitMetaPriorScore(unit, concept, formation) {
   const commanderMeta = getArmyMeta(unit.commander);
   const viceMembers = unit.unitMembers.filter((member) => member.slotKey.startsWith("vice"));
@@ -3628,12 +7113,17 @@ function getArmyUnitMetaPriorScore(unit, concept, formation) {
   const guideClusterScore = unit.guideClusterScore ?? getArmyGuideClusterScore(unit.unitMembers);
   const expertPattern = unit.expertPattern ?? getArmyExpertUnitPatternMatch(unit.unitMembers, concept);
   const expertPatternScore = unit.expertPatternScore ?? expertPattern.score;
+  const videoTheoryScore = unit.videoTheory?.score ?? 50;
   const objectiveMatch =
     averageArmyValues(unit.unitMembers.map((member) => member.meta.objectiveScores?.[concept.primaryObjective] ?? 50)) / 100;
   const formationMatch = formation.key === getConceptRecommendedFormationKey(concept) ? 1 : 0.82;
 
   return clampArmyScore(
-    (guideAverage * 0.42 + pairAverage * 0.12 + guideClusterScore * 0.24 + expertPatternScore * 0.22) *
+    (guideAverage * 0.32 +
+      pairAverage * 0.1 +
+      guideClusterScore * 0.2 +
+      expertPatternScore * 0.18 +
+      videoTheoryScore * 0.2) *
       ARMY_META_PRIOR_FACTORS.sourceTrust *
       ARMY_META_PRIOR_FACTORS.recency *
       formationMatch *
@@ -3846,19 +7336,21 @@ function buildArmyUnitCandidate(commanderMeta, viceMetaA, viceMetaB, aideMetaA, 
   const roleBreadthScore = clampArmyScore(
     new Set(unitMembers.flatMap((member) => member.meta.roleTags)).size * 8
   );
+  const videoTheory = getArmyUnitVideoTheoryProfile(unitMembers, commanderMeta, concept);
   const synergyScore = clampArmyScore(
-    averageArmyValues(chainScores) * 0.36 +
-      guideBonusScore * 0.14 +
-      guideClusterScore * 0.12 +
-      expertPatternScore * 0.12 +
-      roleBreadthScore * 0.14 +
+    averageArmyValues(chainScores) * 0.28 +
+      guideBonusScore * 0.12 +
+      guideClusterScore * 0.1 +
+      expertPatternScore * 0.1 +
+      roleBreadthScore * 0.12 +
       averageArmyValues([
         getArmyTacticSupportScore(commanderMeta, viceOrder.vice1, "vice1"),
         getArmyTacticSupportScore(commanderMeta, viceOrder.vice2, "vice2"),
         aides[0].fitness.supportMatch,
         aides[1].fitness.supportMatch
       ]) *
-        0.12
+        0.1 +
+      videoTheory.score * 0.18
   );
   const tempoScore = clampArmyScore(
     getArmyTempoOrderValue(commanderMeta.character, concept) * 0.46 +
@@ -3913,7 +7405,8 @@ function buildArmyUnitCandidate(commanderMeta, viceMetaA, viceMetaB, aideMetaA, 
     investmentScore,
     powerScore,
     guideClusterScore,
-    expertPatternScore
+    expertPatternScore,
+    videoTheoryScore: videoTheory.score
   };
   const rowScores = getArmyUnitRowScores(unitMembers, concept);
   const defaultRow = keepTopArmyEntries(
@@ -3941,7 +7434,8 @@ function buildArmyUnitCandidate(commanderMeta, viceMetaA, viceMetaB, aideMetaA, 
       roleTags,
       guideClusterScore,
       expertPatternScore,
-      expertPattern
+      expertPattern,
+      videoTheory
     },
     concept,
     defaultFormationContext.formation,
@@ -3951,12 +7445,15 @@ function buildArmyUnitCandidate(commanderMeta, viceMetaA, viceMetaB, aideMetaA, 
   const topAxes = getArmyTopAxisEntries(scoreAxes, concept, 3);
 
   const reasons = [
+    commanderMeta.positionProfile?.focusText ? `配置適性: ${commanderMeta.positionProfile.focusText}` : "",
     `${commanderMeta.character.name}を主将にした時の主将適性が高い`,
     chainSummary ? `副将連鎖率は ${chainSummary}` : "",
     topAxes.length ? `重視軸: ${topAxes.map((entry) => `${entry.label} ${entry.value.toFixed(1)}`).join(" / ")}` : "",
     powerScore >= 82 || scoreAxes.powerCurrent >= 82 ? `戦力寄与が高く、5人合計の部隊戦力が伸びやすい` : "",
     scoreAxes.burst20s >= 68 ? "前半20秒の戦法火力が出やすい" : "",
     scoreAxes.controlUptime >= 66 ? "妨害や強化解除を早い時間帯に通しやすい" : "",
+    videoTheory.focusText ? `動画傾向: ${videoTheory.focusText}` : "",
+    videoTheory.packageText ? `技能束ね: ${videoTheory.packageText}` : "",
     expertPatternScore >= 62 ? `猛者編成で多い ${expertPattern.label} に近い` : "",
     highTags.length ? `コンセプト一致タグ: ${highTags.slice(0, 4).join(" / ")}` : "",
     guideClusterScore >= 40 ? "おすすめ編成でよく見る副将ペア / 補佐ペアに近い" : guideBonusScore >= 36 ? "GameWith のおすすめ編成に近い組み合わせが含まれる" : "",
@@ -3967,6 +7464,7 @@ function buildArmyUnitCandidate(commanderMeta, viceMetaA, viceMetaB, aideMetaA, 
     averageArmyValues(chainScores) < 40 ? "副将連鎖率は高めではない" : "",
     !roleTags.includes("role.frontline-anchor") ? "前列維持役が薄い" : "",
     !roleTags.includes("role.flex-support") ? "補佐の支援色は弱め" : "",
+    videoTheory.warningText || "",
     expertPatternScore < 42 ? "部隊タイプが曖昧で、猛者編成の型に寄り切れていない" : "",
     scoreAxes.cleanseCoverage < 38 && concept.key === "defense" ? "防衛安定向けとしては弱化解除が不足しやすい" : "",
     scoreAxes.formationFit < 48 ? "おすすめ陣形に置いても列適性が伸び切りにくい" : ""
@@ -3994,8 +7492,9 @@ function buildArmyUnitCandidate(commanderMeta, viceMetaA, viceMetaB, aideMetaA, 
     guideClusterScore,
     expertPatternScore,
     expertPattern,
-    reasons: reasons.slice(0, 4),
-    warnings: warnings.slice(0, 3),
+    videoTheory,
+    reasons: reasons.slice(0, 6),
+    warnings: warnings.slice(0, 4),
     roleTags,
     highTags,
     preferredAxisText: formatArmyAxisText(scoreAxes, concept, 3)
@@ -4053,7 +7552,7 @@ function buildVicePairs(commanderMeta, allowedMetas, concept, forcedViceMeta) {
     }
   }
 
-  return keepTopArmyEntries(
+  const rankedPairs = keepTopArmyEntries(
     pairs.map(([leftMeta, rightMeta]) => ({
       pair: [leftMeta, rightMeta],
       score:
@@ -4063,6 +7562,31 @@ function buildVicePairs(commanderMeta, allowedMetas, concept, forcedViceMeta) {
     })),
     ARMY_BUILDER_LIMITS.vicePairKeep
   ).map((entry) => entry.pair);
+
+  if (rankedPairs.length) {
+    return rankedPairs;
+  }
+
+  const emergencyPool = keepTopArmyEntries(
+    allowedMetas
+      .filter((meta) => meta.character.id !== commanderMeta.character.id)
+      .filter((meta) => !forcedViceMeta || meta.character.id !== forcedViceMeta.character.id)
+      .map((meta) => ({
+        meta,
+        score:
+          getArmyViceFitness(commanderMeta, meta, concept, "vice1").score +
+          getArmyViceFitness(commanderMeta, meta, concept, "vice2").score
+      })),
+    4,
+    "score"
+  ).map((entry) => entry.meta);
+
+  if (forcedViceMeta) {
+    const partner = emergencyPool.find((meta) => meta.character.id !== forcedViceMeta.character.id);
+    return partner ? [[forcedViceMeta, partner]] : [];
+  }
+
+  return emergencyPool.length >= 2 ? [[emergencyPool[0], emergencyPool[1]]] : [];
 }
 
 function buildAidePairs(commanderMeta, vicePair, allowedMetas, concept, forcedAideMeta) {
@@ -4097,7 +7621,96 @@ function buildAidePairs(commanderMeta, vicePair, allowedMetas, concept, forcedAi
     }
   }
 
-  return pairs;
+  if (pairs.length) {
+    return pairs;
+  }
+
+  const emergencyPool = keepTopArmyEntries(
+    allowedMetas
+      .filter((meta) => !core.some((coreMeta) => coreMeta.character.id === meta.character.id))
+      .filter((meta) => !forcedAideMeta || meta.character.id !== forcedAideMeta.character.id)
+      .map((meta) => ({
+        meta,
+        score:
+          getArmyAideFitness(core, meta, concept, "aide1").score +
+          getArmyAideFitness(core, meta, concept, "aide2").score
+      })),
+    4,
+    "score"
+  ).map((entry) => entry.meta);
+
+  if (forcedAideMeta) {
+    const partner = emergencyPool.find((meta) => meta.character.id !== forcedAideMeta.character.id);
+    return partner ? [[forcedAideMeta, partner]] : [];
+  }
+
+  return emergencyPool.length >= 2 ? [[emergencyPool[0], emergencyPool[1]]] : [];
+}
+
+function buildEmergencyUnitCandidatesForCommander(commanderMeta, allowedMetas, concept, options = {}) {
+  const forcedViceMeta = options.forcedViceMeta ?? null;
+  const forcedAideMeta = options.forcedAideMeta ?? null;
+  const vicePool = keepTopArmyEntries(
+    allowedMetas
+      .filter((meta) => meta.character.id !== commanderMeta.character.id)
+      .filter((meta) => !forcedViceMeta || meta.character.id !== forcedViceMeta.character.id)
+      .map((meta) => ({
+        meta,
+        score:
+          getArmyViceFitness(commanderMeta, meta, concept, "vice1").score +
+          getArmyViceFitness(commanderMeta, meta, concept, "vice2").score
+      })),
+    6,
+    "score"
+  ).map((entry) => entry.meta);
+
+  let vicePair = [];
+  if (forcedViceMeta) {
+    const partner = vicePool.find((meta) => meta.character.id !== forcedViceMeta.character.id);
+    vicePair = partner ? [forcedViceMeta, partner] : [];
+  } else if (vicePool.length >= 2) {
+    vicePair = [vicePool[0], vicePool[1]];
+  }
+  if (vicePair.length !== 2) {
+    return [];
+  }
+
+  const core = [commanderMeta, ...vicePair];
+  const aidePool = keepTopArmyEntries(
+    allowedMetas
+      .filter((meta) => !core.some((coreMeta) => coreMeta.character.id === meta.character.id))
+      .filter((meta) => !forcedAideMeta || meta.character.id !== forcedAideMeta.character.id)
+      .map((meta) => ({
+        meta,
+        score:
+          getArmyAideFitness(core, meta, concept, "aide1").score +
+          getArmyAideFitness(core, meta, concept, "aide2").score
+      })),
+    6,
+    "score"
+  ).map((entry) => entry.meta);
+
+  let aidePair = [];
+  if (forcedAideMeta) {
+    const partner = aidePool.find((meta) => meta.character.id !== forcedAideMeta.character.id);
+    aidePair = partner ? [forcedAideMeta, partner] : [];
+  } else if (aidePool.length >= 2) {
+    aidePair = [aidePool[0], aidePool[1]];
+  }
+  if (aidePair.length !== 2) {
+    return [];
+  }
+
+  const candidate = buildArmyUnitCandidate(
+    commanderMeta,
+    vicePair[0],
+    vicePair[1],
+    aidePair[0],
+    aidePair[1],
+    concept
+  );
+
+  return candidate ? [candidate] : [];
 }
 
 function buildUnitCandidatesForCommander(commanderMeta, allowedMetas, concept, options = {}) {
@@ -4129,7 +7742,12 @@ function buildUnitCandidatesForCommander(commanderMeta, allowedMetas, concept, o
     }
   }
 
-  return pickDiverseArmyUnits(candidates, ARMY_BUILDER_LIMITS.keepUnitsPerCommander);
+  const ranked = pickDiverseArmyUnits(candidates, ARMY_BUILDER_LIMITS.keepUnitsPerCommander);
+  if (ranked.length) {
+    return ranked;
+  }
+
+  return buildEmergencyUnitCandidatesForCommander(commanderMeta, allowedMetas, concept, options);
 }
 
 function resolveArmySeedSlots(seedCharacter, modeKey) {
@@ -4172,7 +7790,33 @@ function sanitizeArmySelectedCommanderIds(ids = [], allowedMetas = []) {
 function setArmySelectedCommanderIds(ids = [], allowedMetas = null) {
   const allowedPool = allowedMetas ?? preparedCharacters.map((character) => getArmyMeta(character));
   armySelectedCommanderIds = sanitizeArmySelectedCommanderIds(ids, allowedPool);
+  if (armySelectedCommanderIds.length < 5) {
+    clearArmyCommanderPrefetchTimer();
+    armyCommanderPrefetchKey = "";
+  }
   return armySelectedCommanderIds;
+}
+
+function toggleArmyCommanderSelection(commanderId) {
+  const numericCommanderId = Number(commanderId);
+  if (!Number.isFinite(numericCommanderId)) {
+    return false;
+  }
+
+  if (armySelectedCommanderIds.includes(numericCommanderId)) {
+    armySelectedCommanderIds = armySelectedCommanderIds.filter((value) => value !== numericCommanderId);
+  } else if (armySelectedCommanderIds.length < 5) {
+    armySelectedCommanderIds = [...armySelectedCommanderIds, numericCommanderId];
+  } else {
+    window.KH_APP_API?.showStatusToast?.("主将は5体までです。先に1体外してください。");
+    return false;
+  }
+
+  lastArmyPlannerResult = null;
+  activeArmyAlternativeIndex = 0;
+  renderArmyPlanner(buildArmyCommanderPreviewResult());
+  scheduleArmyCommanderPrefetch();
+  return true;
 }
 
 function getArmySelectedCommanderMetas(allowedMetas = []) {
@@ -4181,14 +7825,133 @@ function getArmySelectedCommanderMetas(allowedMetas = []) {
   return selectedIds.map((characterId) => ARMY_CHARACTER_META_BY_ID.get(characterId)).filter(Boolean);
 }
 
+function getArmyQuickCommanderSelectionScore(meta, concept, seedMeta = null) {
+  const commanderScore = getArmySlotBaseScore(meta, "commander", concept);
+  const objectiveScore = meta.objectiveScores?.[concept.primaryObjective] ?? 0;
+  const conceptAffinity = getArmyConceptAffinity(meta, concept);
+  const powerSnapshot = getArmyCharacterPowerSnapshot(meta);
+  const powerNowScore = clampArmyScore(
+    (powerSnapshot.current / Math.max(getArmyReferenceUnitPower() * 0.38, 1)) * 100
+  );
+  return clampArmyScore(
+    commanderScore * 0.38 +
+      conceptAffinity * 0.18 +
+      objectiveScore * 0.16 +
+      meta.chainPotential * 0.1 +
+      powerNowScore * 0.14 +
+      (seedMeta?.character.id === meta.character.id ? 12 : 0)
+  );
+}
+
+function buildArmyCommanderFastAutoEntries(allowedMetas, concept, seedMeta = null, preferredCommanderIds = []) {
+  const preferredIdSet = new Set(preferredCommanderIds.map((value) => Number(value)).filter(Number.isFinite));
+  const pressureHeavyConcept =
+    concept?.primaryObjective === "pvp" || ["balanced", "meta", "opener", "debuff"].includes(concept?.key);
+  return allowedMetas
+    .map((meta) => {
+      const commanderScore = getArmySlotBaseScore(meta, "commander", concept);
+      const objectiveScore = meta.objectiveScores?.[concept.primaryObjective] ?? 0;
+      const conceptAffinity = getArmyConceptAffinity(meta, concept);
+      const powerSnapshot = getArmyCharacterPowerSnapshot(meta);
+      const powerNowScore = clampArmyScore(
+        (powerSnapshot.current / Math.max(getArmyReferenceUnitPower() * 0.38, 1)) * 100
+      );
+      const positionBiasScore = clampArmyScore(
+        (meta.positionProfile?.dominantScore ?? 0) * 2.2 + Math.max(0, meta.positionProfile?.dominantGap ?? 0) * 2.8
+      );
+      const burstAxis = clampArmyScore(
+        meta.groupScores.offense * 0.68 + objectiveScore * 0.18 + commanderScore * 0.14
+      );
+      const controlAxis = clampArmyScore(
+        meta.groupScores.control * 0.64 + meta.groupScores.support * 0.22 + commanderScore * 0.14
+      );
+      const sustainAxis = clampArmyScore(
+        meta.groupScores.defense * 0.72 + meta.groupScores.support * 0.1 + commanderScore * 0.18
+      );
+      const flexibilityScore = clampArmyScore(
+        44 +
+          uniqueValues(
+            (meta.roleTags ?? []).filter(
+              (tag) =>
+                tag.startsWith("role.") || tag.startsWith("support.") || tag.startsWith("control.") || tag.startsWith("def.")
+            )
+          ).length *
+            9
+      );
+      const depthScore = clampArmyScore(
+        meta.chainPotential * 0.38 +
+          conceptAffinity * 0.28 +
+          objectiveScore * 0.18 +
+          sustainAxis * 0.16
+      );
+      const defaultRowInfo = getArmyDominantRowInfo(meta.rowScores, meta.positionProfile?.dominantRow || "middle");
+      const shellScore = clampArmyScore(
+        pressureHeavyConcept
+          ? commanderScore * 0.3 +
+              objectiveScore * 0.14 +
+              conceptAffinity * 0.14 +
+              powerNowScore * 0.1 +
+              burstAxis * 0.24 +
+              controlAxis * 0.08
+          : commanderScore * 0.42 +
+              objectiveScore * 0.18 +
+              conceptAffinity * 0.18 +
+              powerNowScore * 0.12 +
+              burstAxis * 0.1
+      );
+      return {
+        meta,
+        score: clampArmyScore(
+          pressureHeavyConcept
+            ? shellScore * 0.32 +
+                burstAxis * 0.28 +
+                controlAxis * 0.12 +
+                sustainAxis * 0.04 +
+                flexibilityScore * 0.08 +
+                depthScore * 0.04 +
+                positionBiasScore * 0.04 +
+                powerNowScore * 0.04 +
+                (preferredIdSet.has(meta.character.id) ? 8 : 0) +
+                (seedMeta?.character.id === meta.character.id ? 12 : 0)
+            : shellScore * 0.38 +
+                burstAxis * 0.18 +
+                controlAxis * 0.14 +
+                sustainAxis * 0.08 +
+                flexibilityScore * 0.08 +
+                depthScore * 0.06 +
+                positionBiasScore * 0.04 +
+                powerNowScore * 0.04 +
+                (preferredIdSet.has(meta.character.id) ? 8 : 0) +
+                (seedMeta?.character.id === meta.character.id ? 12 : 0)
+        ),
+        buildScore: shellScore,
+        flexibilityScore,
+        depthScore,
+        bestUnit: {
+          memberIds: new Set([meta.character.id]),
+          roleTags: [...(meta.roleTags ?? [])],
+          rowScores: { ...(meta.rowScores ?? {}) },
+          defaultRow: defaultRowInfo.rowKey,
+          scoreAxes: {
+            burst20s: burstAxis,
+            controlUptime: controlAxis,
+            sustain40s: sustainAxis
+          }
+        }
+      };
+    })
+    .sort((left, right) => right.score - left.score);
+}
+
 function getArmyPlannerContext(options = {}) {
   const concept = ARMY_CONCEPT_MAP[elements.armyConcept?.value] ?? ARMY_CONCEPT_DEFS[0];
+  const seasonFocusKey = getArmySelectedSeasonFocusKey();
   const formationChoiceKey = sanitizeArmyFormationChoiceKey(elements.armyFormation?.value ?? "auto");
   const selectedRarities = readCheckedValuesIn(elements.armyRarityFilters, "army-rarity");
   const seedCharacter = characterByName[elements.armySeedCharacter?.value] ?? null;
   const seedMeta = getArmyMeta(seedCharacter);
   const seedSlots = resolveArmySeedSlots(seedCharacter, elements.armySeedMode?.value ?? "best");
-  const { usingRoster, ownedCount, allowedMetas } = getArmyAllowedMetas(selectedRarities, seedCharacter);
+  const { usingRoster, ownedCount, readyCount, allowedMetas } = getArmyAllowedMetas(selectedRarities, seedCharacter);
   const selectedCommanderIds = options.ignoreCommanderSelection
     ? []
     : sanitizeArmySelectedCommanderIds(armySelectedCommanderIds, allowedMetas);
@@ -4199,6 +7962,7 @@ function getArmyPlannerContext(options = {}) {
 
   return {
     concept,
+    seasonFocusKey,
     formationChoiceKey,
     selectedRarities,
     seedCharacter,
@@ -4206,47 +7970,97 @@ function getArmyPlannerContext(options = {}) {
     seedSlots,
     usingRoster,
     ownedCount,
+    readyCount,
     allowedMetas,
     selectedCommanderIds
   };
+}
+
+function buildArmyCommanderPoolEntries(context = null, selectedIds = []) {
+  const plannerContext = context ?? getArmyPlannerContext();
+  const selectedIdSet = new Set(
+    sanitizeArmySelectedCommanderIds(selectedIds, plannerContext.allowedMetas).map((value) => Number(value))
+  );
+  const sourceCharacters = plannerContext.usingRoster ? getOwnedArmyCharacters() : preparedCharacters;
+  const filteredCharacters = sourceCharacters.filter(
+    (character) =>
+      plannerContext.selectedRarities.includes(character.rarity) ||
+      selectedIdSet.has(character.id) ||
+      plannerContext.seedCharacter?.id === character.id
+  );
+
+  return filteredCharacters
+    .map((character) => {
+      const meta = getArmyMeta(character);
+      const profile = getArmyRosterProfile(character.id);
+      const snapshot = getArmyCharacterPowerSnapshot(character);
+      const isSelected = selectedIdSet.has(character.id);
+      const isReady = plannerContext.usingRoster ? isArmyCharacterReady(character.id) : true;
+      const quickScore = getArmyQuickCommanderSelectionScore(meta, plannerContext.concept, plannerContext.seedMeta);
+      return {
+        mode: "pool",
+        meta,
+        profile,
+        isSelected,
+        isReady,
+        power: snapshot.current,
+        quickScore
+      };
+    })
+    .sort(
+      (left, right) =>
+        Number(right.isSelected) - Number(left.isSelected) ||
+        Number(right.isReady) - Number(left.isReady) ||
+        (right.quickScore ?? 0) - (left.quickScore ?? 0) ||
+        right.power - left.power ||
+        left.meta.character.name.localeCompare(right.meta.character.name, "ja")
+    );
 }
 
 function buildArmyCommanderPreviewResult(context = null) {
   const plannerContext = context ?? getArmyPlannerContext();
   const {
     concept,
+    seasonFocusKey,
     formationChoiceKey,
     selectedRarities,
     seedCharacter,
     seedMeta,
     usingRoster,
     ownedCount,
+    readyCount,
     allowedMetas,
     selectedCommanderIds
   } = plannerContext;
-  const commanderShortlist = buildArmyCommanderShortlist(allowedMetas, concept, null, seedMeta, selectedCommanderIds);
-
   let validation = "";
   if (seedCharacter && usingRoster && !isArmyCharacterOwned(seedCharacter.id)) {
     validation = `固定候補の ${seedCharacter.name} が手持ちに入っていません。先に手持ちへ追加してください。`;
+  } else if (seedCharacter && usingRoster && !isArmyCharacterReady(seedCharacter.id)) {
+    validation = `固定候補の ${seedCharacter.name} は未育成です。仕上がりにしてから主将候補へ入れてください。`;
+  } else if (usingRoster && readyCount === 0) {
+    validation = "仕上がりの武将がまだいません。手持ち一覧で仕上がりへ切り替えてください。";
   } else if (!allowedMetas.length) {
-    validation = usingRoster ? "まずは手持ちから候補武将を選んでください。" : "この条件では主将候補が出ません。";
+    validation = usingRoster
+      ? "仕上がり武将の中で、この条件に合う候補がいません。レアリティか固定候補を見直してください。"
+      : "この条件では主将候補が出ません。";
   } else if (selectedCommanderIds.length < 5) {
-    validation = `主将を ${selectedCommanderIds.length} / 5 体選ぶと、残りの副将 / 補佐を提案します。`;
+    validation = `主将を ${selectedCommanderIds.length} / 5 体まで絞ると5部隊を確定します。副将候補は下に先出ししています。`;
   }
 
   return {
     validation,
     concept,
+    seasonFocusKey,
     formationChoiceKey,
     selectedRarities,
     seedCharacter,
     seedMeta,
     usingRoster,
     ownedCount,
+    readyCount,
     allowedCount: allowedMetas.length,
     selectedCommanderIds,
-    commanderShortlist,
+    commanderShortlist: buildArmyCommanderPoolEntries(plannerContext, selectedCommanderIds),
     viceShortlist: { commanderMeta: null, entries: [] },
     armies: [],
     reserveSuggestions: [],
@@ -4258,7 +8072,7 @@ function buildArmyCommanderPreviewResult(context = null) {
     summary: formatSummaryText(
       [
         `最適化方針: ${concept.label}`,
-        usingRoster ? `手持ち: ${ownedCount}体` : "全武将モード",
+        usingRoster ? `仕上がり: ${readyCount}体 / 登録 ${ownedCount}体` : "全武将モード",
         `レアリティ: ${selectedRarities.join(" / ")}`,
         `主将選択: ${selectedCommanderIds.length} / 5`
       ].filter(Boolean),
@@ -4403,7 +8217,9 @@ function buildArmyCommanderSearchFallbackArmies(allowedMetas, concept, seedMeta,
     vicePairKeep: Math.max(ARMY_BUILDER_LIMITS.vicePairKeep, 54),
     keepUnitsPerCommander: Math.max(ARMY_BUILDER_LIMITS.keepUnitsPerCommander, 24)
   };
-  const commanderMetas = buildArmyCommanderShortlist(allowedMetas, concept, null, seedMeta, []).slice(0, 15).map((entry) => entry.meta);
+  const commanderMetas = buildArmyCommanderFastAutoEntries(allowedMetas, concept, seedMeta, [])
+    .slice(0, 10)
+    .map((entry) => entry.meta);
   const results = [];
   const signatureSet = new Set();
   const maxResults = Math.max(ARMY_BUILDER_LIMITS.finalArmies * 2, 6);
@@ -4429,7 +8245,7 @@ function buildArmyCommanderSearchFallbackArmies(allowedMetas, concept, seedMeta,
         meta,
         candidates: withArmyBuilderLimitOverrides(overrideConfig, () =>
           buildUnitCandidatesForCommander(meta, remainingMetas, concept)
-        ).slice(0, 4)
+        ).slice(0, 3)
       }))
       .filter((entry) => entry.candidates.length)
       .sort(
@@ -4437,7 +8253,7 @@ function buildArmyCommanderSearchFallbackArmies(allowedMetas, concept, seedMeta,
           left.candidates.length - right.candidates.length ||
           (right.candidates[0]?.total ?? 0) - (left.candidates[0]?.total ?? 0)
       )
-      .slice(0, 6);
+      .slice(0, 5);
 
     for (const entry of commanderEntries) {
       const nextCommanderMetas = remainingCommanderMetas.filter((meta) => meta.character.id !== entry.meta.character.id);
@@ -4455,29 +8271,387 @@ function buildArmyCommanderSearchFallbackArmies(allowedMetas, concept, seedMeta,
   return keepTopArmyEntries(results, ARMY_BUILDER_LIMITS.finalArmies, "total");
 }
 
+function buildArmyGreedyCommanderSelection(
+  allowedMetas,
+  concept,
+  seedMeta,
+  preferredCommanderIds = [],
+  limit = 5,
+  candidateEntries = null
+) {
+  if (!allowedMetas.length || limit <= 0) {
+    return [];
+  }
+
+  const preferredIds = uniqueValues(preferredCommanderIds.map((value) => Number(value)).filter(Number.isFinite));
+  const preferredIdSet = new Set(preferredIds);
+  const shortlist = (
+    Array.isArray(candidateEntries) && candidateEntries.length
+      ? candidateEntries
+      : buildArmyCommanderShortlistV2(allowedMetas, concept, null, seedMeta, preferredIds)
+  ).slice(0, Math.max(limit + 10, 15));
+
+  if (!shortlist.length) {
+    return [];
+  }
+
+  const pickedEntries = [];
+  const pickedIdSet = new Set();
+  const usedMemberIds = new Set();
+  const pickedRoleCounts = {
+    support: 0,
+    frontline: 0,
+    disruptor: 0,
+    burst: 0
+  };
+  const pickedRowCounts = {
+    front: 0,
+    middle: 0,
+    back: 0
+  };
+  const rowTargets = concept?.rowTarget ?? {
+    front: 2,
+    middle: 2,
+    back: 1
+  };
+  const pressureHeavyConcept =
+    concept?.primaryObjective === "pvp" || ["balanced", "meta", "opener", "debuff"].includes(concept?.key);
+
+  const getEntryRoleFlags = (entry) => {
+    const tagSet = new Set([...(entry.meta?.roleTags ?? []), ...(entry.bestUnit?.roleTags ?? [])]);
+    const burstAxis = entry.bestUnit?.scoreAxes?.burst20s ?? 0;
+    return {
+      support:
+        tagSet.has("role.flex-support") || tagSet.has("support.heal") || tagSet.has("support.cleanse"),
+      frontline: tagSet.has("role.frontline-anchor"),
+      disruptor:
+        tagSet.has("role.disruptor") || tagSet.has("control.buff-strip") || tagSet.has("control.fear"),
+      burst:
+        tagSet.has("role.burst-commander") ||
+        burstAxis >= 56 ||
+        (entry.meta?.groupScores?.offense ?? 0) >= 72
+    };
+  };
+
+  const getEntryRowFocus = (entry) => {
+    const scoreSource = entry.bestUnit?.rowScores ?? entry.meta?.rowScores ?? {};
+    const fallbackRow = entry.bestUnit?.defaultRow ?? entry.meta?.positionProfile?.dominantRow ?? "middle";
+    return getArmyDominantRowInfo(scoreSource, fallbackRow);
+  };
+
+  const addPickedRoleCounts = (entry) => {
+    const flags = getEntryRoleFlags(entry);
+    Object.entries(flags).forEach(([key, enabled]) => {
+      if (enabled) {
+        pickedRoleCounts[key] += 1;
+      }
+    });
+  };
+
+  const addPickedRowCounts = (entry) => {
+    const focus = getEntryRowFocus(entry);
+    if (focus?.rowKey) {
+      pickedRowCounts[focus.rowKey] += 1;
+    }
+  };
+
+  while (pickedEntries.length < limit) {
+    let bestEntry = null;
+    let bestScore = -Infinity;
+
+    shortlist.forEach((entry) => {
+      const commanderId = entry.meta.character.id;
+      if (pickedIdSet.has(commanderId)) {
+        return;
+      }
+
+      const memberIds = Array.from(entry.bestUnit?.memberIds ?? [commanderId]);
+      const overlapCount = memberIds.filter((characterId) => usedMemberIds.has(characterId)).length;
+      const flags = getEntryRoleFlags(entry);
+      const rowFocus = getEntryRowFocus(entry);
+      const burstAxis = entry.bestUnit?.scoreAxes?.burst20s ?? 0;
+      const controlAxis = entry.bestUnit?.scoreAxes?.controlUptime ?? 0;
+      const sustainAxis = entry.bestUnit?.scoreAxes?.sustain40s ?? 0;
+      let roleNeedBonus = 0;
+      let rowNeedBonus = 0;
+      let rowOverflowPenalty = 0;
+      if (pickedRoleCounts.support < 1 && flags.support) {
+        roleNeedBonus += 10;
+      }
+      if (pickedRoleCounts.frontline < 1 && flags.frontline) {
+        roleNeedBonus += 11;
+      }
+      if (pickedRoleCounts.disruptor < 1 && flags.disruptor) {
+        roleNeedBonus += pressureHeavyConcept ? 13 : 9;
+      }
+      if (pressureHeavyConcept && pickedRoleCounts.burst < 3 && flags.burst) {
+        roleNeedBonus += pickedRoleCounts.burst < 1 ? 18 : 14;
+      }
+      if (!pressureHeavyConcept && pickedRoleCounts.burst < 1 && flags.burst) {
+        roleNeedBonus += 8;
+      }
+      if (rowFocus?.rowKey) {
+        const target = rowTargets[rowFocus.rowKey] ?? 0;
+        const strongRowBias = rowFocus.score >= 70 || rowFocus.gap >= 8;
+        if (pickedRowCounts[rowFocus.rowKey] < target) {
+          rowNeedBonus += strongRowBias ? 10 : 6;
+        } else if (pickedRowCounts[rowFocus.rowKey] >= target && target > 0) {
+          rowOverflowPenalty += strongRowBias ? 10 : 5;
+        }
+      }
+      const axisBias = pressureHeavyConcept
+        ? burstAxis * 0.24 + controlAxis * 0.08 + sustainAxis * 0.03
+        : sustainAxis * 0.1 + controlAxis * 0.08 + burstAxis * 0.06;
+      const duplicateRolePenalty =
+        (flags.support && pickedRoleCounts.support >= 2 ? 10 : 0) +
+        (flags.frontline && pickedRoleCounts.frontline >= 2 ? 6 : 0) +
+        (flags.disruptor && pickedRoleCounts.disruptor >= 2 ? 7 : 0) +
+        (flags.burst && pickedRoleCounts.burst >= 3 ? 4 : 0);
+      const adjustedScore =
+        entry.score +
+        entry.buildScore * 0.24 +
+        (entry.depthScore ?? 0) * 0.08 +
+        (entry.flexibilityScore ?? 0) * 0.06 +
+        axisBias +
+        roleNeedBonus +
+        rowNeedBonus +
+        (preferredIdSet.has(commanderId) ? 16 : 0) -
+        overlapCount * 28 -
+        duplicateRolePenalty -
+        rowOverflowPenalty;
+
+      if (adjustedScore > bestScore) {
+        bestScore = adjustedScore;
+        bestEntry = entry;
+      }
+    });
+
+    if (!bestEntry) {
+      break;
+    }
+
+    pickedEntries.push(bestEntry);
+    pickedIdSet.add(bestEntry.meta.character.id);
+    Array.from(bestEntry.bestUnit?.memberIds ?? [bestEntry.meta.character.id]).forEach((characterId) =>
+      usedMemberIds.add(characterId)
+    );
+    addPickedRoleCounts(bestEntry);
+    addPickedRowCounts(bestEntry);
+  }
+
+  if (pickedEntries.length < limit) {
+    shortlist.forEach((entry) => {
+      if (pickedEntries.length >= limit || pickedIdSet.has(entry.meta.character.id)) {
+        return;
+      }
+      pickedEntries.push(entry);
+      pickedIdSet.add(entry.meta.character.id);
+    });
+  }
+
+  return pickedEntries.slice(0, limit).map((entry) => entry.meta.character.id);
+}
+
 function findBuildableArmyCommanderIds(context = null) {
   const plannerContext = context ?? getArmyPlannerContext({ ignoreCommanderSelection: true });
   const {
     concept,
     formationChoiceKey,
     seedMeta,
+    seedSlots,
     usingRoster,
-    ownedCount,
+    readyCount,
     allowedMetas
   } = plannerContext;
 
-  if ((usingRoster && ownedCount < 25) || allowedMetas.length < 25) {
+  if ((usingRoster && readyCount < 25) || allowedMetas.length < 25) {
     return [];
   }
 
-  const fallbackArmies = buildArmyCommanderSearchFallbackArmies(allowedMetas, concept, seedMeta, formationChoiceKey);
-  if (fallbackArmies.length) {
-    const selectedIds = fallbackArmies[0].units.map((unit) => unit.commander.id).slice(0, 5);
-    storeArmyCommanderSelectionCache(plannerContext, selectedIds, fallbackArmies);
-    return selectedIds;
+  const candidateSelections = [];
+  const fastEntries = buildArmyCommanderFastAutoEntries(allowedMetas, concept, seedMeta, []);
+  const rankSelection = (armies = []) => {
+    const topArmy = armies[0];
+    if (!topArmy) {
+      return -Infinity;
+    }
+    const burstBias =
+      concept.primaryObjective === "pvp" || ["balanced", "meta", "opener"].includes(concept.key)
+        ? (topArmy.scoreAxes?.burst20s ?? 0) * 0.22
+        : 0;
+    return (topArmy.total ?? 0) + burstBias + (topArmy.scoreAxes?.formationFit ?? 0) * 0.06;
+  };
+  const shouldAcceptQuickSelection = (armies = []) => {
+    const topArmy = armies[0];
+    if (!topArmy) {
+      return false;
+    }
+    const formationReady = topArmy.formationBonus?.active || topArmy.formation?.key === "basic";
+    const totalScore = topArmy.total ?? 0;
+    const burstScore = topArmy.scoreAxes?.burst20s ?? 0;
+    if (concept.primaryObjective === "pvp" || ["balanced", "meta", "opener", "debuff"].includes(concept.key)) {
+      return totalScore >= 38 && (formationReady || burstScore >= 30);
+    }
+    return totalScore >= 36 && formationReady;
+  };
+
+  const greedyIds = buildArmyGreedyCommanderSelection(allowedMetas, concept, seedMeta, [], 5, fastEntries);
+  let greedyArmies = [];
+  if (greedyIds.length === 5) {
+    const cachedGreedyArmies = readArmyCommanderSelectionCache(plannerContext, greedyIds);
+    if (cachedGreedyArmies.length) {
+      greedyArmies = cachedGreedyArmies;
+    } else {
+      const greedyMetas = greedyIds.map((characterId) => ARMY_CHARACTER_META_BY_ID.get(characterId)).filter(Boolean);
+      greedyArmies = buildArmiesForSelectedCommanders(
+        greedyMetas,
+        allowedMetas,
+        concept,
+        seedMeta,
+        seedSlots,
+        formationChoiceKey,
+        plannerContext,
+        greedyIds
+      );
+    }
+    if (greedyArmies.length) {
+      candidateSelections.push({
+        ids: greedyIds,
+        armies: greedyArmies,
+        score: rankSelection(greedyArmies)
+      });
+      if (shouldAcceptQuickSelection(greedyArmies)) {
+        return greedyIds;
+      }
+    }
   }
 
-  return [];
+  const quickPreferredIds = [...fastEntries]
+    .sort((left, right) => {
+      const leftBurst = left.bestUnit?.scoreAxes?.burst20s ?? 0;
+      const rightBurst = right.bestUnit?.scoreAxes?.burst20s ?? 0;
+      const leftControl = left.bestUnit?.scoreAxes?.controlUptime ?? 0;
+      const rightControl = right.bestUnit?.scoreAxes?.controlUptime ?? 0;
+      const leftSupport = left.meta.groupScores?.support ?? 0;
+      const rightSupport = right.meta.groupScores?.support ?? 0;
+      return rightBurst + rightControl * 0.45 + rightSupport * 0.12 - (leftBurst + leftControl * 0.45 + leftSupport * 0.12);
+    })
+    .slice(0, 8)
+    .map((entry) => entry.meta.character.id);
+  const guidedIds = buildArmyGreedyCommanderSelection(
+    allowedMetas,
+    concept,
+    seedMeta,
+    quickPreferredIds,
+    5,
+    fastEntries
+  );
+  if (guidedIds.length === 5 && guidedIds.join(":") !== greedyIds.join(":")) {
+    const cachedGuidedArmies = readArmyCommanderSelectionCache(plannerContext, guidedIds);
+    const guidedArmies =
+      cachedGuidedArmies.length
+        ? cachedGuidedArmies
+        : buildArmiesForSelectedCommanders(
+            guidedIds.map((characterId) => ARMY_CHARACTER_META_BY_ID.get(characterId)).filter(Boolean),
+            allowedMetas,
+            concept,
+            seedMeta,
+            seedSlots,
+            formationChoiceKey,
+            plannerContext,
+            guidedIds
+          );
+    if (guidedArmies.length) {
+      candidateSelections.push({
+        ids: guidedIds,
+        armies: guidedArmies,
+        score: rankSelection(guidedArmies)
+      });
+      if (shouldAcceptQuickSelection(guidedArmies)) {
+        return guidedIds;
+      }
+    }
+  }
+
+  const fallbackArmies = buildArmyCommanderSearchFallbackArmies(
+    allowedMetas,
+    concept,
+    seedMeta,
+    formationChoiceKey
+  );
+  if (!fallbackArmies.length) {
+    const bestSelection = candidateSelections.sort((left, right) => (right.score ?? -Infinity) - (left.score ?? -Infinity))[0];
+    return bestSelection?.ids ?? [];
+  }
+  const fallbackIds = fallbackArmies[0].units.map((unit) => unit.commander.id).slice(0, 5);
+  if (fallbackIds.length === 5) {
+    candidateSelections.push({
+      ids: fallbackIds,
+      armies: fallbackArmies,
+      score: rankSelection(fallbackArmies)
+    });
+  }
+
+  const bestSelection = candidateSelections.sort((left, right) => (right.score ?? -Infinity) - (left.score ?? -Infinity))[0];
+  if (!bestSelection?.ids?.length) {
+    return [];
+  }
+  if (bestSelection.armies?.length) {
+    storeArmyCommanderSelectionCache(plannerContext, bestSelection.ids, bestSelection.armies);
+  }
+  return bestSelection.ids;
+}
+
+function findNearestBuildableArmySelection(context = null, selectedCommanderIds = []) {
+  const plannerContext = context ?? getArmyPlannerContext({ ignoreCommanderSelection: true });
+  const {
+    concept,
+    formationChoiceKey,
+    seedMeta,
+    usingRoster,
+    readyCount,
+    allowedMetas
+  } = plannerContext;
+
+  const normalizedSelectedIds = sanitizeArmySelectedCommanderIds(selectedCommanderIds, allowedMetas);
+  if (normalizedSelectedIds.length < 5 || (usingRoster && readyCount < 25) || allowedMetas.length < 25) {
+    return null;
+  }
+
+  const fastEntries = buildArmyCommanderFastAutoEntries(
+    allowedMetas,
+    concept,
+    seedMeta,
+    normalizedSelectedIds
+  );
+  const suggestedCommanderIds = buildArmyGreedyCommanderSelection(
+    allowedMetas,
+    concept,
+    seedMeta,
+    normalizedSelectedIds,
+    5,
+    fastEntries
+  );
+  if (suggestedCommanderIds.length < 5) {
+    return null;
+  }
+
+  const selectedIdSet = new Set(normalizedSelectedIds);
+  const keptIds = normalizedSelectedIds.filter((id) => suggestedCommanderIds.includes(id));
+  const addedIds = suggestedCommanderIds.filter((id) => !selectedIdSet.has(id));
+  const removedIds = normalizedSelectedIds.filter((id) => !suggestedCommanderIds.includes(id));
+
+  if (keptIds.length < 3) {
+    return null;
+  }
+
+  return {
+    selectedCommanderIds: suggestedCommanderIds,
+    keptIds,
+    addedIds,
+    removedIds,
+    overlapCount: keptIds.length
+  };
 }
 
 function buildArmyCommanderSelectionCacheKey(context = {}, selectedCommanderIds = []) {
@@ -4627,6 +8801,240 @@ function getArmyFormationTypeInfo(units) {
   );
 }
 
+function getArmyFormationRowDemand(units = []) {
+  const counts = { front: 0, middle: 0, back: 0 };
+  const strengths = { front: 0, middle: 0, back: 0 };
+
+  units.forEach((unit) => {
+    const rowScores = unit?.rowScores ?? {};
+    const dominant = getArmyDominantRowInfo(rowScores, unit?.defaultRow ?? "middle");
+    const dominantRow = dominant.rowKey || "middle";
+    const dominantScore = dominant.score ?? (rowScores[dominantRow] ?? 50);
+
+    ARMY_BUILDER_ROW_KEYS.forEach((rowKey) => {
+      strengths[rowKey] += rowScores[rowKey] ?? 50;
+    });
+
+    counts[dominantRow] += dominantScore >= 72 ? 1.35 : dominantScore >= 60 ? 1 : 0.72;
+  });
+
+  return {
+    counts,
+    strengths: Object.fromEntries(
+      ARMY_BUILDER_ROW_KEYS.map((rowKey) => [
+        rowKey,
+        units.length ? strengths[rowKey] / units.length : 0
+      ])
+    )
+  };
+}
+
+function getArmyCommanderTypeCounts(units = []) {
+  return units.reduce(
+    (result, unit) => {
+      const commander =
+        unit.commander ??
+        unit.unitMembers?.find((member) => member.slotKey === "commander")?.meta?.character ??
+        null;
+      const typeKey = commander?.type;
+      if (typeKey) {
+        result[typeKey] = (result[typeKey] ?? 0) + 1;
+      }
+      return result;
+    },
+    { 援: 0, 闘: 0, 護: 0, 妨: 0, 智: 0 }
+  );
+}
+
+function getArmyObservedFormationMixScore(units = [], formation) {
+  const typeCounts = getArmyCommanderTypeCounts(units);
+  const supportCount = (typeCounts["援"] ?? 0) + Math.max(0, (typeCounts["智"] ?? 0) - 1) * 0.4;
+  const assaultCount = (typeCounts["闘"] ?? 0) + (typeCounts["護"] ?? 0);
+  const disruptorCount = (typeCounts["妨"] ?? 0) + Math.min(1, typeCounts["智"] ?? 0) * 0.5;
+  let score = 56;
+  let text = "";
+
+  switch (formation?.key) {
+    case "kakuyoku":
+      score += supportCount >= 2 ? 18 : supportCount >= 1 ? 6 : -10;
+      score += assaultCount >= 2 ? 16 : assaultCount >= 1 ? 6 : -8;
+      score += disruptorCount <= 1.5 ? 6 : 0;
+      text =
+        supportCount >= 2 && assaultCount >= 2
+          ? "支援2枚で前圧を支える型"
+          : supportCount >= 2
+            ? "支援を前列へ回しやすい型"
+            : "";
+      break;
+    case "suikou":
+      score += assaultCount >= 3 ? 18 : assaultCount >= 2 ? 8 : -10;
+      score += supportCount >= 1 ? 10 : -8;
+      score += disruptorCount >= 1 ? 8 : 0;
+      text =
+        assaultCount >= 3 && supportCount >= 1
+          ? "攻め3枚と橋渡し役が揃う型"
+          : assaultCount >= 3
+            ? "前圧を押し込みやすい型"
+            : "";
+      break;
+    case "sakubou":
+      score += disruptorCount >= 3 ? 22 : disruptorCount >= 2 ? 10 : -12;
+      score += supportCount >= 1 ? 10 : -6;
+      score += assaultCount >= 1 ? 4 : 0;
+      text =
+        disruptorCount >= 3 && supportCount >= 1
+          ? "妨害3枚以上に支援1枚を添える型"
+          : disruptorCount >= 3
+            ? "妨害寄せで押さえ込む型"
+            : "";
+      break;
+    case "houjin":
+      score += supportCount >= 1 ? 10 : -4;
+      score += assaultCount >= 2 ? 10 : assaultCount >= 1 ? 4 : -6;
+      score += disruptorCount >= 1 ? 6 : 0;
+      text =
+        supportCount >= 1 && assaultCount >= 2
+          ? "中核火力へ支援を添える型"
+          : supportCount >= 1
+            ? "支援中心で押し込みを作る型"
+            : "";
+      break;
+    default:
+      score += supportCount >= 1 ? 6 : 0;
+      score += assaultCount >= 2 ? 6 : 0;
+      score += disruptorCount >= 1 ? 4 : 0;
+      break;
+  }
+
+  return {
+    score: clampArmyScore(score),
+    text,
+    typeCounts
+  };
+}
+
+function getArmyFormationStrategicBias(units = [], concept, formation, counts = null, teamAxes = null) {
+  const rowDemand = getArmyFormationRowDemand(units);
+  const profileCounts = counts ?? getArmyCommunityProfileCounts(units);
+  const formationMix = getArmyObservedFormationMixScore(units, formation);
+  const axes =
+    teamAxes ??
+    {
+      burst20s: averageArmyValues(units.map((unit) => unit.scoreAxes?.burst20s ?? 50)),
+      sustain40s: averageArmyValues(units.map((unit) => unit.scoreAxes?.sustain40s ?? 50)),
+      controlUptime: averageArmyValues(units.map((unit) => unit.scoreAxes?.controlUptime ?? 50)),
+      siegeDps: averageArmyValues(units.map((unit) => unit.scoreAxes?.siegeDps ?? 50))
+    };
+  const rowCapacities = (formation?.slots ?? []).reduce((result, slot) => {
+    result[slot.rowKey] = (result[slot.rowKey] ?? 0) + 1;
+    return result;
+  }, {});
+  const rowSupportDemand = units.reduce(
+    (result, unit) => {
+      for (const member of unit.unitMembers ?? []) {
+        const skillText = [
+          member.meta?.character?.battleArtText ?? "",
+          ...(member.meta?.character?.battleArtEffects ?? []),
+          ...(member.meta?.character?.guide?.evaluationPoints ?? []),
+          ...(member.meta?.character?.guide?.latestFormation?.focusTitles ?? [])
+        ]
+          .filter(Boolean)
+          .join(" ");
+        if (!/(同じ横列|横列の味方|同列の味方|横一列)/u.test(skillText)) {
+          continue;
+        }
+        const preferredRow =
+          member.meta?.positionProfile?.dominantRow ??
+          getArmyDominantRowInfo(member.meta?.rowScores ?? {}, unit.assignedRow ?? unit.defaultRow ?? "middle").rowKey;
+        result[preferredRow] = (result[preferredRow] ?? 0) + (member.slotKey === "commander" ? 1 : 0.72);
+      }
+      return result;
+    },
+    { front: 0, middle: 0, back: 0 }
+  );
+  let bonus = 0;
+  const reasons = [];
+
+  switch (formation?.key) {
+    case "kakuyoku":
+      bonus += Math.max(0, rowDemand.counts.front - 1.1) * 16;
+      bonus += Math.max(0, profileCounts.frontline - 0.7) * 10;
+      bonus += Math.max(0, profileCounts.support - 1.1) * 14;
+      bonus += Math.max(0, axes.sustain40s - 54) * 0.16;
+      if (rowDemand.counts.front >= 1.6) {
+        reasons.push("前衛向きが多い");
+      }
+      if (profileCounts.support >= 1.4) {
+        reasons.push("支援2枚で前列を支えやすい");
+      }
+      break;
+    case "suikou":
+      bonus += Math.max(0, profileCounts.pressure - 2.2) * 16;
+      bonus += Math.max(0, profileCounts.frontline - 0.8) * 10;
+      bonus += Math.max(0, profileCounts.support - 0.45) * 8;
+      bonus += Math.max(0, profileCounts.disruptor - 0.35) * 8;
+      bonus += Math.max(0, axes.burst20s - 48) * 0.2;
+      bonus += Math.max(0, axes.siegeDps - 46) * 0.16;
+      if (Math.max(axes.burst20s, axes.siegeDps) >= 60) {
+        reasons.push("攻め筋が太い");
+      }
+      if (profileCounts.support >= 0.6 || profileCounts.disruptor >= 0.6) {
+        reasons.push("橋渡し役がいる");
+      }
+      break;
+    case "houjin":
+      bonus += Math.max(0, rowDemand.counts.middle - 1.3) * 10;
+      bonus += Math.max(0, profileCounts.pressure - 1.8) * 8;
+      bonus += Math.max(0, profileCounts.support - 0.8) * 8;
+      bonus += Math.max(0, axes.burst20s - 50) * 0.14;
+      if (rowDemand.counts.middle >= 1.8) {
+        reasons.push("中列向きが多い");
+      }
+      break;
+    case "sakubou":
+      bonus += Math.max(0, profileCounts.disruptor - 1.4) * 20;
+      bonus += Math.max(0, profileCounts.support - 0.5) * 12;
+      bonus += Math.max(0, axes.controlUptime - 56) * 0.22;
+      if (profileCounts.disruptor >= 2) {
+        reasons.push("妨害3枚級が作れる");
+      }
+      if (profileCounts.support >= 0.7) {
+        reasons.push("支援1枚を添えやすい");
+      }
+      break;
+    case "basic":
+      bonus -= 28;
+      reasons.push("基本陣は優先しない");
+      break;
+    default:
+      break;
+  }
+
+  bonus += Math.max(0, formationMix.score - 58) * 0.35;
+  if (formationMix.text) {
+    reasons.push(formationMix.text);
+  }
+
+  const rowSupportBonus = [...ARMY_BUILDER_ROW_KEYS].reduce((total, rowKey) => {
+    const capacity = rowCapacities[rowKey] ?? 0;
+    if (capacity < 2) {
+      return total;
+    }
+    return total + Math.max(0, (rowSupportDemand[rowKey] ?? 0) - 0.45) * (capacity - 1) * 9;
+  }, 0);
+  bonus += rowSupportBonus;
+  if (rowSupportBonus >= 6) {
+    reasons.push("横列支援を並べやすい");
+  }
+
+  return {
+    score: clampArmyScore(50 + bonus),
+    rawBonus: bonus,
+    reasonText: reasons.join(" / "),
+    rowDemand
+  };
+}
+
 function getArmyFormationBonusValue(stats = {}) {
   return (
     (stats.attack ?? 0) * 1 +
@@ -4732,6 +9140,776 @@ function getArmyFormationPressureBias(concept) {
   return biasMap[concept?.key] ?? 0.5;
 }
 
+function getArmyObservedProfileLabel(key) {
+  return ARMY_OBSERVED_PROFILE_LABELS[key] ?? key;
+}
+
+function getArmyObservedTopProfileKey(source = {}) {
+  return ["support", "pressure", "frontline", "disruptor", "late"].reduce((bestKey, key) => {
+    if (!bestKey) {
+      return key;
+    }
+    return (source[key] ?? 0) > (source[bestKey] ?? 0) ? key : bestKey;
+  }, "");
+}
+
+function getArmyObservedCountContribution(value) {
+  if (value >= 78) {
+    return 1;
+  }
+  if (value >= 64) {
+    return 0.8;
+  }
+  if (value >= 50) {
+    return 0.55;
+  }
+  if (value >= 38) {
+    return 0.3;
+  }
+  return 0;
+}
+
+function getArmyObservedBandScore(value, minTarget, maxTarget) {
+  const center = (minTarget + maxTarget) / 2;
+  const freeBand = Math.max((maxTarget - minTarget) / 2, 0.25);
+  const distance = Math.abs(value - center);
+  const overflow = Math.max(0, distance - freeBand);
+  return clampArmyScore(100 - overflow * 42 - Math.max(0, overflow - 1) * 18);
+}
+
+function shiftArmyObservedBand(band = [0, 0], minDelta = 0, maxDelta = minDelta) {
+  const nextMin = Math.max(0, (band[0] ?? 0) + minDelta);
+  const nextMax = Math.max(nextMin, (band[1] ?? 0) + maxDelta);
+  return [nextMin, nextMax];
+}
+
+function getArmyObservedFormationTargets(formation, concept) {
+  const baseTargets = ARMY_OBSERVED_PATTERN_TARGETS[formation?.key] ?? ARMY_OBSERVED_PATTERN_TARGETS.generic;
+  const targets = Object.fromEntries(
+    Object.entries(baseTargets).map(([key, band]) => [key, [...band]])
+  );
+
+  if (concept?.key === "siege") {
+    targets.pressure = shiftArmyObservedBand(targets.pressure, 0.35, 0.45);
+    targets.support = shiftArmyObservedBand(targets.support, -0.1, 0.1);
+    targets.late = shiftArmyObservedBand(targets.late, -0.2, 0);
+  } else if (concept?.key === "defense") {
+    targets.support = shiftArmyObservedBand(targets.support, 0.2, 0.4);
+    targets.frontline = shiftArmyObservedBand(targets.frontline, 0.45, 0.7);
+    targets.pressure = shiftArmyObservedBand(targets.pressure, -0.35, -0.15);
+    targets.disruptor = shiftArmyObservedBand(targets.disruptor, 0.1, 0.3);
+    targets.late = shiftArmyObservedBand(targets.late, 0.35, 0.6);
+  } else if (concept?.key === "debuff") {
+    targets.support = shiftArmyObservedBand(targets.support, 0.1, 0.3);
+    targets.pressure = shiftArmyObservedBand(targets.pressure, -0.2, 0.1);
+    targets.disruptor = shiftArmyObservedBand(targets.disruptor, 0.5, 0.9);
+  } else if (concept?.key === "powermax" || concept?.key === "counter") {
+    targets.pressure = shiftArmyObservedBand(targets.pressure, 0.15, 0.35);
+  }
+
+  return targets;
+}
+
+function getArmyObservedFallbackSlotProfile(slot, formation) {
+  const tempoBias = getArmyFormationSlotTempoBias(slot.key, formation);
+  const isFront = slot.rowKey === "front";
+  const isMiddle = slot.rowKey === "middle";
+  const isBack = slot.rowKey === "back";
+  const profile = {
+    support: isMiddle ? 0.76 : isBack ? 0.68 : 0.48,
+    pressure: isFront ? 0.82 : isMiddle ? 0.74 : 0.54,
+    frontline: isFront ? 0.9 : isMiddle ? 0.68 : 0.42,
+    disruptor: isMiddle ? 0.74 : isBack ? 0.6 : 0.5,
+    late: isBack ? 0.9 : isMiddle ? 0.6 : 0.44
+  };
+
+  if (tempoBias >= 0.72) {
+    profile.support += 0.08;
+    profile.pressure += 0.14;
+    profile.late -= 0.12;
+  } else if (tempoBias <= 0.44) {
+    profile.support += 0.04;
+    profile.pressure -= 0.08;
+    profile.frontline += 0.12;
+    profile.late += 0.18;
+  }
+
+  Object.keys(profile).forEach((key) => {
+    profile[key] = Math.max(0.28, Math.min(1, profile[key]));
+  });
+
+  return profile;
+}
+
+function getArmyObservedSlotProfile(slot, formation) {
+  const profile = ARMY_OBSERVED_FORMATION_SLOT_PROFILES[formation?.key]?.[slot?.key];
+  if (profile) {
+    return profile;
+  }
+  return getArmyObservedFallbackSlotProfile(slot, formation);
+}
+
+function getArmyObservedUnitProfile(unit = {}) {
+  const roleSet = new Set(unit.roleTags ?? []);
+  const commander = unit.commander ?? unit.unitMembers?.find((member) => member.slotKey === "commander")?.meta?.character ?? null;
+  const typeKey = commander?.type ?? "-";
+  const expertFamily = unit.expertPattern?.family ?? "hybrid";
+  const burstScore = unit.scoreAxes?.burst20s ?? unit.scoreBreakdown?.pressureScore ?? 50;
+  const sustainScore = unit.scoreAxes?.sustain40s ?? unit.scoreBreakdown?.sustainScore ?? 50;
+  const controlScore = unit.scoreAxes?.controlUptime ?? unit.scoreBreakdown?.utilityScore ?? 50;
+  const cleanseScore = unit.scoreAxes?.cleanseCoverage ?? 0;
+  const ehpScore = unit.scoreAxes?.ehp ?? unit.scoreBreakdown?.sustainScore ?? 50;
+  const powerScore = unit.scoreAxes?.powerCurrent ?? unit.scoreBreakdown?.powerScore ?? 50;
+  const tempoScore = unit.scoreBreakdown?.tempoScore ?? 50;
+  const frontRowScore = unit.rowScores?.front ?? unit.rowScores?.middle ?? 50;
+  const backRowScore = unit.rowScores?.back ?? unit.rowScores?.middle ?? 50;
+
+  const support = clampArmyScore(
+    (roleSet.has("role.flex-support") ? 32 : 0) +
+      (roleSet.has("support.heal") ? 22 : 0) +
+      (roleSet.has("support.cleanse") ? 18 : 0) +
+      (typeKey === "援" ? 16 : 0) +
+      (expertFamily === "support" ? 18 : 0) +
+      (unit.scoreBreakdown?.utilityScore ?? controlScore) * 0.24 +
+      cleanseScore * 0.16 +
+      sustainScore * 0.08
+  );
+  const disruptor = clampArmyScore(
+    (roleSet.has("role.disruptor") ? 34 : 0) +
+      (roleSet.has("control.buff-strip") ? 18 : 0) +
+      (roleSet.has("control.fear") ? 18 : 0) +
+      (typeKey === "妨" ? 16 : 0) +
+      controlScore * 0.38 +
+      (expertFamily === "support" ? 10 : 0)
+  );
+  const frontline = clampArmyScore(
+    (roleSet.has("role.frontline-anchor") ? 34 : 0) +
+      (roleSet.has("def.damage-cut") ? 18 : 0) +
+      (roleSet.has("def.debuff-immunity") ? 14 : 0) +
+      (typeKey === "護" ? 16 : 0) +
+      ehpScore * 0.34 +
+      sustainScore * 0.18 +
+      frontRowScore * 0.1 +
+      (expertFamily === "defense" ? 16 : 0)
+  );
+  const pressure = clampArmyScore(
+    (roleSet.has("role.burst-commander") ? 30 : 0) +
+      (roleSet.has("role.siege-breaker") ? 20 : 0) +
+      (roleSet.has("role.counter-enabler") ? 8 : 0) +
+      (typeKey === "闘" ? 16 : 0) +
+      burstScore * 0.38 +
+      powerScore * 0.18 +
+      tempoScore * 0.12 +
+      (expertFamily === "assault" ? 16 : 0) +
+      (expertFamily === "siege" ? 14 : 0)
+  );
+  const orderLabel = commander?.battleArtMeta?.chainOrder ?? "普通";
+  const late = clampArmyScore(
+    frontline * 0.4 +
+      pressure * 0.22 +
+      sustainScore * 0.18 +
+      backRowScore * 0.12 +
+      (orderLabel === "遅い" ? 16 : orderLabel === "普通" ? 8 : 0) +
+      (expertFamily === "defense" ? 10 : 0) +
+      (roleSet.has("support.heal") ? 6 : 0)
+  );
+
+  return {
+    support,
+    pressure,
+    frontline,
+    disruptor,
+    late,
+    primaryKey: getArmyObservedTopProfileKey({ support, pressure, frontline, disruptor, late })
+  };
+}
+
+function getArmyObservedSlotProfileMatch(unit, slot, formation, concept) {
+  const profile = getArmyObservedUnitProfile(unit);
+  const preferences = getArmyObservedSlotProfile(slot, formation);
+  const totalWeight = Math.max(sumArmyValues(Object.values(preferences)), 0.01);
+  const weightedScore =
+    (profile.support * (preferences.support ?? 0) +
+      profile.pressure * (preferences.pressure ?? 0) +
+      profile.frontline * (preferences.frontline ?? 0) +
+      profile.disruptor * (preferences.disruptor ?? 0) +
+      profile.late * (preferences.late ?? 0)) /
+    totalWeight;
+  const preferredKey = getArmyObservedTopProfileKey(preferences);
+  let bonus = 0;
+
+  if (concept?.primaryObjective === "siege" && preferredKey === "pressure" && profile.pressure >= 66) {
+    bonus += 4;
+  }
+  if (concept?.primaryObjective === "defense" && (preferredKey === "frontline" || preferredKey === "late") && profile.frontline >= 62) {
+    bonus += 4;
+  }
+  if (concept?.key === "debuff" && preferredKey === "disruptor" && profile.disruptor >= 62) {
+    bonus += 4;
+  }
+  if (preferredKey === "support" && profile.support >= 62) {
+    bonus += 3;
+  }
+
+  return {
+    score: clampArmyScore(weightedScore + bonus),
+    profile,
+    preferences,
+    preferredKey,
+    actualKey: profile.primaryKey
+  };
+}
+
+function getArmyObservedArmyPatternScore(units = [], concept, formation) {
+  if (!units.length) {
+    return {
+      score: 0,
+      slotAverage: 0,
+      compositionScore: 0,
+      counts: { support: 0, pressure: 0, frontline: 0, disruptor: 0, late: 0 },
+      matchedSlots: [],
+      weakSlots: [],
+      focusText: ARMY_OBSERVED_FORMATION_FOCUS_TEXT[formation?.key] ?? "",
+      summaryText: ""
+    };
+  }
+
+  const slotEntries = units.map((unit) => {
+    const slot =
+      unit.assignedFormationSlot ??
+      getFormationSlotMeta(formation, unit.assignedFormationSlot?.key ?? formation?.slots?.[0]?.key ?? "first");
+    const match = getArmyObservedSlotProfileMatch(unit, slot, formation, concept);
+    return {
+      unit,
+      slot,
+      ...match
+    };
+  });
+  const counts = slotEntries.reduce(
+    (result, entry) => {
+      result.support += getArmyObservedCountContribution(entry.profile.support);
+      result.pressure += getArmyObservedCountContribution(entry.profile.pressure);
+      result.frontline += getArmyObservedCountContribution(entry.profile.frontline);
+      result.disruptor += getArmyObservedCountContribution(entry.profile.disruptor);
+      result.late += getArmyObservedCountContribution(entry.profile.late);
+      return result;
+    },
+    { support: 0, pressure: 0, frontline: 0, disruptor: 0, late: 0 }
+  );
+  const targets = getArmyObservedFormationTargets(formation, concept);
+  const bandScores = {
+    support: getArmyObservedBandScore(counts.support, ...(targets.support ?? ARMY_OBSERVED_PATTERN_TARGETS.generic.support)),
+    pressure: getArmyObservedBandScore(counts.pressure, ...(targets.pressure ?? ARMY_OBSERVED_PATTERN_TARGETS.generic.pressure)),
+    frontline: getArmyObservedBandScore(counts.frontline, ...(targets.frontline ?? ARMY_OBSERVED_PATTERN_TARGETS.generic.frontline)),
+    disruptor: getArmyObservedBandScore(counts.disruptor, ...(targets.disruptor ?? ARMY_OBSERVED_PATTERN_TARGETS.generic.disruptor)),
+    late: getArmyObservedBandScore(counts.late, ...(targets.late ?? ARMY_OBSERVED_PATTERN_TARGETS.generic.late))
+  };
+  const formationMix = getArmyObservedFormationMixScore(units, formation);
+  const diversityScore = clampArmyScore(
+    54 +
+      Math.min(18, new Set(slotEntries.map((entry) => entry.actualKey)).size * 9) +
+      (counts.support >= 0.9 ? 8 : -6) +
+      (counts.pressure >= 2.4 ? 10 : counts.pressure >= 1.8 ? 4 : -8) +
+      (counts.frontline >= 0.8 ? 8 : concept?.key === "defense" ? -10 : -4) +
+      (counts.disruptor <= (concept?.key === "debuff" ? 2.4 : 1.6) ? 4 : -6)
+  );
+  const slotAverage = clampArmyScore(averageArmyValues(slotEntries.map((entry) => entry.score)));
+  const compositionScore = clampArmyScore(
+    bandScores.support * 0.22 +
+      bandScores.pressure * 0.24 +
+      bandScores.frontline * 0.2 +
+      bandScores.disruptor * 0.14 +
+      bandScores.late * 0.12 +
+      diversityScore * 0.04 +
+      formationMix.score * 0.08
+  );
+  const matchedSlots = slotEntries
+    .filter((entry) => entry.score >= 70)
+    .sort((left, right) => right.score - left.score)
+    .slice(0, 3)
+    .map((entry) => `${entry.slot.label}${getArmyObservedProfileLabel(entry.actualKey)}`);
+  const weakSlots = slotEntries
+    .filter((entry) => entry.score < 56)
+    .sort((left, right) => left.score - right.score)
+    .slice(0, 2)
+    .map((entry) => `${entry.slot.label}${getArmyObservedProfileLabel(entry.preferredKey)}寄り`);
+
+  return {
+    score: clampArmyScore(compositionScore * 0.68 + slotAverage * 0.32),
+    slotAverage,
+    compositionScore,
+    counts,
+    bandScores,
+    diversityScore,
+    formationMixScore: formationMix.score,
+    formationMixText: formationMix.text,
+    matchedSlots,
+    weakSlots,
+    focusText:
+      ARMY_OBSERVED_FORMATION_FOCUS_TEXT[formation?.key] ??
+      "役割を散らしつつ、速い枠と遅い枠の使い分けを見ています。",
+      summaryText: `支援${counts.support.toFixed(1)} / 圧力${counts.pressure.toFixed(1)} / 前線${counts.frontline.toFixed(1)} / 妨害${counts.disruptor.toFixed(1)}${formationMix.text ? ` / 型 ${formationMix.text}` : ""}`
+  };
+}
+
+function getArmyCommunityFormationGuide(formation, concept) {
+  const seasonFocusKey = getArmySelectedSeasonFocusKey();
+  const seasonFocus = getArmySeasonFocusConfig("s3", concept);
+  const guide = ARMY_COMMUNITY_FORMATION_GUIDES[formation?.key] ?? ARMY_COMMUNITY_FORMATION_GUIDES.generic;
+  const conceptBonus =
+    (ARMY_COMMUNITY_CONCEPT_FORMATION_BONUS[concept?.key]?.[formation?.key] ?? 0) +
+    (seasonFocus.formationBias?.[formation?.key] ?? 0);
+  const fallbackLabel = FORMATION_MAP[guide.fallbackFormationKey]?.label ?? formation?.label ?? "基本陣";
+  const profileTargets = Object.fromEntries(
+    Object.entries(guide.profileTargets ?? {}).map(([key, band]) => [
+      key,
+      shiftArmyObservedBand(band, ...(seasonFocus.profileDelta?.[key] ?? [0, 0]))
+    ])
+  );
+  const axisTargets = Object.fromEntries(
+    Object.entries(guide.axisTargets ?? {}).map(([key, band]) => [
+      key,
+      shiftArmyObservedBand(band, ...(seasonFocus.axisDelta?.[key] ?? [0, 0]))
+    ])
+  );
+  return {
+    ...guide,
+    seasonFocusKey,
+    seasonFocusLabel: seasonFocus.label,
+    focusText: `${guide.focusText} ${seasonFocus.summary}`,
+    sourceText: `${guide.sourceText} / ${seasonFocus.label}`,
+    profileTargets,
+    axisTargets,
+    conceptBonus,
+    fallbackLabel
+  };
+}
+
+function getArmyCommunityProfileCounts(units = []) {
+  return units.reduce(
+    (result, unit) => {
+      const profile = getArmyObservedUnitProfile(unit);
+      result.support += getArmyObservedCountContribution(profile.support);
+      result.pressure += getArmyObservedCountContribution(profile.pressure);
+      result.frontline += getArmyObservedCountContribution(profile.frontline);
+      result.disruptor += getArmyObservedCountContribution(profile.disruptor);
+      result.late += getArmyObservedCountContribution(profile.late);
+      result.primaryCounts[profile.primaryKey] = (result.primaryCounts[profile.primaryKey] ?? 0) + 1;
+      return result;
+    },
+    {
+      support: 0,
+      pressure: 0,
+      frontline: 0,
+      disruptor: 0,
+      late: 0,
+      primaryCounts: {}
+    }
+  );
+}
+
+function getArmyCommonFoundationScore(units = [], concept, formation, activeFormationBonus, formationPlacementScore = 0) {
+  const seasonFocus = getArmySeasonFocusConfig("s3", concept);
+  if (!units.length) {
+    return {
+      score: 0,
+      chainScore: 0,
+      roleCoreScore: 0,
+      commanderCoreScore: 0,
+      formationReadinessScore: 0,
+      summaryText: "",
+      warningText: "",
+      focusText: "共通条件とS3条件を分けて見ます。"
+    };
+  }
+
+  const counts = getArmyCommunityProfileCounts(units);
+  const chainScore = clampArmyScore(averageArmyValues(units.map((unit) => unit.chainAverage ?? 0)));
+  const videoTheoryScore = clampArmyScore(averageArmyValues(units.map((unit) => unit.videoTheory?.score ?? 50)));
+  const commanderCoreScore = clampArmyScore(
+    averageArmyValues(units.map((unit) => getArmySlotBaseScore(getArmyMeta(unit.commander), "commander", concept)))
+  );
+  const roleCoreScore = clampArmyScore(
+    getArmyObservedBandScore(counts.support, 0.8, 1.8) * 0.22 +
+      getArmyObservedBandScore(counts.pressure, 1.8, 3.6) * 0.3 +
+      getArmyObservedBandScore(counts.frontline, 0.8, 1.8) * 0.24 +
+      getArmyObservedBandScore(counts.disruptor, 0.2, 1.4) * 0.12 +
+      getArmyObservedBandScore(counts.late, 0.8, 2) * 0.12
+  );
+  const s3DensityScore = clampArmyScore(
+    getArmyObservedBandScore(counts.support, 1, 2.1) * 0.54 +
+      getArmyObservedBandScore(counts.disruptor, 0.5, 1.6) * 0.46
+  );
+  const formationReadinessScore = clampArmyScore(
+    (activeFormationBonus ? 74 + activeFormationBonus.value * 0.22 : 48) * 0.5 +
+      formationPlacementScore * 0.3 +
+      averageArmyValues(units.map((unit) => unit.scoreAxes?.sustain40s ?? 50)) * 0.2
+  );
+  const commonRequirementScore = clampArmyScore(
+    chainScore * 0.32 +
+      roleCoreScore * 0.3 +
+      commanderCoreScore * 0.2 +
+      formationReadinessScore * 0.18
+  );
+  const s3ConditionScore = clampArmyScore(
+    s3DensityScore * 0.4 +
+      videoTheoryScore * 0.36 +
+      formationReadinessScore * 0.24
+  );
+  const commonConditionText = [
+    counts.support >= 0.7 ? "始動役あり" : "始動役不足",
+    counts.pressure >= 1.7 ? "圧力あり" : "圧力不足",
+    counts.frontline >= 0.7 ? "前線あり" : "前線不足",
+    chainScore >= 60 ? "副将連鎖あり" : "副将連鎖不足",
+    commanderCoreScore >= 62 ? "主将軸成立" : "主将軸が弱い"
+  ].join(" / ");
+  const s3ConditionText = [
+    s3DensityScore >= 60 ? "支援/妨害密度○" : "支援/妨害密度不足",
+    videoTheoryScore >= 60 ? "技能束ね○" : "技能束ね不足",
+    formationReadinessScore >= 60 ? "配置準備○" : "配置準備不足"
+  ].join(" / ");
+  const s2ReferenceText =
+    (seasonFocus.referenceMix?.s2 ?? 0) >= 0.1
+      ? "S2参考を少し強めに反映: 初動20秒と陣形速度も補助加点"
+      : "S2参考は軽め: 初動20秒と陣形相性は補助加点のみ";
+
+  const warnings = [];
+  if (counts.support < 0.7) {
+    warnings.push("支援不足");
+  }
+  if (counts.pressure < 1.7) {
+    warnings.push("圧力不足");
+  }
+  if (counts.frontline < 0.7) {
+    warnings.push("前線不足");
+  }
+  if (chainScore < 60) {
+    warnings.push("連鎖率不足");
+  }
+  if (formationPlacementScore < 58) {
+    warnings.push("配置不足");
+  }
+  if (s3DensityScore < 58) {
+    warnings.push("S3支援/妨害不足");
+  }
+
+  return {
+    score: clampArmyScore(
+      chainScore * 0.24 +
+        roleCoreScore * 0.28 +
+        commanderCoreScore * 0.2 +
+        formationReadinessScore * 0.14 +
+        s3DensityScore * 0.08 +
+        videoTheoryScore * 0.06
+    ),
+    chainScore,
+    roleCoreScore,
+    commanderCoreScore,
+    formationReadinessScore,
+    videoTheoryScore,
+    s3DensityScore,
+    commonRequirementScore,
+    s3ConditionScore,
+    summaryText: `必要 ${commonRequirementScore.toFixed(0)} / S3 ${s3ConditionScore.toFixed(0)} / 配置 ${formationReadinessScore.toFixed(0)}`,
+    warningText: warnings.join(" / "),
+    focusText:
+      `共通では主将軸・副将連鎖・支援/圧力/前線の最低限を見ます。S3では支援/妨害/継戦の密度と技能束ねを十分条件寄りに扱います。 ${seasonFocus.summary}`,
+    commonConditionText,
+    s3ConditionText,
+    s2ReferenceText
+  };
+}
+
+function getArmyCommunityFormationGuideScore(units = [], concept, formation, activeFormationBonus, formationPlacementScore = 0) {
+  const guide = getArmyCommunityFormationGuide(formation, concept);
+  if (!units.length) {
+    return {
+      score: 0,
+      naturalnessScore: 0,
+      replacementFlexScore: 0,
+      antiForceScore: 0,
+      counts: { support: 0, pressure: 0, frontline: 0, disruptor: 0, late: 0 },
+      primaryCounts: {},
+      focusText: guide.focusText,
+      sourceText: guide.sourceText,
+      summaryText: "",
+      warningText: "",
+      improvementTip: "",
+      conceptBonus: guide.conceptBonus,
+      fallbackLabel: guide.fallbackLabel
+    };
+  }
+
+  const counts = getArmyCommunityProfileCounts(units);
+  const teamAxes = {
+    burst20s: averageArmyValues(units.map((unit) => unit.scoreAxes?.burst20s ?? 50)),
+    sustain40s: averageArmyValues(units.map((unit) => unit.scoreAxes?.sustain40s ?? 50)),
+    controlUptime: averageArmyValues(units.map((unit) => unit.scoreAxes?.controlUptime ?? 50)),
+    siegeDps: averageArmyValues(units.map((unit) => unit.scoreAxes?.siegeDps ?? 50)),
+    cleanseCoverage: averageArmyValues(units.map((unit) => unit.scoreAxes?.cleanseCoverage ?? 0))
+  };
+  const baseProfileTargets = guide.profileTargets ?? ARMY_COMMUNITY_FORMATION_GUIDES.generic.profileTargets;
+  const baseAxisTargets = guide.axisTargets ?? ARMY_COMMUNITY_FORMATION_GUIDES.generic.axisTargets;
+  const profileScores = {
+    support: getArmyObservedBandScore(counts.support, ...(baseProfileTargets.support ?? [0, 100])),
+    pressure: getArmyObservedBandScore(counts.pressure, ...(baseProfileTargets.pressure ?? [0, 100])),
+    frontline: getArmyObservedBandScore(counts.frontline, ...(baseProfileTargets.frontline ?? [0, 100])),
+    disruptor: getArmyObservedBandScore(counts.disruptor, ...(baseProfileTargets.disruptor ?? [0, 100])),
+    late: getArmyObservedBandScore(counts.late, ...(baseProfileTargets.late ?? [0, 100]))
+  };
+  const axisScores = {
+    burst20s: getArmyObservedBandScore(teamAxes.burst20s, ...(baseAxisTargets.burst20s ?? [0, 100])),
+    sustain40s: getArmyObservedBandScore(teamAxes.sustain40s, ...(baseAxisTargets.sustain40s ?? [0, 100])),
+    controlUptime: getArmyObservedBandScore(teamAxes.controlUptime, ...(baseAxisTargets.controlUptime ?? [0, 100])),
+    siegeDps: getArmyObservedBandScore(teamAxes.siegeDps, ...(baseAxisTargets.siegeDps ?? [0, 100])),
+    cleanseCoverage: getArmyObservedBandScore(teamAxes.cleanseCoverage, ...(baseAxisTargets.cleanseCoverage ?? [0, 100]))
+  };
+  const naturalnessScore = clampArmyScore(
+    profileScores.support * 0.16 +
+      profileScores.pressure * 0.26 +
+      profileScores.frontline * 0.18 +
+      profileScores.disruptor * 0.16 +
+      profileScores.late * 0.08 +
+      averageArmyValues(Object.values(axisScores)) * 0.16
+  );
+  const roleFloorHits = ["support", "pressure", "frontline", "disruptor"].filter(
+    (key) => counts[key] >= Math.max(0.4, (baseProfileTargets[key]?.[0] ?? 0.5) * 0.8)
+  ).length;
+  const uniquePrimaryCount = Object.keys(counts.primaryCounts).length;
+  const primaryCrowd = Math.max(...Object.values(counts.primaryCounts), 0);
+  const replacementFlexScore = clampArmyScore(
+    38 + uniquePrimaryCount * 14 + roleFloorHits * 8 - Math.max(0, primaryCrowd - 2) * 9
+  );
+
+  const warnings = [];
+  let antiForcePenalty = 0;
+  if (formation.key !== "basic" && !activeFormationBonus) {
+    antiForcePenalty += formation.key === "sakubou" ? 22 : 18;
+    warnings.push("陣効果未発動");
+  }
+  if (formationPlacementScore < 56) {
+    antiForcePenalty += Math.round((56 - formationPlacementScore) * 0.22);
+    warnings.push("配置噛み合い不足");
+  }
+
+  switch (formation.key) {
+    case "suikou":
+      if (counts.pressure < 2.2) {
+        antiForcePenalty += 18;
+        warnings.push("圧力不足");
+      }
+      if (counts.support < 0.5 && counts.disruptor < 0.4) {
+        antiForcePenalty += 12;
+        warnings.push("橋渡し不足");
+      }
+      if (Math.max(teamAxes.burst20s, teamAxes.siegeDps) < 54) {
+        antiForcePenalty += 14;
+        warnings.push("攻め筋不足");
+      }
+      break;
+    case "kakuyoku":
+      if (counts.frontline < 0.9) {
+        antiForcePenalty += 18;
+        warnings.push("前線不足");
+      }
+      if (counts.support < 1.1) {
+        antiForcePenalty += 14;
+        warnings.push("支援不足");
+      }
+      if (teamAxes.sustain40s < 56) {
+        antiForcePenalty += 12;
+        warnings.push("継戦不足");
+      }
+      break;
+    case "houjin":
+      if (counts.pressure < 1.9) {
+        antiForcePenalty += 14;
+        warnings.push("戦法火力不足");
+      }
+      if (counts.support < 0.8) {
+        antiForcePenalty += 10;
+        warnings.push("支援核不足");
+      }
+      break;
+    case "sakubou":
+      if (counts.disruptor < 1.6) {
+        antiForcePenalty += 28;
+        warnings.push("妨害核不足");
+      }
+      if (counts.support < 0.6) {
+        antiForcePenalty += 12;
+        warnings.push("支援不足");
+      }
+      if (teamAxes.controlUptime < 60) {
+        antiForcePenalty += 22;
+        warnings.push("前半妨害不足");
+      }
+      break;
+    default:
+      if (!activeFormationBonus) {
+        antiForcePenalty += 16;
+      }
+      if (uniquePrimaryCount < 3) {
+        antiForcePenalty += 8;
+        warnings.push("役割偏重");
+      }
+      break;
+  }
+
+  const antiForceScore = clampArmyScore(
+    100 -
+      antiForcePenalty +
+      Math.min(8, (activeFormationBonus?.bonuses?.length ?? 0) * 4) +
+      Math.max(0, guide.conceptBonus)
+  );
+  const activeBonusScore = activeFormationBonus
+    ? clampArmyScore(56 + activeFormationBonus.value * 0.62 + guide.conceptBonus)
+    : clampArmyScore(42 + guide.conceptBonus);
+  const score = clampArmyScore(
+    naturalnessScore * 0.48 +
+      replacementFlexScore * 0.22 +
+      antiForceScore * 0.18 +
+      activeBonusScore * 0.12
+  );
+  const warningText = [...new Set(warnings)].join(" / ");
+
+  return {
+    score,
+    naturalnessScore,
+    replacementFlexScore,
+    antiForceScore,
+    counts: {
+      support: counts.support,
+      pressure: counts.pressure,
+      frontline: counts.frontline,
+      disruptor: counts.disruptor,
+      late: counts.late
+    },
+    primaryCounts: counts.primaryCounts,
+    focusText: guide.focusText,
+    sourceText: guide.sourceText,
+    summaryText: `自然さ ${naturalnessScore.toFixed(0)} / 代用性 ${replacementFlexScore.toFixed(0)} / 無理合わせ ${antiForceScore.toFixed(0)}`,
+    warningText,
+    improvementTip: warningText ? `${warningText.split(" / ")[0]} を補うか ${guide.fallbackLabel} へ戻す` : "",
+    conceptBonus: guide.conceptBonus,
+    fallbackLabel: guide.fallbackLabel
+  };
+}
+
+function getArmyFormationViabilityAssessment(
+  units = [],
+  concept,
+  formation,
+  activeFormationBonus,
+  formationPlacementScore = 0,
+  communityGuide = null
+) {
+  if (!units.length) {
+    return {
+      score: 0,
+      penalty: 100,
+      warningText: "",
+      teamAxes: {
+        burst20s: 0,
+        sustain40s: 0,
+        controlUptime: 0,
+        siegeDps: 0
+      }
+    };
+  }
+
+  const nonBasic = formation?.key !== "basic";
+  const teamAxes = {
+    burst20s: averageArmyValues(units.map((unit) => unit.scoreAxes?.burst20s ?? 0)),
+    sustain40s: averageArmyValues(units.map((unit) => unit.scoreAxes?.sustain40s ?? 0)),
+    controlUptime: averageArmyValues(units.map((unit) => unit.scoreAxes?.controlUptime ?? 0)),
+    siegeDps: averageArmyValues(units.map((unit) => unit.scoreAxes?.siegeDps ?? 0))
+  };
+  const warnings = [];
+  let penalty = 0;
+
+  if (nonBasic && !activeFormationBonus) {
+    penalty += formation?.key === "sakubou" ? 34 : 26;
+    warnings.push("陣効果未発動");
+  }
+
+  if (nonBasic && formationPlacementScore < 60) {
+    penalty += Math.round((60 - formationPlacementScore) * 0.45);
+    warnings.push("配置準備不足");
+  }
+
+  if (communityGuide && nonBasic && communityGuide.antiForceScore < 60) {
+    penalty += Math.round((60 - communityGuide.antiForceScore) * 0.5);
+  }
+
+  const pressureHeavyConcept =
+    concept?.primaryObjective === "pvp" || ["balanced", "meta", "opener", "debuff"].includes(concept?.key);
+  if (pressureHeavyConcept && teamAxes.burst20s < 30) {
+    penalty += Math.round((30 - teamAxes.burst20s) * 1.1);
+    warnings.push("初動火力不足");
+  }
+
+  switch (formation?.key) {
+    case "sakubou":
+      if ((communityGuide?.counts?.disruptor ?? 0) < 1.8) {
+        penalty += 18;
+        warnings.push("妨害枚数不足");
+      }
+      if ((communityGuide?.counts?.support ?? 0) < 0.6) {
+        penalty += 12;
+        warnings.push("支援不足");
+      }
+      if (teamAxes.controlUptime < 60) {
+        penalty += Math.round((60 - teamAxes.controlUptime) * 0.8);
+        warnings.push("妨害維持不足");
+      }
+      if (teamAxes.burst20s < 28) {
+        penalty += Math.round((28 - teamAxes.burst20s) * 0.9);
+        warnings.push("削り不足");
+      }
+      break;
+    case "suikou":
+      if (teamAxes.burst20s < 56) {
+        penalty += Math.round((56 - teamAxes.burst20s) * 0.65);
+        warnings.push("速攻不足");
+      }
+      if ((communityGuide?.counts?.support ?? 0) < 0.5 && (communityGuide?.counts?.disruptor ?? 0) < 0.4) {
+        penalty += 10;
+        warnings.push("橋渡し不足");
+      }
+      if (teamAxes.siegeDps < 46 && concept?.primaryObjective === "siege") {
+        penalty += Math.round((46 - teamAxes.siegeDps) * 0.5);
+      }
+      break;
+    case "kakuyoku":
+      if ((communityGuide?.counts?.support ?? 0) < 1.1) {
+        penalty += 12;
+        warnings.push("支援不足");
+      }
+      if (teamAxes.sustain40s < 58) {
+        penalty += Math.round((58 - teamAxes.sustain40s) * 0.65);
+        warnings.push("継戦不足");
+      }
+      break;
+    case "houjin":
+      if (teamAxes.burst20s < 38) {
+        penalty += Math.round((38 - teamAxes.burst20s) * 0.45);
+        warnings.push("押し込み不足");
+      }
+      break;
+    default:
+      break;
+  }
+
+  const bonusCredit = activeFormationBonus ? Math.min(10, (activeFormationBonus.value ?? 0) * 0.08) : 0;
+  return {
+    score: clampArmyScore(100 - penalty + bonusCredit),
+    penalty: Math.max(0, Math.round(penalty - bonusCredit)),
+    warningText: [...new Set(warnings)].join(" / "),
+    teamAxes
+  };
+}
+
 function getArmyFormationPlacementScore(unit, slot, formation, concept) {
   const rowScore = unit.rowScores[slot.rowKey] ?? unit.rowScores[unit.defaultRow] ?? 50;
   const tempoBias = getArmyFormationSlotTempoBias(slot.key, formation);
@@ -4754,8 +9932,9 @@ function getArmyFormationPlacementScore(unit, slot, formation, concept) {
   );
   const orderLabel = unit.commander.battleArtMeta?.chainOrder ?? "普通";
   const orderBonus = clampArmyScore((concept.orderWeights?.[orderLabel] ?? 0.72) * 100);
+  const observedMatch = getArmyObservedSlotProfileMatch(unit, slot, formation, concept);
 
-  return clampArmyScore(rowScore * 0.68 + slotFitScore * 0.22 + orderBonus * 0.1);
+  return clampArmyScore(rowScore * 0.56 + slotFitScore * 0.22 + orderBonus * 0.08 + observedMatch.score * 0.14);
 }
 
 function chooseArmyFormationAssignment(units, concept, formation) {
@@ -5028,13 +10207,71 @@ function evaluateArmyCompositionForFormation(units, concept, seedMeta, formation
   );
   const activeFormationBonus = getArmyFormationActiveBonus(augmentedUnits, formation);
   const formationPlacementScore = clampArmyScore(formationAssignment.score / Math.max(augmentedUnits.length, 1));
-  const formationBonusScore = activeFormationBonus ? clampArmyScore(56 + activeFormationBonus.value * 0.72) : 30;
+  const formationProfileCounts = getArmyCommunityProfileCounts(augmentedUnits);
+  const formationAxesPreview = {
+    burst20s: averageArmyValues(augmentedUnits.map((unit) => unit.scoreAxes?.burst20s ?? 50)),
+    sustain40s: averageArmyValues(augmentedUnits.map((unit) => unit.scoreAxes?.sustain40s ?? 50)),
+    controlUptime: averageArmyValues(augmentedUnits.map((unit) => unit.scoreAxes?.controlUptime ?? 50)),
+    siegeDps: averageArmyValues(augmentedUnits.map((unit) => unit.scoreAxes?.siegeDps ?? 50))
+  };
+  const formationStrategicBias = getArmyFormationStrategicBias(
+    augmentedUnits,
+    concept,
+    formation,
+    formationProfileCounts,
+    formationAxesPreview
+  );
+  const formationBonusScore = activeFormationBonus
+    ? clampArmyScore(56 + activeFormationBonus.value * 0.72)
+    : formation.key === "basic"
+      ? 46
+      : 8;
+  const commonFoundation = getArmyCommonFoundationScore(
+    augmentedUnits,
+    concept,
+    formation,
+    activeFormationBonus,
+    formationPlacementScore
+  );
+  const communityGuide = getArmyCommunityFormationGuideScore(
+    augmentedUnits,
+    concept,
+    formation,
+    activeFormationBonus,
+    formationPlacementScore
+  );
+  const formationViability = getArmyFormationViabilityAssessment(
+    augmentedUnits,
+    concept,
+    formation,
+    activeFormationBonus,
+    formationPlacementScore,
+    communityGuide
+  );
   const formationRecommendationScore =
     formation.key === getConceptRecommendedFormationKey(concept)
-      ? 100
-      : clampArmyScore(70 - Math.abs(formationPlacementScore - 60) * 0.2);
+      ? clampArmyScore(
+          (activeFormationBonus || formation.key === "basic" ? 78 : 58) +
+            communityGuide.conceptBonus * 0.5 +
+            formationStrategicBias.rawBonus * 0.8 -
+            Math.max(0, 58 - formationViability.score) * 0.18
+        )
+      : clampArmyScore(
+          (activeFormationBonus ? 60 : 36) +
+            communityGuide.conceptBonus * 0.4 +
+            formationStrategicBias.rawBonus * 0.72 -
+            Math.abs(formationPlacementScore - 60) * 0.22
+        );
+  const observedPattern = getArmyObservedArmyPatternScore(augmentedUnits, concept, formation);
   const formationFitScore = clampArmyScore(
-    formationPlacementScore * 0.48 + formationBonusScore * 0.34 + formationRecommendationScore * 0.18
+    formationPlacementScore * 0.24 +
+      formationBonusScore * 0.18 +
+      formationRecommendationScore * 0.08 +
+      formationStrategicBias.score * 0.1 +
+      observedPattern.score * 0.1 +
+      communityGuide.score * 0.08 +
+      commonFoundation.score * 0.08 +
+      formationViability.score * 0.24
   );
 
   const penalties = {};
@@ -5079,6 +10316,18 @@ function evaluateArmyCompositionForFormation(units, concept, seedMeta, formation
   }, 0);
   if (rowDelta >= 2) {
     penalties.rowMismatch = Math.round(rowDelta * 2.5);
+  }
+  if (commonFoundation.warningText.split(" / ").filter(Boolean).length >= 3) {
+    penalties.foundationWeak = 8;
+  }
+  if (formation.key !== "basic" && communityGuide.antiForceScore < 58) {
+    penalties.forcedFormation = Math.round((58 - communityGuide.antiForceScore) * (formation.key === "sakubou" ? 0.58 : 0.42));
+  }
+  if (formation.key !== "basic" && formationViability.penalty > 0) {
+    penalties.formationViability = Math.round(formationViability.penalty * 0.7);
+  }
+  if (formation.key === "basic") {
+    penalties.basicFormation = 28;
   }
 
   const powerEstimate = getArmyPowerEstimate({
@@ -5125,11 +10374,18 @@ function evaluateArmyCompositionForFormation(units, concept, seedMeta, formation
     ),
     formationFit: formationFitScore,
     metaPrior: clampArmyScore(
-      averageArmyValues(augmentedUnits.map((unit) => unit.scoreAxes?.metaPrior ?? 0)) * 0.72 +
-        roleCoverageScore * 0.1 +
-        expertCoverageScore * 0.18
+      averageArmyValues(augmentedUnits.map((unit) => unit.scoreAxes?.metaPrior ?? 0)) * 0.56 +
+        roleCoverageScore * 0.08 +
+        expertCoverageScore * 0.14 +
+        observedPattern.score * 0.12 +
+        communityGuide.score * 0.06 +
+        commonFoundation.score * 0.12
     ),
-    roleCoverage: clampArmyScore(roleCoverageScore * 0.84 + averageArmyValues(augmentedUnits.map((unit) => unit.scoreAxes?.roleCoverage ?? 0)) * 0.16),
+    roleCoverage: clampArmyScore(
+      roleCoverageScore * 0.74 +
+        averageArmyValues(augmentedUnits.map((unit) => unit.scoreAxes?.roleCoverage ?? 0)) * 0.14 +
+        commonFoundation.score * 0.12
+    ),
     investmentEfficiency: clampArmyScore(
       averageArmyValues(augmentedUnits.map((unit) => unit.scoreAxes?.investmentEfficiency ?? 0)) * 0.76 +
         clampArmyScore((powerEstimate.growth / Math.max(powerEstimate.potential, 1)) * 140) * 0.24
@@ -5146,6 +10402,9 @@ function evaluateArmyCompositionForFormation(units, concept, seedMeta, formation
     synergyCoverageScore,
     stabilityScore: clampArmyScore(scoreAxes.ehp * 0.54 + scoreAxes.sustain40s * 0.46),
     formationFitScore: scoreAxes.formationFit,
+    commonFoundationScore: commonFoundation.score,
+    observedPatternScore: observedPattern.score,
+    communityGuideScore: communityGuide.score,
     objectivePurityScore,
     investmentEfficiencyScore: scoreAxes.investmentEfficiency
   };
@@ -5180,13 +10439,21 @@ function evaluateArmyCompositionForFormation(units, concept, seedMeta, formation
     penalties,
     scoreBreakdown,
     scoreAxes,
+    commonFoundation,
+    observedPattern,
+    communityGuide,
     preferredAxisText: formatArmyAxisText(scoreAxes, concept, 4),
     summaryParts: [
       `${concept.label}`,
       `陣形 ${formation.label}`,
+      `環境 ${getArmySeasonFocusConfig("s3", concept).label}`,
       `前${rowCounts.front} / 中${rowCounts.middle} / 後${rowCounts.back}`,
       seedMeta ? `固定武将 ${seedMeta.character.name}` : "固定武将なし",
-      `主要軸: ${formatArmyAxisText(scoreAxes, concept, 3)}`
+      `編成土台: ${commonFoundation.summaryText}`,
+      `主要軸: ${formatArmyAxisText(scoreAxes, concept, 3)}`,
+      `画像傾向: ${observedPattern.summaryText}`,
+      `記事傾向: ${communityGuide.summaryText}`,
+      formationStrategicBias.reasonText ? `陣判断: ${formationStrategicBias.reasonText}` : ""
     ],
     improvementTips: [
       missingRules[0] ? `${armyRoleTagLabel(missingRules[0].tag)} を埋める武将へ差し替える` : "",
@@ -5195,7 +10462,11 @@ function evaluateArmyCompositionForFormation(units, concept, seedMeta, formation
       brittleUnits >= 2 ? "各部隊に 前衛 or 支援 の軸を入れて型崩れを減らす" : "",
       !activeFormationBonus ? "陣効果が未発動なのでタイプ構成を寄せる" : "",
       scoreAxes.cleanseCoverage < 42 && concept.key === "defense" ? "防衛安定では弱化解除か回復を増やす" : "",
-      scoreAxes.controlUptime < 46 && concept.key === "debuff" ? "妨害先手では恐怖や強化解除を前半20秒へ寄せる" : ""
+      scoreAxes.controlUptime < 46 && concept.key === "debuff" ? "妨害先手では恐怖や強化解除を前半20秒へ寄せる" : "",
+      commonFoundation.warningText ? `${commonFoundation.warningText.split(" / ")[0]} を優先補強する` : "",
+      observedPattern.weakSlots[0] ? `${observedPattern.weakSlots[0]} の役割を画像傾向に寄せる` : "",
+      communityGuide.improvementTip,
+      formation.key === "basic" ? "基本陣は使わず、手持ちの配置適性に合う陣へ寄せる" : ""
     ].filter(Boolean),
     formation: {
       key: formation.key,
@@ -5204,7 +10475,8 @@ function evaluateArmyCompositionForFormation(units, concept, seedMeta, formation
       sourceSummary: formation.sourceSummary,
       timings: formation.timings,
       activeBonus: activeFormationBonus,
-      slotAssignments: augmentedUnits.map((unit) => unit.assignedFormationSlot)
+      slotAssignments: augmentedUnits.map((unit) => unit.assignedFormationSlot),
+      strategicBias: formationStrategicBias
     },
     powerEstimate
   };
@@ -5213,7 +10485,9 @@ function evaluateArmyCompositionForFormation(units, concept, seedMeta, formation
 function evaluateArmyComposition(units, concept, seedMeta, formationChoiceKey = "auto") {
   const choiceKey = sanitizeArmyFormationChoiceKey(formationChoiceKey);
   const formations =
-    choiceKey === "auto" ? FORMATION_DEFS : [FORMATION_MAP[choiceKey] ?? FORMATION_DEFS[0]];
+    choiceKey === "auto"
+      ? FORMATION_DEFS.filter((formation) => formation.key !== "basic")
+      : [FORMATION_MAP[choiceKey] ?? FORMATION_DEFS[0]];
 
   return keepTopArmyEntries(
     formations.map((formation) => evaluateArmyCompositionForFormation(units, concept, seedMeta, formation)),
@@ -5529,7 +10803,7 @@ function formatArmyScoreDelta(value) {
 function buildArmyFormationAlternatives(bestArmy, concept, seedMeta) {
   const basePower = getArmyPowerEstimate(bestArmy);
 
-  return FORMATION_DEFS.map((formation) => {
+  return FORMATION_DEFS.filter((formation) => formation.key !== "basic").map((formation) => {
     const candidate =
       bestArmy.formation?.key === formation.key
         ? bestArmy
@@ -5557,7 +10831,7 @@ function getArmyCandidateCountBySlot(allowedMetas, concept, slotKey) {
   }).length;
 }
 
-function getArmyResultConfidence(bestArmy, allowedMetas, usingRoster, ownedCount, concept) {
+function getArmyResultConfidence(bestArmy, allowedMetas, usingRoster, readyCount, concept) {
   const minOwnedHeroes = ARMY_BUILDER_GATES.minOwnedHeroes ?? 30;
   const minAvailableHeroes = ARMY_BUILDER_GATES.minAvailableHeroes ?? 25;
   const minCommanderCandidates = ARMY_BUILDER_GATES.minCommanderCandidates ?? 5;
@@ -5566,8 +10840,8 @@ function getArmyResultConfidence(bestArmy, allowedMetas, usingRoster, ownedCount
   ).length;
   const checks = [
     {
-      ok: !usingRoster || ownedCount >= minOwnedHeroes,
-      text: usingRoster ? `手持ち ${ownedCount}/${minOwnedHeroes}` : "全武将モード"
+      ok: !usingRoster || readyCount >= minOwnedHeroes,
+      text: usingRoster ? `仕上がり ${readyCount}/${minOwnedHeroes}` : "全武将モード"
     },
     {
       ok: allowedMetas.length >= minAvailableHeroes,
@@ -5601,7 +10875,7 @@ function getArmyResultConfidence(bestArmy, allowedMetas, usingRoster, ownedCount
   };
 }
 
-function buildArmyRoleAudit(bestArmy, allowedMetas, concept, usingRoster, ownedCount, formationAlternatives) {
+function buildArmyRoleAudit(bestArmy, allowedMetas, concept, usingRoster, readyCount, formationAlternatives) {
   const missingText = bestArmy.missingRules.length
     ? bestArmy.missingRules.map((rule) => `${armyRoleTagLabel(rule.tag)} ${rule.count}/${rule.minUnits}`).join(" / ")
     : "不足役割は大きくありません";
@@ -5629,7 +10903,7 @@ function buildArmyRoleAudit(bestArmy, allowedMetas, concept, usingRoster, ownedC
   const viceCandidates = getArmyCandidateCountBySlot(allowedMetas, concept, "vice");
   const aideCandidates = getArmyCandidateCountBySlot(allowedMetas, concept, "aide");
   const secondFormation = formationAlternatives.find((entry) => !entry.isCurrent);
-  const confidence = getArmyResultConfidence(bestArmy, allowedMetas, usingRoster, ownedCount, concept);
+  const confidence = getArmyResultConfidence(bestArmy, allowedMetas, usingRoster, readyCount, concept);
   const toolNames = [
     "missing-role-checker",
     "formation-auto-picker",
@@ -5639,6 +10913,23 @@ function buildArmyRoleAudit(bestArmy, allowedMetas, concept, usingRoster, ownedC
   const topAxes = getArmyTopAxisEntries(bestArmy.scoreAxes, concept, 4);
   const axisWeightText = topAxes.map((entry) => `${entry.label} x${entry.weight.toFixed(2)}`).join(" / ");
   const metaPriorWeight = (getArmyAxisWeights(concept).metaPrior ?? 0) * 100;
+  const commonFoundation = bestArmy.commonFoundation ?? null;
+  const observedPattern = bestArmy.observedPattern ?? null;
+  const communityGuide = bestArmy.communityGuide ?? null;
+  const videoTheoryAverage = clampArmyScore(
+    averageArmyValues(bestArmy.units.map((unit) => unit.videoTheory?.score ?? 50))
+  );
+  const videoTheoryUnitText = bestArmy.units
+    .map((unit) => `${unit.commander.name} ${Math.round(unit.videoTheory?.score ?? 0)}`)
+    .join(" / ");
+  const videoTheoryPackages = uniqueValues(
+    bestArmy.units.flatMap((unit) => (unit.videoTheory?.packages ?? []).map(getArmyVideoPackageLabel))
+  ).join(" / ");
+  const videoTheoryWarnings = uniqueValues(
+    bestArmy.units.map((unit) => unit.videoTheory?.warningText).filter(Boolean)
+  )
+    .slice(0, 2)
+    .join(" / ");
 
   return {
     confidence,
@@ -5662,12 +10953,65 @@ function buildArmyRoleAudit(bestArmy, allowedMetas, concept, usingRoster, ownedC
         body: "評価仕様の手持ち数とスロット適性基準を確認しています。",
         detail: `主将候補 ${commanderCandidates} / 副将候補 ${viceCandidates} / 補佐候補 ${aideCandidates}`,
         extra: [
-          usingRoster ? `手持ち ${ownedCount}/${ARMY_BUILDER_GATES.minOwnedHeroes ?? 30}` : "全武将モード",
+          usingRoster ? `仕上がり ${readyCount}/${ARMY_BUILDER_GATES.minOwnedHeroes ?? 30}` : "全武将モード",
           `候補 ${allowedMetas.length}/${ARMY_BUILDER_GATES.minAvailableHeroes ?? 25}`,
           `下限 主将${Math.round(getArmySlotSuitabilityFloorScore("commander"))} / 副将${Math.round(
             getArmySlotSuitabilityFloorScore("vice")
           )} / 補佐${Math.round(getArmySlotSuitabilityFloorScore("aide"))}`
         ].join(" | ")
+      },
+      {
+        title: "画像傾向",
+        body: observedPattern?.focusText ?? "上位画像の並び傾向を採点へ反映しています。",
+        detail: observedPattern?.summaryText ?? "支援・圧力・前線の散らし方を見ています。",
+        extra: observedPattern
+          ? observedPattern.weakSlots.length
+            ? `要調整 ${observedPattern.weakSlots.join(" / ")}`
+            : `一致 ${observedPattern.matchedSlots.join(" / ") || `傾向一致 ${observedPattern.score.toFixed(0)} / 100`}`
+          : "画像データ未反映"
+      },
+      {
+        title: "S3必要条件",
+        body: commonFoundation?.commonConditionText ?? "主将軸・副将連鎖・支援/圧力/前線の最低限を見ています。",
+        detail: commonFoundation
+          ? `必要 ${commonFoundation.commonRequirementScore.toFixed(0)} / 100 / ${commonFoundation.summaryText}`
+          : "必要条件 / S3条件 / 配置 を見ています。",
+        extra: commonFoundation
+          ? [
+              commonFoundation.focusText,
+              commonFoundation.warningText || "大きな欠けはありません。",
+              commonFoundation.s2ReferenceText
+            ]
+              .filter(Boolean)
+              .join(" / ")
+          : "主将軸・副将連鎖・支援/圧力/前線を見ています。"
+      },
+      {
+        title: "S3勝ち筋",
+        body: commonFoundation?.s3ConditionText ?? "支援/妨害密度と技能束ねを、S3で伸ばしたい十分条件として見ています。",
+        detail: commonFoundation
+          ? `十分 ${commonFoundation.s3ConditionScore.toFixed(0)} / 100 / 動画一致 ${videoTheoryAverage.toFixed(0)}`
+          : "支援/妨害密度 / 技能束ね / 配置 を見ています。",
+        extra: commonFoundation
+          ? [
+              commonFoundation.summaryText,
+              commonFoundation.s2ReferenceText
+            ]
+              .filter(Boolean)
+              .join(" / ")
+          : "主将軸・副将連鎖・支援/圧力/前線を見ています。"
+      },
+      {
+        title: "動画内容",
+        body: "字幕や内容で多かった主将起点 / 連鎖 / 技能束ねの一致度です。",
+        detail: `平均 ${videoTheoryAverage.toFixed(1)} / 100 / ${videoTheoryUnitText}`,
+        extra: videoTheoryWarnings || (videoTheoryPackages ? `主要要素 ${videoTheoryPackages}` : "主要要素をまだ抽出できていません。")
+      },
+      {
+        title: "記事傾向",
+        body: communityGuide?.focusText ?? "主将軸と役割代用を優先し、陣形の無理押しを下げています。",
+        detail: communityGuide?.summaryText ?? "自然さ / 代用性 / 無理合わせ を見ています。",
+        extra: communityGuide ? communityGuide.warningText || communityGuide.sourceText : "GameWith優先で外部記事をソフト反映"
       },
       {
         title: "陣形比較",
@@ -5691,7 +11035,7 @@ function buildArmyRoleAudit(bestArmy, allowedMetas, concept, usingRoster, ownedC
   };
 }
 
-function buildArmyCommanderShortlist(allowedMetas, concept, bestArmy = null, seedMeta, selectedCommanderIds = []) {
+function buildArmyCommanderShortlistLegacy(allowedMetas, concept, bestArmy = null, seedMeta, selectedCommanderIds = []) {
   const activeCommanderMap = new Map((bestArmy?.units ?? []).map((unit, index) => [unit.commander.id, index]));
   const selectedIdSet = new Set(selectedCommanderIds);
   const topCandidates = keepTopArmyEntries(
@@ -5740,6 +11084,582 @@ function buildArmyCommanderShortlist(allowedMetas, concept, bestArmy = null, see
           .join(" / ") || "主要一致タグなし"
     };
   });
+}
+
+function buildArmyUnitCandidatesForShortlist(commanderMeta, allowedMetas, concept) {
+  return buildUnitCandidatesForCommander(commanderMeta, allowedMetas, concept).slice(
+    0,
+    Math.max(ARMY_BUILDER_LIMITS.commanderPreviewUnits, 3)
+  );
+}
+
+function getArmyCommanderNeedScore(commanderMeta, bestUnit, concept) {
+  if (!bestUnit) {
+    return clampArmyScore(
+      getArmySlotBaseScore(commanderMeta, "commander", concept) * 0.74 +
+        getArmyConceptAffinity(commanderMeta, concept) * 0.16 +
+        (commanderMeta.objectiveScores?.[concept.primaryObjective] ?? 0) * 0.1
+    );
+  }
+
+  const axes = bestUnit.scoreAxes ?? {};
+  const breakdown = bestUnit.scoreBreakdown ?? {};
+  const commanderScore = getArmySlotBaseScore(commanderMeta, "commander", concept);
+  const objectiveScore = commanderMeta.objectiveScores?.[concept.primaryObjective] ?? 0;
+  const readinessScore = getArmyAvailabilityProfile(commanderMeta).currentReadinessScore ?? 100;
+
+  switch (concept.key) {
+    case "powermax":
+      return clampArmyScore(
+        (axes.powerCurrent ?? 0) * 0.32 +
+          (axes.powerPotential ?? 0) * 0.16 +
+          (breakdown.powerScore ?? 0) * 0.16 +
+          commanderScore * 0.16 +
+          objectiveScore * 0.08 +
+          commanderMeta.groupScores.offense * 0.08 +
+          readinessScore * 0.04
+      );
+    case "siege":
+      return clampArmyScore(
+        (axes.siegeDps ?? 0) * 0.34 +
+          (axes.burst20s ?? 0) * 0.14 +
+          (axes.powerCurrent ?? 0) * 0.1 +
+          (axes.roleCoverage ?? 0) * 0.08 +
+          (axes.formationFit ?? 0) * 0.08 +
+          commanderScore * 0.14 +
+          objectiveScore * 0.08 +
+          commanderMeta.groupScores.offense * 0.04
+      );
+    case "debuff":
+      return clampArmyScore(
+        (axes.controlUptime ?? 0) * 0.32 +
+          (axes.burst20s ?? 0) * 0.12 +
+          (axes.roleCoverage ?? 0) * 0.08 +
+          (axes.formationFit ?? 0) * 0.08 +
+          commanderScore * 0.14 +
+          objectiveScore * 0.08 +
+          commanderMeta.groupScores.control * 0.14 +
+          readinessScore * 0.04
+      );
+    case "opener":
+      return clampArmyScore(
+        (axes.burst20s ?? 0) * 0.3 +
+          (axes.controlUptime ?? 0) * 0.22 +
+          (axes.formationFit ?? 0) * 0.12 +
+          (axes.roleCoverage ?? 0) * 0.08 +
+          commanderScore * 0.12 +
+          objectiveScore * 0.08 +
+          commanderMeta.groupScores.control * 0.1 +
+          commanderMeta.groupScores.support * 0.1 +
+          readinessScore * 0.05
+      );
+    case "defense":
+      return clampArmyScore(
+        (axes.ehp ?? 0) * 0.28 +
+          (axes.sustain40s ?? 0) * 0.18 +
+          (axes.cleanseCoverage ?? 0) * 0.1 +
+          (axes.formationFit ?? 0) * 0.08 +
+          commanderScore * 0.14 +
+          commanderMeta.groupScores.defense * 0.14 +
+          objectiveScore * 0.04 +
+          (axes.roleCoverage ?? 0) * 0.04
+      );
+    case "growth":
+      return clampArmyScore(
+        (axes.powerPotential ?? 0) * 0.24 +
+          (axes.investmentEfficiency ?? 0) * 0.22 +
+          (axes.formationFit ?? 0) * 0.08 +
+          (axes.roleCoverage ?? 0) * 0.08 +
+          commanderScore * 0.14 +
+          objectiveScore * 0.08 +
+          readinessScore * 0.08 +
+          (breakdown.powerScore ?? 0) * 0.08
+      );
+    case "counter":
+      return clampArmyScore(
+        (axes.powerPotential ?? 0) * 0.2 +
+          (axes.burst20s ?? 0) * 0.12 +
+          (axes.sustain40s ?? 0) * 0.12 +
+          (axes.formationFit ?? 0) * 0.08 +
+          commanderScore * 0.16 +
+          commanderMeta.groupScores.offense * 0.12 +
+          objectiveScore * 0.08 +
+          (breakdown.powerScore ?? 0) * 0.12
+      );
+    case "meta":
+      return clampArmyScore(
+        (axes.metaPrior ?? 0) * 0.22 +
+          (axes.burst20s ?? 0) * 0.1 +
+          (axes.sustain40s ?? 0) * 0.08 +
+          (axes.controlUptime ?? 0) * 0.08 +
+          (axes.formationFit ?? 0) * 0.08 +
+          commanderScore * 0.14 +
+          objectiveScore * 0.08 +
+          averageArmyValues([commanderMeta.groupScores.support, commanderMeta.groupScores.control]) * 0.1 +
+          (axes.roleCoverage ?? 0) * 0.12
+      );
+    default:
+      return clampArmyScore(
+        (axes.burst20s ?? 0) * 0.16 +
+          (axes.sustain40s ?? 0) * 0.12 +
+          (axes.controlUptime ?? 0) * 0.12 +
+          (axes.formationFit ?? 0) * 0.08 +
+          commanderScore * 0.16 +
+          objectiveScore * 0.08 +
+          commanderMeta.groupScores.offense * 0.08 +
+          commanderMeta.groupScores.defense * 0.08 +
+          (axes.roleCoverage ?? 0) * 0.12
+      );
+  }
+}
+
+function buildArmyCommanderPreviewSummary(commanderMeta, allowedMetas, concept) {
+  const previewUnits = buildArmyUnitCandidatesForShortlist(commanderMeta, allowedMetas, concept);
+  const bestUnit = previewUnits[0] ?? null;
+  const viceMembers = bestUnit?.unitMembers.filter((member) => member.slotKey.startsWith("vice")) ?? [];
+  const aideMembers = bestUnit?.unitMembers.filter((member) => member.slotKey.startsWith("aide")) ?? [];
+  const chainAverage = averageArmyValues(
+    viceMembers.map((member) => normalizeChainRate(member.chainStats?.rate ?? 0))
+  );
+  const shellScore = bestUnit
+    ? clampArmyScore(
+        (bestUnit.scoreBreakdown?.synergyScore ?? 0) * 0.36 +
+          (bestUnit.scoreBreakdown?.slotFitScore ?? 0) * 0.18 +
+          (bestUnit.scoreBreakdown?.guideClusterScore ?? 0) * 0.14 +
+          (bestUnit.scoreBreakdown?.videoTheoryScore ?? 0) * 0.14 +
+          chainAverage * 0.18
+      )
+    : 0;
+  const topUnits = previewUnits.slice(0, Math.max(ARMY_BUILDER_LIMITS.commanderPreviewUnits, 3));
+  const roleSpreadScore = clampArmyScore(new Set(topUnits.flatMap((unit) => unit.roleTags ?? [])).size * 6.8);
+  const flexibilityScore = topUnits.length
+    ? clampArmyScore(
+        averageArmyValues(topUnits.map((unit) => unit.total)) * 0.44 +
+          averageArmyValues(topUnits.map((unit) => unit.scoreAxes?.roleCoverage ?? 0)) * 0.24 +
+          averageArmyValues(topUnits.map((unit) => unit.scoreAxes?.formationFit ?? 0)) * 0.14 +
+          roleSpreadScore * 0.18
+      )
+    : 0;
+  const strongCount = topUnits.filter((unit) => unit.total >= Math.max(58, (bestUnit?.total ?? 0) - 8)).length;
+  const depthScore = topUnits.length
+    ? clampArmyScore(
+        averageArmyValues(topUnits.map((unit, index) => unit.total - index * 3)) * 0.76 +
+          Math.min(100, strongCount * 18) * 0.24
+      )
+    : 0;
+  const powerEstimate = bestUnit ? getArmyUnitPowerEstimate(bestUnit) : null;
+  const focusAxes = bestUnit ? getArmyTopAxisEntries(bestUnit.scoreAxes ?? {}, concept, 2) : [];
+  const roleText = bestUnit
+    ? uniqueValues(
+        bestUnit.roleTags
+          .filter(
+            (tag) =>
+              tag.startsWith("role.") ||
+              tag.startsWith("support.") ||
+              tag.startsWith("control.") ||
+              tag.startsWith("def.")
+          )
+          .map((tag) => armyRoleTagLabel(tag))
+      )
+        .slice(0, 4)
+        .join(" / ")
+    : "役割候補不足";
+
+  return {
+    bestUnit,
+    focusAxes,
+    shellScore,
+    flexibilityScore,
+    depthScore,
+    vicePairText: viceMembers.length ? viceMembers.map((member) => member.meta.character.name).join(" / ") : "副将候補不足",
+    viceChainText: viceMembers.length
+      ? viceMembers
+          .map((member) => `${member.meta.character.name} ${formatPercent(member.chainStats?.rate ?? 0)}`)
+          .join(" / ")
+      : "連鎖候補不足",
+    aidePairText: aideMembers.length ? aideMembers.map((member) => member.meta.character.name).join(" / ") : "補佐候補不足",
+    roleText,
+    unitPowerText: powerEstimate
+      ? `現在 ${Math.round(powerEstimate.current)} / 最大 ${Math.round(powerEstimate.potential)}`
+      : "部隊見込み不足"
+  };
+}
+
+function buildArmyCommanderSafePreview(commanderMeta, concept) {
+  const commanderScore = getArmySlotBaseScore(commanderMeta, "commander", concept);
+  const conceptAffinity = getArmyConceptAffinity(commanderMeta, concept);
+  const powerEstimate = getArmyCharacterPowerSnapshot(commanderMeta);
+  const roleText =
+    uniqueValues(
+      [...commanderMeta.roleTagSet]
+        .filter(
+          (tag) =>
+            tag.startsWith("role.") || tag.startsWith("support.") || tag.startsWith("control.") || tag.startsWith("def.")
+        )
+        .map((tag) => armyRoleTagLabel(tag))
+    )
+      .slice(0, 4)
+      .join(" / ") || "役割候補整理中";
+  const focusParts = [];
+  if (commanderMeta.groupScores.control >= 68) {
+    focusParts.push("妨害先手");
+  }
+  if (commanderMeta.groupScores.support >= 68) {
+    focusParts.push("支援起点");
+  }
+  if (commanderMeta.groupScores.offense >= 70) {
+    focusParts.push("主将火力");
+  }
+  if (commanderMeta.groupScores.defense >= 70) {
+    focusParts.push("受け持ち");
+  }
+  return {
+    bestUnit: null,
+    focusAxes: [],
+    shellScore: clampArmyScore(
+      commanderMeta.chainPotential * 0.34 +
+        commanderMeta.groupScores.support * 0.22 +
+        commanderMeta.groupScores.control * 0.18 +
+        conceptAffinity * 0.16 +
+        commanderScore * 0.1
+    ),
+    flexibilityScore: clampArmyScore(
+      conceptAffinity * 0.42 +
+        commanderScore * 0.28 +
+        commanderMeta.groupScores.support * 0.1 +
+        commanderMeta.groupScores.control * 0.1 +
+        commanderMeta.groupScores.offense * 0.1
+    ),
+    depthScore: clampArmyScore(
+      commanderScore * 0.38 +
+        conceptAffinity * 0.24 +
+        commanderMeta.chainPotential * 0.18 +
+        (commanderMeta.character.tenpu / 900) * 100 * 0.2
+    ),
+    vicePairText: "選択後に副将ペアを再計算",
+    viceChainText: "主将選択後に連鎖候補を表示",
+    aidePairText: "選択後に補佐候補を再計算",
+    roleText,
+    focusText: focusParts.join(" / ") || "主将軸を作りやすい",
+    unitPowerText: `現在 ${Math.round(powerEstimate.current)} / 最大 ${Math.round(powerEstimate.potential)}`
+  };
+}
+
+function pickDiverseArmyCommanderShortlist(entries, limit) {
+  const sorted = [...entries].sort((left, right) => right.score - left.score);
+  const forced = sorted.filter((entry) => entry.isSelected || entry.isSeed || entry.isActive).slice(0, limit);
+  const picked = [...forced];
+  const pickedIdSet = new Set(picked.map((entry) => entry.meta.character.id));
+  const typeCounts = new Map();
+  const guideCounts = new Map();
+  const focusCounts = new Map();
+  const rowCounts = new Map();
+
+  const addCounts = (entry) => {
+    const typeKey = entry.meta.character.type || "any";
+    const guideKey = entry.meta.character.guideSlot || "any";
+    const focusKey = entry.focusAxes?.[0]?.key ?? "general";
+    const rowKey =
+      entry.bestUnit?.defaultRow ??
+      entry.meta.positionProfile?.dominantRow ??
+      getArmyDominantRowInfo(entry.bestUnit?.rowScores ?? entry.meta.rowScores ?? {}, "middle").rowKey;
+    typeCounts.set(typeKey, (typeCounts.get(typeKey) ?? 0) + 1);
+    guideCounts.set(guideKey, (guideCounts.get(guideKey) ?? 0) + 1);
+    focusCounts.set(focusKey, (focusCounts.get(focusKey) ?? 0) + 1);
+    rowCounts.set(rowKey, (rowCounts.get(rowKey) ?? 0) + 1);
+  };
+
+  picked.forEach(addCounts);
+
+  const remaining = sorted.filter((entry) => !pickedIdSet.has(entry.meta.character.id));
+  while (picked.length < limit && remaining.length) {
+    let bestIndex = 0;
+    let bestAdjustedScore = -Infinity;
+
+    remaining.forEach((entry, index) => {
+      const typeKey = entry.meta.character.type || "any";
+      const guideKey = entry.meta.character.guideSlot || "any";
+      const focusKey = entry.focusAxes?.[0]?.key ?? "general";
+      const rowKey =
+        entry.bestUnit?.defaultRow ??
+        entry.meta.positionProfile?.dominantRow ??
+        getArmyDominantRowInfo(entry.bestUnit?.rowScores ?? entry.meta.rowScores ?? {}, "middle").rowKey;
+      const typeCount = typeCounts.get(typeKey) ?? 0;
+      const guideCount = guideCounts.get(guideKey) ?? 0;
+      const focusCount = focusCounts.get(focusKey) ?? 0;
+      const rowCount = rowCounts.get(rowKey) ?? 0;
+      const diversityBonus =
+        (typeCount === 0 ? 4.8 : typeCount === 1 ? 1.6 : 0) +
+        (guideCount === 0 ? 2.6 : guideCount === 1 ? 0.8 : 0) +
+        (focusCount === 0 ? 1.8 : 0) +
+        (rowCount === 0 ? 2.6 : rowCount === 1 ? 0.8 : 0) +
+        Math.max(0, (entry.flexibilityScore ?? 0) - 70) * 0.03;
+      const adjustedScore = entry.score + diversityBonus;
+
+      if (adjustedScore > bestAdjustedScore) {
+        bestAdjustedScore = adjustedScore;
+        bestIndex = index;
+      }
+    });
+
+    const [pickedEntry] = remaining.splice(bestIndex, 1);
+    picked.push(pickedEntry);
+    addCounts(pickedEntry);
+  }
+
+  return picked.sort((left, right) => {
+    const leftBoost = left.isSelected ? 0.6 : 0;
+    const rightBoost = right.isSelected ? 0.6 : 0;
+    return right.score + rightBoost - (left.score + leftBoost);
+  });
+}
+
+function buildArmyCommanderShortlistV2(allowedMetas, concept, bestArmy = null, seedMeta, selectedCommanderIds = []) {
+  if (!allowedMetas.length) {
+    return [];
+  }
+  const activeCommanderMap = new Map((bestArmy?.units ?? []).map((unit, index) => [unit.commander.id, index]));
+  const selectedIdSet = new Set(selectedCommanderIds);
+  const coarseCandidates = keepTopArmyEntries(
+    allowedMetas.map((meta) => {
+      const commanderScore = getArmySlotBaseScore(meta, "commander", concept);
+      const objectiveScore = meta.objectiveScores?.[concept.primaryObjective] ?? 0;
+      const conceptAffinity = getArmyConceptAffinity(meta, concept);
+      const powerSnapshot = getArmyCharacterPowerSnapshot(meta);
+      const powerNowScore = clampArmyScore(
+        (powerSnapshot.current / Math.max(getArmyReferenceUnitPower() * 0.38, 1)) * 100
+      );
+      const positionBiasScore = clampArmyScore(
+        (meta.positionProfile?.dominantScore ?? 0) * 2.1 + Math.max(0, meta.positionProfile?.dominantGap ?? 0) * 2.6
+      );
+
+      return {
+        meta,
+        commanderScore,
+        objectiveScore,
+        conceptAffinity,
+        score: clampArmyScore(
+          commanderScore * 0.4 +
+            conceptAffinity * 0.18 +
+            objectiveScore * 0.14 +
+            meta.chainPotential * 0.1 +
+            positionBiasScore * 0.08 +
+            powerNowScore * 0.1 +
+            (activeCommanderMap.has(meta.character.id) ? 4 : 0) +
+            (selectedIdSet.has(meta.character.id) ? 6 : 0) +
+            (seedMeta?.character.id === meta.character.id ? 12 : 0)
+        )
+      };
+    }),
+    Math.max(ARMY_BUILDER_LIMITS.commanderPreviewPool, ARMY_BUILDER_LIMITS.commanderShortlist + 6),
+    "score"
+  );
+
+  const enriched = coarseCandidates.map((entry) => {
+    let preview = null;
+    try {
+      preview = withArmyBuilderLimitOverrides(
+        {
+          vicePool: Math.min(ARMY_BUILDER_LIMITS.vicePool, ARMY_BUILDER_LIMITS.commanderPreviewVicePool),
+          aidePool: Math.min(ARMY_BUILDER_LIMITS.aidePool, ARMY_BUILDER_LIMITS.commanderPreviewAidePool),
+          vicePairKeep: Math.min(ARMY_BUILDER_LIMITS.vicePairKeep, ARMY_BUILDER_LIMITS.commanderPreviewVicePairKeep),
+          keepUnitsPerCommander: Math.max(ARMY_BUILDER_LIMITS.commanderPreviewUnits, 3)
+        },
+        () => buildArmyCommanderPreviewSummary(entry.meta, allowedMetas, concept)
+      );
+    } catch (error) {
+      preview = null;
+    }
+    const safePreview = preview ?? buildArmyCommanderSafePreview(entry.meta, concept);
+    const needScore = getArmyCommanderNeedScore(entry.meta, safePreview.bestUnit, concept);
+    const slotEntries = getArmySlotSuitabilityEntries(entry.meta, concept);
+
+    return {
+      meta: entry.meta,
+      isSelected: selectedIdSet.has(entry.meta.character.id),
+      isSeed: seedMeta?.character.id === entry.meta.character.id,
+      isActive: activeCommanderMap.has(entry.meta.character.id),
+      score: clampArmyScore(
+          entry.commanderScore * 0.2 +
+          entry.conceptAffinity * 0.08 +
+          entry.objectiveScore * 0.08 +
+          (safePreview.bestUnit?.total ?? 0) * 0.34 +
+          needScore * 0.14 +
+          safePreview.shellScore * 0.08 +
+          safePreview.flexibilityScore * 0.08 +
+          safePreview.depthScore * 0.06 +
+          (activeCommanderMap.has(entry.meta.character.id) ? 3 : 0) +
+          (selectedIdSet.has(entry.meta.character.id) ? 5 : 0) +
+          (seedMeta?.character.id === entry.meta.character.id ? 8 : 0)
+      ),
+      commanderScore: entry.commanderScore,
+      buildScore:
+        safePreview.bestUnit?.total ??
+        clampArmyScore((safePreview.flexibilityScore ?? 0) * 0.64 + (safePreview.shellScore ?? 0) * 0.36),
+      needScore,
+      shellScore: safePreview.shellScore,
+      flexibilityScore: safePreview.flexibilityScore,
+      depthScore: safePreview.depthScore,
+      bestSlot: slotEntries[0],
+      bestUnit: safePreview.bestUnit,
+      positionText: entry.meta.positionProfile?.focusText || "汎用",
+      focusAxes: safePreview.focusAxes,
+      focusText:
+        safePreview.focusAxes?.length
+          ? safePreview.focusAxes.map((axis) => `${axis.label} ${axis.value.toFixed(1)}`).join(" / ")
+          : safePreview.focusText,
+      vicePairText: safePreview.vicePairText,
+      viceChainText: safePreview.viceChainText,
+      aidePairText: safePreview.aidePairText,
+      roleText: safePreview.roleText,
+      unitPowerText: safePreview.unitPowerText,
+      usageText: activeCommanderMap.has(entry.meta.character.id)
+        ? `現編成入り: 第${activeCommanderMap.get(entry.meta.character.id) + 1}部隊`
+        : "現編成外",
+      featureText:
+        entry.meta.character.featureTags
+          .filter((featureKey) => concept.featureWeights?.[featureKey] >= 10)
+          .slice(0, 3)
+          .join(" / ") || "主要タグなし"
+    };
+  });
+
+  const diverseEntries = pickDiverseArmyCommanderShortlist(enriched, ARMY_BUILDER_LIMITS.commanderShortlist);
+  const finalEntries = diverseEntries.length
+    ? diverseEntries
+    : keepTopArmyEntries(
+        allowedMetas.map((meta) => {
+          const commanderScore = getArmySlotBaseScore(meta, "commander", concept);
+          const conceptAffinity = getArmyConceptAffinity(meta, concept);
+          const preview = buildArmyCommanderSafePreview(meta, concept);
+          const positionBiasScore = clampArmyScore(
+            (meta.positionProfile?.dominantScore ?? 0) * 2.1 +
+              Math.max(0, meta.positionProfile?.dominantGap ?? 0) * 2.6
+          );
+          return {
+            meta,
+            isSelected: selectedIdSet.has(meta.character.id),
+            isSeed: seedMeta?.character.id === meta.character.id,
+            isActive: activeCommanderMap.has(meta.character.id),
+            score: clampArmyScore(
+              commanderScore * 0.48 +
+                conceptAffinity * 0.22 +
+                preview.shellScore * 0.14 +
+                preview.depthScore * 0.08 +
+                positionBiasScore * 0.08
+            ),
+            commanderScore,
+            buildScore: clampArmyScore(preview.flexibilityScore * 0.64 + preview.shellScore * 0.36),
+            needScore: clampArmyScore(commanderScore * 0.58 + conceptAffinity * 0.42),
+            shellScore: preview.shellScore,
+            flexibilityScore: preview.flexibilityScore,
+            depthScore: preview.depthScore,
+            bestSlot: getArmySlotSuitabilityEntries(meta, concept)[0],
+            bestUnit: null,
+            positionText: meta.positionProfile?.focusText || "汎用",
+            focusAxes: [],
+            focusText: preview.focusText,
+            vicePairText: preview.vicePairText,
+            viceChainText: preview.viceChainText,
+            aidePairText: preview.aidePairText,
+            roleText: preview.roleText,
+            unitPowerText: preview.unitPowerText,
+            usageText: "候補再計算中",
+            featureText:
+              meta.character.featureTags.filter((featureKey) => concept.featureWeights?.[featureKey] >= 10).slice(0, 3).join(" / ") ||
+              "主要タグなし"
+          };
+        }),
+        ARMY_BUILDER_LIMITS.commanderShortlist,
+        "score"
+      );
+  return finalEntries.map((entry, index) => ({
+    ...entry,
+    rank: index + 1
+  }));
+}
+
+function buildArmyViceShortlistForCommander(commanderMeta, allowedMetas, concept, usedIds = new Set()) {
+  if (!commanderMeta) {
+    return {
+      commanderMeta: null,
+      entries: []
+    };
+  }
+
+  const pairs = buildVicePairs(commanderMeta, allowedMetas, concept, null).slice(0, 6);
+
+  return {
+    commanderMeta,
+    entries: pairs.map((pair, index) => {
+      const vice1Fitness = getArmyViceFitness(commanderMeta, pair[0], concept, "vice1");
+      const vice2Fitness = getArmyViceFitness(commanderMeta, pair[1], concept, "vice2");
+      const chainAverage = averageArmyValues([vice1Fitness.chainStats?.rate ?? 0, vice2Fitness.chainStats?.rate ?? 0]);
+      const usedCount = pair.filter((meta) => usedIds.has(meta.character.id)).length;
+
+      return {
+        rank: index + 1,
+        pair,
+        score: clampArmyScore(
+          vice1Fitness.score * 0.36 +
+            vice2Fitness.score * 0.32 +
+            normalizeChainRate(chainAverage) * 0.18 +
+            getArmyGuidePairScore(pair[0].character, pair[1].character) * 14 +
+            averageArmyValues([
+              getArmyConceptAffinity(pair[0], concept),
+              getArmyConceptAffinity(pair[1], concept)
+            ]) *
+              0.14
+        ),
+        chainAverage,
+        supportText: uniqueValues(
+          pair.flatMap((meta) =>
+            meta.roleTags
+              .filter(
+                (tag) =>
+                  tag.startsWith("role.") ||
+                  tag.startsWith("support.") ||
+                  tag.startsWith("control.") ||
+                  tag.startsWith("tempo.")
+              )
+              .map((tag) => armyRoleTagLabel(tag))
+          )
+        )
+          .slice(0, 4)
+          .join(" / "),
+        usageText: usedCount === 2 ? "両方使用中" : usedCount === 1 ? "一部使用中" : "組み込み候補",
+        viceChainText: [vice1Fitness, vice2Fitness]
+          .map((fitness, pairIndex) => `${pair[pairIndex].character.name} ${formatPercent(fitness.chainStats?.rate ?? 0)}`)
+          .join(" / ")
+      };
+    })
+  };
+}
+
+function buildArmyPreviewViceShortlist(allowedMetas, concept, seedMeta, selectedCommanderIds = [], commanderShortlist = []) {
+  const selectedCommanderMetas = selectedCommanderIds
+    .map((characterId) => allowedMetas.find((meta) => meta.character.id === characterId) ?? null)
+    .filter(Boolean);
+  const allowedIdSet = new Set(allowedMetas.map((meta) => meta.character.id));
+  const seedCommanderMeta =
+    seedMeta && allowedIdSet.has(seedMeta.character.id)
+      ? allowedMetas.find((meta) => meta.character.id === seedMeta.character.id) ?? seedMeta
+      : null;
+  const focusCommanderMeta =
+    selectedCommanderMetas[0] ??
+    seedCommanderMeta ??
+    commanderShortlist.find((entry) => entry?.meta)?.meta ??
+    allowedMetas[0] ??
+    null;
+  const reservedCommanderIds = new Set(selectedCommanderMetas.map((meta) => meta.character.id));
+  const previewAllowedMetas = focusCommanderMeta
+    ? allowedMetas.filter(
+        (meta) =>
+          meta.character.id === focusCommanderMeta.character.id || !reservedCommanderIds.has(meta.character.id)
+      )
+    : allowedMetas;
+
+  return buildArmyViceShortlistForCommander(focusCommanderMeta, previewAllowedMetas, concept, reservedCommanderIds);
 }
 
 function buildArmyViceShortlist(bestArmy, allowedMetas, concept, seedMeta) {
@@ -5801,6 +11721,21 @@ function buildArmyViceShortlist(bestArmy, allowedMetas, concept, seedMeta) {
       };
     })
   };
+}
+
+function buildArmyViceShortlist(bestArmy, allowedMetas, concept, seedMeta) {
+  const focusUnit =
+    (seedMeta && bestArmy.units.find((unit) => unit.commander.id === seedMeta.character.id)) ?? bestArmy.units[0] ?? null;
+  if (!focusUnit) {
+    return {
+      commanderMeta: null,
+      entries: []
+    };
+  }
+
+  const commanderMeta = getArmyMeta(focusUnit.commander);
+  const usedIds = new Set(bestArmy.units.flatMap((unit) => [...unit.memberIds]));
+  return buildArmyViceShortlistForCommander(commanderMeta, allowedMetas, concept, usedIds);
 }
 
 function buildArmySwapSuggestions(bestArmy, allowedMetas, concept) {
@@ -6155,6 +12090,82 @@ function buildFallbackArmies(allowedMetas, concept, seedMeta, seedSlots, formati
   return keepTopArmyEntries(variants, ARMY_BUILDER_LIMITS.finalArmies, "total");
 }
 
+function buildHeuristicArmiesForSelectedCommanders(
+  selectedCommanderMetas,
+  allowedMetas,
+  concept,
+  seedMeta,
+  formationChoiceKey = "auto"
+) {
+  if (selectedCommanderMetas.length !== 5) {
+    return [];
+  }
+
+  const overrideConfig = {
+    vicePool: 5,
+    aidePool: 4,
+    vicePairKeep: 6,
+    keepUnitsPerCommander: 3,
+    armyBeamWidth: 18
+  };
+  const commanderEntries = selectedCommanderMetas
+    .map((commanderMeta) => ({
+      commanderMeta,
+      quickScore: getArmyQuickCommanderSelectionScore(commanderMeta, concept, seedMeta),
+      previewCandidates: withArmyBuilderLimitOverrides(overrideConfig, () =>
+        buildUnitCandidatesForCommander(commanderMeta, allowedMetas, concept)
+      ).slice(0, 3)
+    }))
+    .filter((entry) => entry.previewCandidates.length)
+    .sort(
+      (left, right) =>
+        left.previewCandidates.length - right.previewCandidates.length ||
+        (right.quickScore ?? 0) - (left.quickScore ?? 0)
+    );
+
+  if (commanderEntries.length !== selectedCommanderMetas.length) {
+    return [];
+  }
+
+  const pickedUnits = [];
+  const signatures = new Set();
+
+  const search = (index, remainingMetas) => {
+    if (index >= commanderEntries.length) {
+      if (pickedUnits.length !== commanderEntries.length) {
+        return null;
+      }
+      const army = evaluateArmyComposition(pickedUnits, concept, seedMeta, formationChoiceKey);
+      const signature = buildArmyCompositionSignature(army);
+      if (!signature || signatures.has(signature)) {
+        return null;
+      }
+      signatures.add(signature);
+      return army;
+    }
+
+    const commanderMeta = commanderEntries[index].commanderMeta;
+    const candidates = withArmyBuilderLimitOverrides(overrideConfig, () =>
+      buildUnitCandidatesForCommander(commanderMeta, remainingMetas, concept)
+    ).slice(0, 3);
+
+    for (const candidate of candidates) {
+      const nextRemainingMetas = remainingMetas.filter((meta) => !candidate.memberIds.has(meta.character.id));
+      pickedUnits.push(candidate);
+      const army = search(index + 1, nextRemainingMetas);
+      if (army) {
+        return army;
+      }
+      pickedUnits.pop();
+    }
+
+    return null;
+  };
+
+  const firstArmy = search(0, allowedMetas);
+  return firstArmy ? [firstArmy] : [];
+}
+
 function armyContainsSeed(army, seedMeta) {
   if (!seedMeta) {
     return true;
@@ -6165,54 +12176,60 @@ function armyContainsSeed(army, seedMeta) {
   );
 }
 
-function buildArmyPlannerResult() {
-  if (!elements.armyView) {
-    return null;
+function buildArmiesForSelectedCommanders(
+  selectedCommanderMetas,
+  allowedMetas,
+  concept,
+  seedMeta,
+  seedSlots,
+  formationChoiceKey,
+  cacheContext = null,
+  cacheSelectedCommanderIds = []
+) {
+  const selectedIds =
+    cacheSelectedCommanderIds.length > 0
+      ? cacheSelectedCommanderIds
+      : selectedCommanderMetas.map((meta) => meta.character.id);
+  if (cacheContext && selectedIds.length) {
+    const cachedArmies = readArmyCommanderSelectionCache(cacheContext, selectedIds);
+    if (cachedArmies.length) {
+      return cachedArmies;
+    }
   }
 
-  const context = getArmyPlannerContext();
-  const {
-    concept,
-    formationChoiceKey,
-    selectedRarities,
-    seedCharacter,
-    seedMeta,
-    seedSlots,
-    usingRoster,
-    ownedCount,
-    allowedMetas,
-    selectedCommanderIds
-  } = context;
-  const previewResult = buildArmyCommanderPreviewResult(context);
-
-  if (selectedCommanderIds.length < 5) {
-    return previewResult;
-  }
-
-  if (usingRoster && ownedCount < 25) {
-    return {
-      ...previewResult,
-      validation: `手持ちが ${ownedCount} 体です。5部隊編成には 25 体以上必要です。`
-    };
-  }
-
-  if (allowedMetas.length < 25) {
-    return {
-      ...previewResult,
-      validation: usingRoster
-        ? `手持ち ${ownedCount} 体のうち、この条件で使えるのは ${allowedMetas.length} 体です。レアリティ条件を広げてください。`
-        : `選択中のレアリティでは ${allowedMetas.length} 体しか使えません。25体以上を確保してください。`
-    };
-  }
-
-  const selectedCommanderMetas = getArmySelectedCommanderMetas(allowedMetas);
-  let armies = buildArmyStatesFromCommanderGroups(
+  let armies = buildHeuristicArmiesForSelectedCommanders(
     selectedCommanderMetas,
     allowedMetas,
     concept,
     seedMeta,
     formationChoiceKey
   );
+  if (armies.length && cacheContext) {
+    storeArmyCommanderSelectionCache(cacheContext, selectedIds, armies);
+    return armies;
+  }
+
+  const fastSearchConfig = {
+    vicePool: Math.min(ARMY_BUILDER_LIMITS.vicePool, 8),
+    aidePool: Math.min(ARMY_BUILDER_LIMITS.aidePool, 6),
+    vicePairKeep: Math.min(ARMY_BUILDER_LIMITS.vicePairKeep, 16),
+    keepUnitsPerCommander: Math.min(ARMY_BUILDER_LIMITS.keepUnitsPerCommander, 8)
+  };
+  const midSearchConfig = {
+    vicePool: Math.min(ARMY_BUILDER_LIMITS.vicePool, 10),
+    aidePool: Math.min(ARMY_BUILDER_LIMITS.aidePool, 7),
+    vicePairKeep: Math.min(ARMY_BUILDER_LIMITS.vicePairKeep, 20),
+    keepUnitsPerCommander: Math.min(ARMY_BUILDER_LIMITS.keepUnitsPerCommander, 10)
+  };
+  armies = withArmyBuilderLimitOverrides(fastSearchConfig, () =>
+    buildArmyStatesFromCommanderGroups(selectedCommanderMetas, allowedMetas, concept, seedMeta, formationChoiceKey)
+  );
+
+  if (!armies.length) {
+    armies = withArmyBuilderLimitOverrides(midSearchConfig, () =>
+      buildArmyStatesFromCommanderGroups(selectedCommanderMetas, allowedMetas, concept, seedMeta, formationChoiceKey)
+    );
+  }
 
   if (!armies.length) {
     const commanderPool = getArmyCommanderPool(allowedMetas, concept, seedMeta, seedSlots);
@@ -6227,8 +12244,113 @@ function buildArmyPlannerResult() {
       selectedCommanderMetas.every((meta) => army.units.some((unit) => unit.commander.id === meta.character.id))
     );
   }
+
   if (!armies.length) {
-    armies = readArmyCommanderSelectionCache(context, selectedCommanderIds);
+    armies = buildFallbackArmies(allowedMetas, concept, seedMeta, seedSlots, formationChoiceKey).filter((army) =>
+      selectedCommanderMetas.every((meta) => army.units.some((unit) => unit.commander.id === meta.character.id))
+    );
+  }
+
+  if (!armies.length && cacheContext) {
+    armies = readArmyCommanderSelectionCache(cacheContext, selectedIds);
+  }
+
+  if (armies.length && cacheContext) {
+    storeArmyCommanderSelectionCache(cacheContext, selectedIds, armies);
+  }
+
+  return armies;
+}
+
+function buildArmyPlannerResult() {
+  if (!elements.armyView) {
+    return null;
+  }
+
+  const context = getArmyPlannerContext();
+  const {
+    concept,
+    seasonFocusKey,
+    formationChoiceKey,
+    selectedRarities,
+    seedCharacter,
+    seedMeta,
+    seedSlots,
+    usingRoster,
+    ownedCount,
+    readyCount,
+    allowedMetas,
+    selectedCommanderIds
+  } = context;
+  const previewResult = buildArmyCommanderPreviewResult(context);
+  let effectiveSelectedCommanderIds = [...selectedCommanderIds];
+  let autoRepairValidation = "";
+
+  if (effectiveSelectedCommanderIds.length < 5) {
+    return previewResult;
+  }
+
+  if (usingRoster && readyCount < 25) {
+    return {
+      ...previewResult,
+      validation: `仕上がりが ${readyCount} 体です。5部隊編成には 25 体以上必要です。`
+    };
+  }
+
+  if (allowedMetas.length < 25) {
+    return {
+      ...previewResult,
+      validation: usingRoster
+        ? `仕上がり ${readyCount} 体のうち、この条件で使えるのは ${allowedMetas.length} 体です。レアリティ条件を広げてください。`
+        : `選択中のレアリティでは ${allowedMetas.length} 体しか使えません。25体以上を確保してください。`
+    };
+  }
+
+  let selectedCommanderMetas = getArmySelectedCommanderMetas(allowedMetas);
+  let armies = buildArmiesForSelectedCommanders(
+    selectedCommanderMetas,
+    allowedMetas,
+    concept,
+    seedMeta,
+    seedSlots,
+    formationChoiceKey,
+    context,
+    selectedCommanderIds
+  );
+
+  if (!armies.length) {
+    const repairedSelection = findNearestBuildableArmySelection(context, effectiveSelectedCommanderIds);
+    if (repairedSelection?.selectedCommanderIds?.length) {
+      effectiveSelectedCommanderIds = [...repairedSelection.selectedCommanderIds];
+      armySelectedCommanderIds = [...effectiveSelectedCommanderIds];
+      selectedCommanderMetas = effectiveSelectedCommanderIds
+        .map((characterId) => ARMY_CHARACTER_META_BY_ID.get(characterId))
+        .filter(Boolean);
+      armies = buildArmiesForSelectedCommanders(
+        selectedCommanderMetas,
+        allowedMetas,
+        concept,
+        seedMeta,
+        seedSlots,
+        formationChoiceKey,
+        context,
+        effectiveSelectedCommanderIds
+      );
+      const removedNames = repairedSelection.removedIds
+        .map((characterId) => ARMY_CHARACTER_META_BY_ID.get(characterId)?.character?.name)
+        .filter(Boolean);
+      const addedNames = repairedSelection.addedIds
+        .map((characterId) => ARMY_CHARACTER_META_BY_ID.get(characterId)?.character?.name)
+        .filter(Boolean);
+      autoRepairValidation = formatSummaryText(
+        [
+          "選択した5体では25体が組めなかったため、近い主将構成へ自動補正しました。",
+          removedNames.length ? `外した主将: ${removedNames.join(" / ")}` : "",
+          addedNames.length ? `追加した主将: ${addedNames.join(" / ")}` : ""
+        ].filter(Boolean),
+        " "
+      );
+    }
   }
 
   if (!armies.length) {
@@ -6240,21 +12362,16 @@ function buildArmyPlannerResult() {
 
   const bestArmy = armies[0];
   const formationAlternatives = buildArmyFormationAlternatives(bestArmy, concept, seedMeta);
-  const roleAudit = buildArmyRoleAudit(bestArmy, allowedMetas, concept, usingRoster, ownedCount, formationAlternatives);
-  const commanderShortlist = buildArmyCommanderShortlist(
-    allowedMetas,
-    concept,
-    bestArmy,
-    seedMeta,
-    selectedCommanderIds
-  );
+  const roleAudit = buildArmyRoleAudit(bestArmy, allowedMetas, concept, usingRoster, readyCount, formationAlternatives);
+  const commanderShortlist = buildArmyCommanderPoolEntries(context, effectiveSelectedCommanderIds);
   const viceShortlist = buildArmyViceShortlist(bestArmy, allowedMetas, concept, seedMeta);
   const swapSuggestions = buildArmySwapSuggestions(bestArmy, allowedMetas, concept);
-  const exclusionReasons = buildArmyExclusionReasons(bestArmy, allowedMetas, concept, commanderShortlist);
+  const exclusionReasons = buildArmyExclusionReasons(bestArmy, allowedMetas, concept, []);
 
   return {
-    validation: "",
+    validation: autoRepairValidation,
     concept,
+    seasonFocusKey,
     formationChoiceKey,
     selectedRarities,
     seedCharacter,
@@ -6263,7 +12380,7 @@ function buildArmyPlannerResult() {
       [
         `最適化方針: ${concept.label}`,
         `選択主将: ${selectedCommanderMetas.map((meta) => meta.character.name).join(" / ")}`,
-        usingRoster ? `手持ち: ${ownedCount}体` : "全武将モード",
+        usingRoster ? `仕上がり: ${readyCount}体 / 登録 ${ownedCount}体` : "全武将モード",
         `レアリティ: ${selectedRarities.join(" / ")}`
       ].filter(Boolean),
       "軍勢自動編成"
@@ -6277,9 +12394,10 @@ function buildArmyPlannerResult() {
     swapSuggestions,
     reserveSuggestions: buildArmyReserveSuggestions(bestArmy, allowedMetas, concept),
     exclusionReasons,
-    selectedCommanderIds,
+    selectedCommanderIds: effectiveSelectedCommanderIds,
     usingRoster,
     ownedCount,
+    readyCount,
     allowedCount: allowedMetas.length
   };
 }
@@ -6381,7 +12499,7 @@ function renderArmyOverviewCards(army, result, powerEstimate) {
         : `この軍勢はあと ${formatArmyEstimateNumber(powerEstimate.growth)} 伸びる見込みです。`,
       detail: usingObservedPower ? getArmyPowerModelSummaryText() : growthText,
       extra: usingObservedPower
-        ? "戦力列がない武将だけ、貼り付けた4ステータス + Lv + 秘伝から補完します。"
+        ? "戦力列がない武将だけ、貼り付けたCSVで最も安定した仮説式から補完します。"
         : "伸び幅が大きい武将から順に、今週の育成候補として見てください。"
     },
     {
@@ -6468,7 +12586,11 @@ function renderArmyCommanderWizard(plannerResult = null) {
       {
         title: "STEP 1",
         body: `${result.allowedCount ?? 0}体から主将候補を洗い、主将向きの高い順に並べます。`,
-        detail: `候補表示 ${result.commanderShortlist?.length ?? 0}体 / ${result.usingRoster ? `手持ち ${result.ownedCount}体` : "全武将モード"}`
+        detail: `候補表示 ${result.commanderShortlist?.length ?? 0}体 / ${
+          result.usingRoster
+            ? `仕上がり ${result.readyCount ?? 0}体 / 登録 ${result.ownedCount ?? 0}体`
+            : "全武将モード"
+        }`
       },
       {
         title: "STEP 2",
@@ -6483,6 +12605,9 @@ function renderArmyCommanderWizard(plannerResult = null) {
         detail: `陣形 ${FORMATION_MAP[result.formationChoiceKey ?? sanitizeArmyFormationChoiceKey(elements.armyFormation?.value ?? "auto")]?.label ?? "自動"} / 方針 ${result.concept?.label ?? "-"}`
       }
     ];
+    if (cards[2]) {
+      cards[2].detail += ` / 環境 ${getArmySeasonFocusConfig(result.seasonFocusKey ?? "s3", result.concept).label}`;
+    }
     elements.armyCommanderWizardSummaryGrid.innerHTML = cards
       .map(
         (card) => `
@@ -6520,10 +12645,239 @@ function renderArmyCommanderWizard(plannerResult = null) {
   }
 }
 
-function renderArmyCommanderShortlistCard(entry) {
+function renderArmyCommanderWizard(plannerResult = null) {
+  const result = plannerResult ?? buildArmyCommanderPreviewResult();
+  const selectedCommanderMetas = (result.selectedCommanderIds ?? [])
+    .map((characterId) => ARMY_CHARACTER_META_BY_ID.get(characterId))
+    .filter(Boolean);
+  const ownedCharacters = getOwnedArmyCharacters();
+  const readyCharacters = getReadyArmyCharacters();
+
+  if (elements.armyCommanderWizardSummaryGrid) {
+    const cards = [
+      {
+        title: "STEP 1",
+        body: "手持ち主将プールから5体選ぶと、その5人を軸に25体を組みます。",
+        detail: result.usingRoster
+          ? `仕上がり ${readyCharacters.length}体 / 手持ち ${ownedCharacters.length}体`
+          : `全武将 ${result.allowedCount ?? 0}体`
+      },
+      {
+        title: "STEP 2",
+        body: `選択済み ${selectedCommanderMetas.length} / 5`,
+        detail: selectedCommanderMetas.length
+          ? selectedCommanderMetas.map((meta) => meta.character.name).join(" / ")
+          : "まだ主将を選んでいません。"
+      },
+      {
+        title: "STEP 3",
+        body: selectedCommanderMetas.length >= 5 ? "副将 / 補佐を組める状態です。" : "主将が5体そろうと残り20枠を提案します。",
+        detail: `陣形 ${FORMATION_MAP[result.formationChoiceKey ?? sanitizeArmyFormationChoiceKey(elements.armyFormation?.value ?? "auto")]?.label ?? "自動"} / 方針 ${result.concept?.label ?? "-"} / 参照 ${getArmySeasonFocusConfig(result.seasonFocusKey ?? "s3", result.concept).label}`
+      }
+    ];
+    elements.armyCommanderWizardSummaryGrid.innerHTML = cards
+      .map(
+        (card) => `
+          <article class="army-summary-card">
+            <h3>${escapeHtml(card.title)}</h3>
+            <p class="field-note">${escapeHtml(card.body)}</p>
+            <p class="toolbar-summary">${escapeHtml(card.detail)}</p>
+          </article>
+        `
+      )
+      .join("");
+  }
+
+  if (elements.armySelectedCommanderStrip) {
+    elements.armySelectedCommanderStrip.innerHTML = Array.from({ length: 5 }, (_, index) => {
+      const meta = selectedCommanderMetas[index] ?? null;
+      return `
+        <button
+          class="mini-button"
+          type="button"
+          ${meta ? `data-army-remove-commander="${meta.character.id}"` : "disabled"}
+        >
+          ${escapeHtml(meta ? `主将${index + 1}: ${meta.character.name}` : `主将${index + 1}: 未選択`)}
+        </button>
+      `;
+    }).join("");
+  }
+
+  if (elements.armyCommanderHelp) {
+    elements.armyCommanderHelp.textContent =
+      selectedCommanderMetas.length >= 5
+        ? "主将5体がそろったので、「副将・補佐を組む」で残り20枠を提案できます。"
+        : "下の手持ち主将プールから、使いたい主将を5体選んでください。";
+  }
+}
+
+function renderArmyCommanderWizard(plannerResult = null) {
+  const result = plannerResult ?? buildArmyCommanderPreviewResult();
+  const selectedCommanderMetas = (result.selectedCommanderIds ?? [])
+    .map((characterId) => ARMY_CHARACTER_META_BY_ID.get(characterId))
+    .filter(Boolean);
+  const ownedCharacters = getOwnedArmyCharacters();
+  const readyCharacters = getReadyArmyCharacters();
+  const formationLabel =
+    FORMATION_MAP[result.formationChoiceKey ?? sanitizeArmyFormationChoiceKey(elements.armyFormation?.value ?? "auto")]?.label ?? "自動";
+  const seasonLabel = getArmySeasonFocusConfig(result.seasonFocusKey ?? "s3", result.concept).label;
+
+  if (elements.armyCommanderWizardSummaryGrid) {
+    const cards = [
+      {
+        title: "主将プール",
+        body: result.usingRoster ? `仕上がり ${readyCharacters.length} / 所持 ${ownedCharacters.length}` : `全武将 ${result.allowedCount ?? 0}`,
+        detail: "下の一覧から5人を選ぶ"
+      },
+      {
+        title: "選択状況",
+        body: `${selectedCommanderMetas.length} / 5`,
+        detail: selectedCommanderMetas.length
+          ? selectedCommanderMetas.map((meta) => meta.character.name).join(" / ")
+          : "まだ主将を選んでいません"
+      },
+      {
+        title: "編成条件",
+        body: selectedCommanderMetas.length >= 5 ? "副将・補佐を組めます" : "主将を5人選ぶ",
+        detail: `${formationLabel} / ${result.concept?.label ?? "-"} / ${seasonLabel}`
+      }
+    ];
+    elements.armyCommanderWizardSummaryGrid.innerHTML = cards
+      .map(
+        (card) => `
+          <article class="army-summary-card">
+            <h3>${escapeHtml(card.title)}</h3>
+            <p class="field-note">${escapeHtml(card.body)}</p>
+            <p class="toolbar-summary">${escapeHtml(card.detail)}</p>
+          </article>
+        `
+      )
+      .join("");
+  }
+
+  if (elements.armySelectedCommanderStrip) {
+    elements.armySelectedCommanderStrip.innerHTML = Array.from({ length: 5 }, (_, index) => {
+      const meta = selectedCommanderMetas[index] ?? null;
+      const label = meta ? `主将${index + 1}: ${meta.character.name}` : `主将${index + 1}: 未選択`;
+      return `
+        <button
+          class="mini-button"
+          type="button"
+          ${meta ? `data-army-remove-commander="${meta.character.id}"` : "disabled"}
+        >
+          ${escapeHtml(label)}
+        </button>
+      `;
+    }).join("");
+  }
+
+  if (elements.armyCommanderHelp) {
+    elements.armyCommanderHelp.textContent =
+      selectedCommanderMetas.length >= 5
+        ? "主将5人が揃いました。「副将・補佐を組む」で残り20枠を編成します。"
+        : "下の主将プールから、使いたい主将を5人選んでください。";
+  }
+}
+
+function renderArmyCommanderPoolCard(meta, profile, isSelected, isReady) {
+  const snapshot = getArmyCharacterPowerSnapshot(meta.character);
+  const statusText = isReady ? "仕上がり" : "未育成";
+  const actionLabel = isSelected ? "主将から外す" : "主将に入れる";
+  return `
+    <article class="quick-card army-commander-card ${isSelected ? "is-selected" : ""} ${!isReady ? "is-dim" : ""}" ${
+      isReady ? `data-army-select-commander-card="${meta.character.id}" role="button" tabindex="0"` : ""
+    }>
+      <span class="status-pill ${isSelected ? "is-live" : isReady ? "is-next" : "is-plan"}">${escapeHtml(
+        isSelected ? "選択中" : statusText
+      )}</span>
+      <img src="${escapeHtml(meta.character.imageUrl)}" alt="${escapeHtml(meta.character.name)}" loading="lazy" />
+      <h3>${escapeHtml(meta.character.name)}</h3>
+      <p>${escapeHtml(meta.character.rarity)} / ${escapeHtml(meta.character.type || "-")} / 天賦 ${escapeHtml(meta.character.tenpu)}</p>
+      <ul>
+        <li><span>育成段階</span><span>${escapeHtml(getArmyProfileLabel(ARMY_INVESTMENT_TIER_DEFS, profile.investmentTier))}</span></li>
+        <li><span>装備</span><span>${escapeHtml(getArmyProfileLabel(ARMY_EQUIPMENT_FIT_DEFS, profile.equipmentFit))}</span></li>
+        <li><span>想定戦力</span><span>${escapeHtml(formatArmyEstimateNumber(snapshot.current))}</span></li>
+        <li><span>役割</span><span>${escapeHtml((meta.character.featureTags || []).slice(0, 3).join(" / ") || "-")}</span></li>
+      </ul>
+      <div class="card-actions">
+        <button class="mini-button" type="button" ${isReady ? `data-army-select-commander="${meta.character.id}"` : "disabled"}>
+          ${escapeHtml(isReady ? actionLabel : "未育成")}
+        </button>
+      </div>
+    </article>
+  `;
+}
+
+function renderArmyCommanderPoolGrid(result = null) {
+  if (!elements.armyCommanderGrid) {
+    return;
+  }
+
+  const selectedIdSet = new Set(result?.selectedCommanderIds ?? armySelectedCommanderIds);
+  const ownedCharacters = getOwnedArmyCharacters();
+  if (!ownedCharacters.length) {
+    elements.armyCommanderGrid.innerHTML = renderEmptyState("手持ち登録した武将がここに並びます。");
+    return;
+  }
+
+  const entries = ownedCharacters
+    .map((character) => {
+      const profile = getArmyRosterProfile(character.id);
+      const meta = getArmyMeta(character);
+      const isReady = profile.investmentTier === "trained";
+      const isSelected = selectedIdSet.has(character.id);
+      const power = getArmyCharacterPowerSnapshot(character).current;
+      return { character, profile, meta, isReady, isSelected, power };
+    })
+    .sort(
+      (left, right) =>
+        Number(right.isSelected) - Number(left.isSelected) ||
+        Number(right.isReady) - Number(left.isReady) ||
+        right.power - left.power ||
+        left.character.name.localeCompare(right.character.name, "ja")
+    );
+
+  elements.armyCommanderGrid.innerHTML = entries
+    .map((entry) => renderArmyCommanderPoolCard(entry.meta, entry.profile, entry.isSelected, entry.isReady))
+    .join("");
+}
+
+function renderArmyCommanderShortlistCardV2(entry) {
+  const actionLabel = entry.isSelected ? "選択解除" : "主将に追加";
+  const focusText = entry.focusText || "軸は再計算中";
+  const positionText = entry.positionText || entry.meta.positionProfile?.focusText || "汎用";
+  const buildText = `${entry.buildScore.toFixed(1)} / 100`;
+  const depthText = `${(entry.depthScore ?? entry.flexibilityScore).toFixed(1)} / 100`;
+  return `
+    <article class="quick-card army-commander-card ${entry.isSelected ? "is-selected" : ""}" data-army-select-commander-card="${entry.meta.character.id}" role="button" tabindex="0">
+      <span class="status-pill ${entry.isSelected ? "is-live" : entry.rank <= 3 ? "is-live" : "is-next"}">${escapeHtml(
+        entry.isSelected ? `選択中 ${entry.rank}` : `主将候補 ${entry.rank}`
+      )}</span>
+      <h3>${escapeHtml(entry.meta.character.name)}</h3>
+      <p>${escapeHtml(entry.meta.character.rarity)} / ${escapeHtml(entry.meta.character.type || "-")} / 天賦 ${entry.meta.character.tenpu}</p>
+      <ul>
+        <li><span>主将適性</span><span>${entry.commanderScore.toFixed(1)} / 100</span></li>
+        <li><span>編成見込み</span><span>${escapeHtml(buildText)}</span></li>
+        <li><span>目的一致</span><span>${entry.needScore.toFixed(1)} / 100</span></li>
+        <li><span>部隊戦力</span><span>${escapeHtml(entry.unitPowerText)}</span></li>
+        <li><span>副将候補</span><span>${escapeHtml(entry.vicePairText)}</span></li>
+        <li><span>補佐候補</span><span>${escapeHtml(entry.aidePairText)}</span></li>
+        <li><span>配置</span><span>${escapeHtml(positionText)}</span></li>
+        <li><span>強み</span><span>${escapeHtml(focusText)}</span></li>
+        <li><span>厚み</span><span>${escapeHtml(depthText)}</span></li>
+        <li><span>役割</span><span>${escapeHtml(entry.roleText || entry.featureText)}</span></li>
+      </ul>
+      <div class="card-actions">
+        <button class="mini-button" type="button" data-army-select-commander="${entry.meta.character.id}">${escapeHtml(actionLabel)}</button>
+      </div>
+    </article>
+  `;
+}
+
+function renderArmyCommanderShortlistCardLegacy(entry) {
   const actionLabel = entry.isSelected ? "選択解除" : "主将に追加";
   return `
-    <article class="quick-card">
+    <article class="quick-card army-commander-card ${entry.isSelected ? "is-selected" : ""}" data-army-select-commander-card="${entry.meta.character.id}" role="button" tabindex="0">
       <span class="status-pill ${entry.isSelected ? "is-live" : entry.rank <= 3 ? "is-live" : "is-next"}">${escapeHtml(
         entry.isSelected ? `選択中 ${entry.rank}` : `主将候補 ${entry.rank}`
       )}</span>
@@ -6544,6 +12898,71 @@ function renderArmyCommanderShortlistCard(entry) {
   `;
 }
 
+function renderArmyCommanderShortlistCardV2(entry) {
+  if (entry?.mode === "pool") {
+    return renderArmyCommanderPoolCard(entry.meta, entry.profile, entry.isSelected, entry.isReady);
+  }
+  const actionLabel = entry.isSelected ? "驕ｸ謚櫁ｧ｣髯､" : "荳ｻ蟆・↓霑ｽ蜉";
+  const focusText = entry.focusText || "霆ｸ縺ｯ蜀崎ｨ育ｮ嶺ｸｭ";
+  const positionText = entry.positionText || entry.meta.positionProfile?.focusText || "汎用";
+  const buildText = `${entry.buildScore.toFixed(1)} / 100`;
+  const depthText = `${(entry.depthScore ?? entry.flexibilityScore).toFixed(1)} / 100`;
+  return `
+    <article class="quick-card army-commander-card ${entry.isSelected ? "is-selected" : ""}" data-army-select-commander-card="${entry.meta.character.id}" role="button" tabindex="0">
+      <span class="status-pill ${entry.isSelected ? "is-live" : entry.rank <= 3 ? "is-live" : "is-next"}">${escapeHtml(
+        entry.isSelected ? `驕ｸ謚樔ｸｭ ${entry.rank}` : `荳ｻ蟆・呵｣・${entry.rank}`
+      )}</span>
+      <h3>${escapeHtml(entry.meta.character.name)}</h3>
+      <p>${escapeHtml(entry.meta.character.rarity)} / ${escapeHtml(entry.meta.character.type || "-")} / 螟ｩ雉ｦ ${entry.meta.character.tenpu}</p>
+      <ul>
+        <li><span>荳ｻ蟆・←諤ｧ</span><span>${entry.commanderScore.toFixed(1)} / 100</span></li>
+        <li><span>邱ｨ謌占ｦ玖ｾｼ縺ｿ</span><span>${escapeHtml(buildText)}</span></li>
+        <li><span>逶ｮ逧・ｸ閾ｴ</span><span>${entry.needScore.toFixed(1)} / 100</span></li>
+        <li><span>驛ｨ髫頑姶蜉・/span><span>${escapeHtml(entry.unitPowerText)}</span></li>
+        <li><span>蜑ｯ蟆・呵｣・/span><span>${escapeHtml(entry.vicePairText)}</span></li>
+        <li><span>陬應ｽ仙呵｣・/span><span>${escapeHtml(entry.aidePairText)}</span></li>
+        <li><span>驟咲ｽｮ</span><span>${escapeHtml(positionText)}</span></li>
+        <li><span>蠑ｷ縺ｿ</span><span>${escapeHtml(focusText)}</span></li>
+        <li><span>蜴壹∩</span><span>${escapeHtml(depthText)}</span></li>
+        <li><span>蠖ｹ蜑ｲ</span><span>${escapeHtml(entry.roleText || entry.featureText)}</span></li>
+      </ul>
+      <div class="card-actions">
+        <button class="mini-button" type="button" data-army-select-commander="${entry.meta.character.id}">${escapeHtml(actionLabel)}</button>
+      </div>
+    </article>
+  `;
+}
+
+function renderArmyCommanderPoolCard(meta, profile, isSelected, isReady) {
+  const snapshot = getArmyCharacterPowerSnapshot(meta.character);
+  const statusText = isSelected ? "選択中" : isReady ? "仕上がり" : "未育成";
+  const actionLabel = isSelected ? "外す" : "主将に入れる";
+  const featureText = (meta.character.featureTags || []).slice(0, 3).join(" / ") || "-";
+  const positionText = meta.positionProfile?.focusText || "汎用";
+  return `
+    <article class="quick-card army-commander-card ${isSelected ? "is-selected" : ""} ${!isReady ? "is-dim" : ""}" ${
+      isReady ? `data-army-select-commander-card="${meta.character.id}" role="button" tabindex="0"` : ""
+    }>
+      <span class="status-pill ${isSelected ? "is-live" : isReady ? "is-next" : "is-plan"}">${escapeHtml(statusText)}</span>
+      <img src="${escapeHtml(meta.character.imageUrl)}" alt="${escapeHtml(meta.character.name)}" loading="lazy" />
+      <h3>${escapeHtml(meta.character.name)}</h3>
+      <p>${escapeHtml(meta.character.rarity)} / ${escapeHtml(meta.character.type || "-")} / 天賦 ${escapeHtml(meta.character.tenpu)}</p>
+      <ul>
+        <li><span>育成</span><span>${escapeHtml(getArmyProfileLabel(ARMY_INVESTMENT_TIER_DEFS, profile.investmentTier))}</span></li>
+        <li><span>装備</span><span>${escapeHtml(getArmyProfileLabel(ARMY_EQUIPMENT_FIT_DEFS, profile.equipmentFit))}</span></li>
+        <li><span>戦力目安</span><span>${escapeHtml(formatArmyEstimateNumber(snapshot.current))}</span></li>
+        <li><span>配置</span><span>${escapeHtml(positionText)}</span></li>
+        <li><span>役割</span><span>${escapeHtml(featureText)}</span></li>
+      </ul>
+      <div class="card-actions">
+        <button class="mini-button" type="button" ${isReady ? `data-army-select-commander="${meta.character.id}"` : "disabled"}>
+          ${escapeHtml(isReady ? actionLabel : "未育成")}
+        </button>
+      </div>
+    </article>
+  `;
+}
+
 function renderArmyViceShortlistCard(commanderMeta, entry) {
   return `
     <article class="quick-card">
@@ -6559,6 +12978,39 @@ function renderArmyViceShortlistCard(commanderMeta, entry) {
       </ul>
     </article>
   `;
+}
+
+function bindArmyCommanderCardButtons() {
+  if (!elements.armyCommanderGrid) {
+    return;
+  }
+
+  elements.armyCommanderGrid.querySelectorAll("[data-army-select-commander]").forEach((button) => {
+    button.onclick = (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      toggleArmyCommanderSelection(button.dataset.armySelectCommander);
+    };
+  });
+
+  elements.armyCommanderGrid.querySelectorAll("[data-army-select-commander-card]").forEach((card) => {
+    card.onclick = (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      if (event.target.closest("[data-army-select-commander]")) {
+        return;
+      }
+      toggleArmyCommanderSelection(card.dataset.armySelectCommanderCard);
+    };
+    card.onkeydown = (event) => {
+      if (event.key !== "Enter" && event.key !== " ") {
+        return;
+      }
+      event.preventDefault();
+      event.stopPropagation();
+      toggleArmyCommanderSelection(card.dataset.armySelectCommanderCard);
+    };
+  });
 }
 
 function renderArmySwapSuggestionCard(entry) {
@@ -6599,7 +13051,88 @@ function renderArmyExcludedReasonCard(entry) {
   `;
 }
 
-function renderArmyUnitCard(unit, unitIndex, armyIndex, unitPowerEstimate) {
+function isArmySkillActiveForPlacement(skill, slotKey, rowKey) {
+  const conditions = skill?.conditions ?? [];
+  const rowConditions = conditions.filter((conditionKey) => ARMY_BUILDER_ROW_KEYS.includes(conditionKey));
+  const roleConditions = conditions.filter((conditionKey) => ["main", "vice", "aide"].includes(conditionKey));
+  const roleCondition = ARMY_SLOT_ROLE_CONDITION[slotKey];
+  const rowOk = !rowConditions.length || rowConditions.includes(rowKey);
+  const roleOk = !roleConditions.length || roleConditions.includes(roleCondition);
+  return rowOk && roleOk;
+}
+
+function summarizeArmyEffectText(text = "") {
+  const normalized = `${text}`.replace(/\s+/g, " ").trim();
+  if (!normalized) {
+    return "";
+  }
+  return normalized.length > 84 ? `${normalized.slice(0, 84)}…` : normalized;
+}
+
+function buildArmyUnitSkillSummary(unit) {
+  const rowKey = unit.assignedRow ?? unit.defaultRow ?? "middle";
+  const commander = unit.unitMembers.find((member) => member.slotKey === "commander");
+  const viceMembers = unit.unitMembers.filter((member) => member.slotKey === "vice1" || member.slotKey === "vice2");
+  const aideMembers = unit.unitMembers.filter((member) => member.slotKey === "aide1" || member.slotKey === "aide2");
+  const rows = [];
+
+  if (commander) {
+    const tacticName = commander.meta.character.battleArtMeta?.name || `${commander.meta.character.name}の戦法`;
+    const tacticEffects = [
+      ...(commander.meta.character.battleArtEffects ?? []),
+      commander.meta.character.battleArtText ?? ""
+    ]
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((text) => summarizeArmyEffectText(text))
+      .filter(Boolean)
+      .join(" / ");
+    rows.push({
+      label: "主将戦法",
+      value: `${tacticName}${tacticEffects ? `: ${tacticEffects}` : ""}`
+    });
+  }
+
+  if (viceMembers.length) {
+    rows.push({
+      label: "副将戦法",
+      value: viceMembers
+        .map((member) => `${member.meta.character.name}: ${member.meta.character.battleArtMeta?.name || "戦法"}`)
+        .join(" / ")
+    });
+  }
+
+  unit.unitMembers.forEach((member) => {
+    const activeSkills = (member.meta.character.skillRecords ?? [])
+      .filter((skill) => isArmySkillActiveForPlacement(skill, member.slotKey, rowKey))
+      .slice(0, 2);
+    if (!activeSkills.length) {
+      return;
+    }
+    const skillText = activeSkills
+      .map((skill) => {
+        const detail = summarizeArmyEffectText(skill.summary || skill.initialEffect || skill.maxEffect || "");
+        return `${skill.name}${detail ? `: ${detail}` : ""}`;
+      })
+      .join(" / ");
+    rows.push({
+      label: member.slotKey.startsWith("aide") ? "補佐技能" : `${member.label}技能`,
+      value: `${member.meta.character.name}: ${skillText}`
+    });
+  });
+
+  if (aideMembers.length) {
+    rows.push({
+      label: "補佐メモ",
+      value: "補佐は戦法なし。技能と戦力で支える枠です。"
+    });
+  }
+
+  return rows.slice(0, 8);
+}
+
+function renderArmyUnitCard(unit, unitIndex, armyIndex, unitPowerEstimate, isFocused = false) {
+  const skillSummaryRows = buildArmyUnitSkillSummary(unit);
   const slotMarkup = unit.unitMembers
     .map((member) => {
       const chainText = member.chainStats ? `連鎖率 ${formatPercent(member.chainStats.rate)}` : "";
@@ -6659,13 +13192,16 @@ function renderArmyUnitCard(unit, unitIndex, armyIndex, unitPowerEstimate) {
     .join("");
 
   return `
-    <article class="army-unit-card">
+    <article class="army-unit-card ${isFocused ? "is-active-focus" : ""}">
       <div class="army-unit-head">
         <div>
           <h3>第${unitIndex + 1}部隊</h3>
           <p>${escapeHtml(unit.assignedFormationSlot?.label || "-")} / ${escapeHtml(builderRowLabelFor(unit.assignedRow))} / 主将 ${escapeHtml(unit.commander.name)}</p>
         </div>
-        <span class="count-pill">${unit.total.toFixed(1)}</span>
+        <div class="stacked-meta">
+          ${isFocused ? '<span class="status-pill is-live">戦法表示中</span>' : ""}
+          <span class="count-pill">${unit.total.toFixed(1)}</span>
+        </div>
       </div>
       <div class="army-score-line">
         <span>主要軸</span>
@@ -6692,6 +13228,20 @@ function renderArmyUnitCard(unit, unitIndex, armyIndex, unitPowerEstimate) {
         </span>
       </div>
       <div class="army-slot-list">${slotMarkup}</div>
+      ${
+        skillSummaryRows.length
+          ? `<div class="army-explanation army-skill-summary">
+              <div class="army-note-list">
+                ${skillSummaryRows
+                  .map(
+                    (row) =>
+                      `<div class="army-list-row"><span>${escapeHtml(row.label)}</span><span>${escapeHtml(row.value)}</span></div>`
+                  )
+                  .join("")}
+              </div>
+            </div>`
+          : ""
+      }
       <div class="army-explanation">
         <div class="army-note-list">
           ${unit.reasons.map((reason) => `<div class="army-list-row"><span>採用理由</span><span>${escapeHtml(reason)}</span></div>`).join("")}
@@ -6699,6 +13249,7 @@ function renderArmyUnitCard(unit, unitIndex, armyIndex, unitPowerEstimate) {
         </div>
       </div>
       <div class="card-actions">
+        <button class="mini-button" type="button" data-army-focus-unit="${armyIndex}:${unitIndex}">${isFocused ? "この部隊を表示中" : "戦法を見る"}</button>
         <button class="mini-button" type="button" data-open-army-unit-builder="${armyIndex}:${unitIndex}">この部隊を編成ツールで開く</button>
       </div>
     </article>
@@ -6821,8 +13372,10 @@ function renderArmyPlanner(result = null) {
   if (result) {
     lastArmyPlannerResult = result;
     activeArmyAlternativeIndex = 0;
+    resetArmyBattlePreviewState();
   } else if (!lastArmyPlannerResult) {
     lastArmyPlannerResult = buildArmyPlannerResult();
+    resetArmyBattlePreviewState();
   }
 
   const plannerResult = result ?? lastArmyPlannerResult;
@@ -6835,7 +13388,8 @@ function renderArmyPlanner(result = null) {
     },
     null
   );
-  elements.armySummary.textContent = plannerResult.summary;
+  const seasonSummaryLabel = getArmySeasonFocusConfig(plannerResult.seasonFocusKey ?? "s3", plannerResult.concept).label;
+  elements.armySummary.textContent = `${plannerResult.summary} / 環境 ${seasonSummaryLabel}`;
   elements.armyValidation.textContent = plannerResult.validation;
   elements.armyValidation.hidden = !plannerResult.validation;
   elements.armyTopCount.textContent =
@@ -6843,6 +13397,7 @@ function renderArmyPlanner(result = null) {
       ? `${plannerResult.armies.length}件`
       : `主将 ${plannerResult.selectedCommanderIds?.length ?? 0} / 5`;
   renderArmyCommanderWizard(plannerResult);
+  renderArmyPlannerFloatingUi(plannerResult);
 
   if (!plannerResult.armies.length) {
     renderArmyFormationInfoCards(plannerResult, null);
@@ -6853,13 +13408,18 @@ function renderArmyPlanner(result = null) {
       elements.armyAuditGrid.innerHTML = renderEmptyState("主将5体が決まると、ここに役割不足と陣形比較を表示します。");
     }
     elements.armyUnitGrid.innerHTML = "";
-    if (elements.armyCommanderGrid) {
-      elements.armyCommanderGrid.innerHTML = (plannerResult.commanderShortlist ?? []).length
-        ? plannerResult.commanderShortlist.map((entry) => renderArmyCommanderShortlistCard(entry)).join("")
-        : renderEmptyState("この条件では主将候補を出せません。");
-    }
+  if (elements.armyCommanderGrid) {
+    elements.armyCommanderGrid.innerHTML = (plannerResult.commanderShortlist ?? []).length
+      ? plannerResult.commanderShortlist.map((entry) => renderArmyCommanderShortlistCardV2(entry)).join("")
+      : renderEmptyState("この条件では主将候補を出せません。");
+    bindArmyCommanderCardButtons();
+  }
     if (elements.armyViceGrid) {
-      elements.armyViceGrid.innerHTML = renderEmptyState("主将5体が決まると、ここに副将ペア候補を表示します。");
+      elements.armyViceGrid.innerHTML = (plannerResult.viceShortlist?.entries ?? []).length
+        ? plannerResult.viceShortlist.entries
+            .map((entry) => renderArmyViceShortlistCard(plannerResult.viceShortlist.commanderMeta, entry))
+            .join("")
+        : renderEmptyState("主将が固まると、ここに副将候補を表示します。");
     }
     elements.armyAlternativeGrid.innerHTML = renderEmptyState("主将5体が決まると、ここに別案の軍勢を表示します。");
     if (elements.armySwapGrid) {
@@ -6869,30 +13429,39 @@ function renderArmyPlanner(result = null) {
     if (elements.armyExcludedGrid) {
       elements.armyExcludedGrid.innerHTML = renderEmptyState("完成案が出ると、ここに落選理由を表示します。");
     }
+    renderArmyBattlePreviewEmptyState(
+      "主将5体が決まると、ここに0〜50秒の戦法タイムラインを表示します。",
+      "主将5体が決まると、ここに3×3盤面を表示します。",
+      "主将5体が決まると、ここに継続中のバフ / デバフを表示します。"
+    );
     return;
   }
 
   const activeArmy = plannerResult.armies[activeArmyAlternativeIndex] ?? plannerResult.armies[0];
   const powerEstimate = getArmyPowerEstimate(activeArmy);
+  activeArmyUnitIndex = Math.max(0, Math.min(powerEstimate.units.length - 1, Number(activeArmyUnitIndex) || 0));
   renderArmyFormationInfoCards(plannerResult, activeArmy);
   elements.armyOverviewGrid.innerHTML = renderArmyOverviewCards(activeArmy, plannerResult, powerEstimate);
   if (elements.armyAuditGrid) {
     elements.armyAuditGrid.innerHTML = renderArmyAuditCards(plannerResult.auditCards ?? []);
   }
   elements.armyUnitGrid.innerHTML = powerEstimate.units
-    .map((unit, unitIndex) => renderArmyUnitCard(unit, unitIndex, activeArmyAlternativeIndex, unit.powerEstimate))
+    .map((unit, unitIndex) =>
+      renderArmyUnitCard(unit, unitIndex, activeArmyAlternativeIndex, unit.powerEstimate, unitIndex === activeArmyUnitIndex)
+    )
     .join("");
   if (elements.armyCommanderGrid) {
     elements.armyCommanderGrid.innerHTML = (plannerResult.commanderShortlist ?? []).length
-      ? plannerResult.commanderShortlist.map((entry) => renderArmyCommanderShortlistCard(entry)).join("")
+      ? plannerResult.commanderShortlist.map((entry) => renderArmyCommanderShortlistCardV2(entry)).join("")
       : renderEmptyState("主将候補はまだ出せません。");
+    bindArmyCommanderCardButtons();
   }
   if (elements.armyViceGrid) {
     elements.armyViceGrid.innerHTML = (plannerResult.viceShortlist?.entries ?? []).length
       ? plannerResult.viceShortlist.entries
           .map((entry) => renderArmyViceShortlistCard(plannerResult.viceShortlist.commanderMeta, entry))
           .join("")
-      : renderEmptyState("副将候補はまだ出せません。");
+      : renderEmptyState("この条件では副将候補が組めません。仕上がり武将か条件を見直してください。");
   }
   elements.armyAlternativeGrid.innerHTML = plannerResult.armies
     .map((army, index) => renderArmyAlternativeCard(army, index))
@@ -6910,6 +13479,7 @@ function renderArmyPlanner(result = null) {
       ? plannerResult.exclusionReasons.map((entry) => renderArmyExcludedReasonCard(entry)).join("")
       : renderEmptyState("非採用理由を出せる候補はありません。");
   }
+  renderArmyBattlePreviewPanel(activeArmy, powerEstimate);
 }
 
 function resetArmyPlanner() {
@@ -6931,6 +13501,9 @@ function resetArmyPlanner() {
   }
   armySelectedCommanderIds = [];
   armyCommanderSelectionCache = null;
+  clearArmyCommanderPrefetchTimer();
+  armyCommanderPrefetchKey = "";
+  resetArmyBattlePreviewState();
   renderCheckboxGroup(elements.armyRarityFilters, RARITY_DEFS, "army-rarity", ARMY_BUILDER_DEFAULT_RARITIES);
   lastArmyPlannerResult = null;
   activeArmyAlternativeIndex = 0;
@@ -7005,6 +13578,17 @@ function bindArmyPlannerEvents() {
     return;
   }
 
+  if (elements.armySuggestCommandersButton) {
+    elements.armySuggestCommandersButton.textContent = "主将プールを更新";
+  }
+  if (elements.armyAutoSelectCommandersButton) {
+    elements.armyAutoSelectCommandersButton.textContent = "おすすめ5人を選ぶ";
+  }
+  if (elements.armyFinalizeButton) {
+    elements.armyFinalizeButton.textContent = "副将・補佐を組む";
+  }
+  setArmyPlannerBusy(false);
+
   [
     elements.powerCalcSoldier,
     elements.powerCalcAttack,
@@ -7023,6 +13607,32 @@ function bindArmyPlannerEvents() {
     resetArmyS3PowerCalcInputs();
     renderArmyS3PowerCalculator();
   });
+  elements.heroPowerPreset?.addEventListener("change", () => {
+    applyHeroPowerResearchPreset(elements.heroPowerPreset.value);
+    renderHeroPowerResearch();
+  });
+  [
+    elements.heroPowerAttack,
+    elements.heroPowerDefense,
+    elements.heroPowerWar,
+    elements.heroPowerStrategy,
+    elements.heroPowerCharm,
+    elements.heroPowerLevel,
+    elements.heroPowerTenpu
+  ]
+    .filter(Boolean)
+    .forEach((input) =>
+      input.addEventListener("input", () => {
+        if (elements.heroPowerPreset && elements.heroPowerPreset.value !== "custom") {
+          elements.heroPowerPreset.value = "custom";
+        }
+        renderHeroPowerResearch();
+      })
+    );
+  elements.heroPowerResetButton?.addEventListener("click", () => {
+    resetHeroPowerResearchInputs();
+    renderHeroPowerResearch();
+  });
 
   elements.armySuggestCommandersButton?.addEventListener("click", () => {
     lastArmyPlannerResult = null;
@@ -7031,29 +13641,60 @@ function bindArmyPlannerEvents() {
     elements.armyCommanderGrid?.scrollIntoView({ behavior: "smooth", block: "start" });
   });
   elements.armyAutoSelectCommandersButton?.addEventListener("click", () => {
-    const context = getArmyPlannerContext({ ignoreCommanderSelection: true });
-    const previewResult = buildArmyCommanderPreviewResult(context);
-    const buildableCommanderIds = findBuildableArmyCommanderIds(context);
-    const topCommanderIds = (buildableCommanderIds.length ? buildableCommanderIds : previewResult.commanderShortlist.slice(0, 5).map((entry) => entry.meta.character.id)).slice(0, 5);
-    setArmySelectedCommanderIds(topCommanderIds, previewResult.commanderShortlist.map((entry) => entry.meta));
-    lastArmyPlannerResult = null;
-    activeArmyAlternativeIndex = 0;
-    renderArmyPlanner(buildArmyPlannerResult());
-    elements.armyOverviewGrid?.scrollIntoView({ behavior: "smooth", block: "start" });
+    setArmyPlannerBusy(true);
+    window.setTimeout(() => {
+      try {
+        const context = getArmyPlannerContext({ ignoreCommanderSelection: true });
+        const previewResult = buildArmyCommanderPreviewResult(context);
+        const fastEntries = buildArmyCommanderFastAutoEntries(
+          context.allowedMetas,
+          context.concept,
+          context.seedMeta,
+          []
+        );
+        const topCommanderIds = buildArmyGreedyCommanderSelection(
+          context.allowedMetas,
+          context.concept,
+          context.seedMeta,
+          [],
+          5,
+          fastEntries
+        ).slice(0, 5);
+        setArmySelectedCommanderIds(
+          topCommanderIds,
+          previewResult.commanderShortlist.map((entry) => entry.meta).filter(Boolean)
+        );
+        lastArmyPlannerResult = null;
+        activeArmyAlternativeIndex = 0;
+        renderArmyPlanner(buildArmyCommanderPreviewResult());
+        elements.armySelectedCommanderStrip?.scrollIntoView({ behavior: "smooth", block: "start" });
+      } finally {
+        setArmyPlannerBusy(false);
+      }
+    }, 16);
   });
   elements.armyFinalizeButton?.addEventListener("click", () => {
     if (armySelectedCommanderIds.length < 5) {
       window.KH_APP_API?.showStatusToast?.("先に主将を5体選んでください。");
       return;
     }
-    scheduleArmyPlannerRebuild(true);
-    setTimeout(() => {
-      elements.armyOverviewGrid?.scrollIntoView({ behavior: "smooth", block: "start" });
-    }, 40);
+    setArmyPlannerBusy(true);
+    window.setTimeout(() => {
+      try {
+        lastArmyPlannerResult = null;
+        activeArmyAlternativeIndex = 0;
+        renderArmyPlanner(buildArmyPlannerResult());
+        elements.armyOverviewGrid?.scrollIntoView({ behavior: "smooth", block: "start" });
+      } finally {
+        setArmyPlannerBusy(false);
+      }
+    }, 16);
   });
   elements.armyClearCommanderSelectionButton?.addEventListener("click", () => {
     armySelectedCommanderIds = [];
     armyCommanderSelectionCache = null;
+    clearArmyCommanderPrefetchTimer();
+    armyCommanderPrefetchKey = "";
     lastArmyPlannerResult = null;
     activeArmyAlternativeIndex = 0;
     renderArmyPlanner(buildArmyCommanderPreviewResult());
@@ -7107,6 +13748,41 @@ function bindArmyPlannerEvents() {
     clearArmyObservedPowerImport();
     window.KH_APP_API?.showStatusToast?.("CSV実測データを削除しました。");
   });
+  elements.armyImageImportInput?.addEventListener("change", () => {
+    const file = elements.armyImageImportInput.files?.[0] ?? null;
+    setArmyImageImportFile(file);
+    renderArmyImageImportUi();
+  });
+  elements.armyImageImportButton?.addEventListener("click", async () => {
+    try {
+      await runArmyImageOcr();
+      if (!armyImageImportState.error) {
+        window.KH_APP_API?.showStatusToast?.("画像のOCR候補を更新しました。");
+      }
+    } catch (error) {
+      window.KH_APP_API?.showStatusToast?.("OCRの読み取りに失敗しました。");
+    }
+  });
+  elements.armyImageImportApplyButton?.addEventListener("click", () => {
+    try {
+      applyArmyImageImportFields();
+      window.KH_APP_API?.showStatusToast?.("OCR結果を手持ち実測へ反映しました。");
+    } catch (error) {
+      window.KH_APP_API?.showStatusToast?.(
+        error.message === "army-ocr-character-mismatch"
+          ? "武将名を特定できませんでした。OCR結果の武将名を補正してください。"
+          : "戦力・攻撃・防御・戦威・策略がそろってから反映してください。"
+      );
+    }
+  });
+  elements.armyImageImportClearButton?.addEventListener("click", () => {
+    clearArmyImageImportState();
+    if (elements.armyImageImportInput) {
+      elements.armyImageImportInput.value = "";
+    }
+    renderArmyImageImportUi();
+    window.KH_APP_API?.showStatusToast?.("OCR結果をクリアしました。");
+  });
   elements.armyDefaultInvestment?.addEventListener("change", () => {
     setArmyRosterDefaults({ defaultInvestmentTier: elements.armyDefaultInvestment.value });
     renderArmyRosterUi();
@@ -7131,9 +13807,48 @@ function bindArmyPlannerEvents() {
     scheduleArmyPlannerRebuild(true);
   });
   elements.armyView.addEventListener("click", (event) => {
+    const dockActionButton = event.target.closest("[data-army-dock-action]");
+    if (dockActionButton) {
+      if (dockActionButton.dataset.armyDockAction === "auto") {
+        elements.armyAutoSelectCommandersButton?.click();
+      } else if (dockActionButton.dataset.armyDockAction === "finalize") {
+        elements.armyFinalizeButton?.click();
+      }
+      return;
+    }
+
+    const quickCloseButton = event.target.closest("[data-army-quick-close]");
+    if (quickCloseButton) {
+      closeArmyQuickEditor();
+      return;
+    }
+
+    const quickOwnedButton = event.target.closest("[data-army-quick-owned]");
+    if (quickOwnedButton) {
+      const characterId = Number(quickOwnedButton.dataset.armyQuickOwned);
+      setArmyRosterOwned(characterId, !isArmyCharacterOwned(characterId));
+      if (!isArmyCharacterOwned(characterId)) {
+        armyQuickEditCharacterId = null;
+      }
+      renderArmyRosterUi();
+      scheduleArmyPlannerRebuild();
+      return;
+    }
+
+    const quickCommanderButton = event.target.closest("[data-army-quick-commander]");
+    if (quickCommanderButton) {
+      toggleArmyCommanderSelection(quickCommanderButton.dataset.armyQuickCommander);
+      renderArmyPlannerFloatingUi(lastArmyPlannerResult);
+      return;
+    }
+
     const rosterButton = event.target.closest("[data-army-roster-toggle]");
     if (rosterButton) {
       const characterId = Number(rosterButton.dataset.armyRosterToggle);
+      if (armyRosterLongPressConsumedId === characterId) {
+        armyRosterLongPressConsumedId = null;
+        return;
+      }
       cycleArmyRosterQuickState(characterId);
       renderArmyRosterUi();
       scheduleArmyPlannerRebuild();
@@ -7145,6 +13860,33 @@ function bindArmyPlannerEvents() {
       setArmyRosterOwned(Number(removeOwnedButton.dataset.armyRosterRemove), false);
       renderArmyRosterUi();
       scheduleArmyPlannerRebuild();
+      return;
+    }
+
+    const focusUnitButton = event.target.closest("[data-army-focus-unit]");
+    if (focusUnitButton) {
+      const [armyIndex, unitIndex] = focusUnitButton.dataset.armyFocusUnit.split(":").map((value) => Number(value));
+      activeArmyAlternativeIndex = Number.isFinite(armyIndex) ? armyIndex : 0;
+      activeArmyUnitIndex = Number.isFinite(unitIndex) ? unitIndex : 0;
+      activeArmyPreviewSecond = clampArmyTimelinePreviewSecond(ARMY_TIMELINE_DEFAULT_SECOND);
+      activeArmyPreviewGroupId = null;
+      activeArmyTargetSlotKey = null;
+      renderArmyPlanner();
+      return;
+    }
+
+    const previewSecondButton = event.target.closest("[data-army-preview-second]");
+    if (previewSecondButton && previewSecondButton.closest("#armyTimeline")) {
+      activeArmyPreviewSecond = clampArmyTimelinePreviewSecond(previewSecondButton.dataset.armyPreviewSecond);
+      activeArmyPreviewGroupId = previewSecondButton.dataset.armySelectGroup || null;
+      renderArmyBattlePreviewPanel(lastArmyPlannerResult?.armies?.[activeArmyAlternativeIndex] ?? null);
+      return;
+    }
+
+    const targetSlotButton = event.target.closest("[data-army-target-slot]");
+    if (targetSlotButton && targetSlotButton.closest("#armyBoardGrid")) {
+      activeArmyTargetSlotKey = targetSlotButton.dataset.armyTargetSlot || null;
+      renderArmyBattlePreviewPanel(lastArmyPlannerResult?.armies?.[activeArmyAlternativeIndex] ?? null);
       return;
     }
 
@@ -7160,24 +13902,26 @@ function bindArmyPlannerEvents() {
     const alternativeButton = event.target.closest("[data-army-alternative-index]");
     if (alternativeButton) {
       activeArmyAlternativeIndex = Number(alternativeButton.dataset.armyAlternativeIndex) || 0;
+      resetArmyBattlePreviewState();
       renderArmyPlanner();
+      return;
+    }
+
+    const armyImageSuggestButton = event.target.closest("[data-army-image-suggest]");
+    if (armyImageSuggestButton) {
+      updateArmyImageImportField("name", armyImageSuggestButton.dataset.armyImageSuggest || "");
       return;
     }
 
     const selectCommanderButton = event.target.closest("[data-army-select-commander]");
     if (selectCommanderButton) {
-      const commanderId = Number(selectCommanderButton.dataset.armySelectCommander);
-      if (armySelectedCommanderIds.includes(commanderId)) {
-        armySelectedCommanderIds = armySelectedCommanderIds.filter((value) => value !== commanderId);
-      } else if (armySelectedCommanderIds.length < 5) {
-        armySelectedCommanderIds = [...armySelectedCommanderIds, commanderId];
-      } else {
-        window.KH_APP_API?.showStatusToast?.("主将は5体までです。先に1体外してください。");
-        return;
-      }
-      lastArmyPlannerResult = null;
-      activeArmyAlternativeIndex = 0;
-      renderArmyPlanner(buildArmyCommanderPreviewResult());
+      toggleArmyCommanderSelection(selectCommanderButton.dataset.armySelectCommander);
+      return;
+    }
+
+    const selectCommanderCard = event.target.closest("[data-army-select-commander-card]");
+    if (selectCommanderCard) {
+      toggleArmyCommanderSelection(selectCommanderCard.dataset.armySelectCommanderCard);
       return;
     }
 
@@ -7206,6 +13950,11 @@ function bindArmyPlannerEvents() {
     }
   });
   elements.armyView.addEventListener("change", (event) => {
+    const imageField = event.target.closest("[data-army-image-field]");
+    if (imageField) {
+      updateArmyImageImportField(imageField.dataset.armyImageField, imageField.value);
+      return;
+    }
     const profileField = event.target.closest("[data-army-profile-id]");
     if (!profileField) {
       return;
@@ -7217,6 +13966,31 @@ function bindArmyPlannerEvents() {
     renderArmyRosterUi();
     scheduleArmyPlannerRebuild();
   });
+  elements.armyView.addEventListener("pointerdown", (event) => {
+    const rosterButton = event.target.closest("[data-army-roster-toggle]");
+    if (!rosterButton || (event.pointerType === "mouse" && event.button !== 0)) {
+      return;
+    }
+    clearArmyRosterLongPressTimer();
+    const characterId = Number(rosterButton.dataset.armyRosterToggle);
+    armyRosterLongPressTimer = window.setTimeout(() => {
+      armyRosterLongPressConsumedId = characterId;
+      openArmyQuickEditor(characterId);
+    }, 420);
+  });
+  ["pointerup", "pointercancel", "pointerleave"].forEach((eventName) => {
+    elements.armyView.addEventListener(eventName, clearArmyRosterLongPressTimer);
+  });
+  elements.armyView.addEventListener("contextmenu", (event) => {
+    const rosterButton = event.target.closest("[data-army-roster-toggle]");
+    if (!rosterButton) {
+      return;
+    }
+    event.preventDefault();
+    const characterId = Number(rosterButton.dataset.armyRosterToggle);
+    armyRosterLongPressConsumedId = characterId;
+    openArmyQuickEditor(characterId);
+  });
 }
 
 function populateArmyPlannerControls() {
@@ -7224,6 +13998,11 @@ function populateArmyPlannerControls() {
     return;
   }
 
+  populateSimpleSelect(
+    elements.heroPowerPreset,
+    HERO_POWER_RESEARCH_PRESET_DEFS,
+    HERO_POWER_RESEARCH_SAMPLE_ROWS[0]?.key ?? "custom"
+  );
   populateCharacterSelect(elements.armySeedCharacter, "固定しない");
   populateSimpleSelect(elements.armySeedMode, ARMY_SEED_MODE_DEFS, "best");
   populateSimpleSelect(elements.armyConcept, ARMY_CONCEPT_DEFS, "balanced");
@@ -7234,6 +14013,8 @@ function populateArmyPlannerControls() {
   renderCheckboxGroup(elements.armyRarityFilters, RARITY_DEFS, "army-rarity", ARMY_BUILDER_DEFAULT_RARITIES);
   resetArmyS3PowerCalcInputs();
   renderArmyS3PowerCalculator();
+  resetHeroPowerResearchInputs();
+  renderHeroPowerResearch();
   renderArmyPowerImportUi();
   renderArmyRosterUi();
 }
@@ -7272,6 +14053,11 @@ function renderArmyPlannerIdleState() {
   if (elements.armyExcludedGrid) {
     elements.armyExcludedGrid.innerHTML = renderEmptyState("完成案が出ると、ここに落選理由を表示します。");
   }
+  renderArmyBattlePreviewEmptyState(
+    "部隊が決まると、ここに0〜50秒の戦法タイムラインを表示します。",
+    "部隊が決まると、ここに味方盤面と敵盤面を表示します。",
+    "部隊が決まると、ここに継続中のバフ / デバフを表示します。"
+  );
 }
 
 function ensureArmyPlannerRendered() {
