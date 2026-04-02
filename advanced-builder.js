@@ -89,6 +89,17 @@
   const skillByName = Object.fromEntries(preparedSkills.map((skill) => [skill.name, skill]));
   const typeKeys = [...new Set(preparedCharacters.map((character) => character.type).filter(Boolean))];
   const equipmentOptionCache = new Map();
+  const statLabelByKey = Object.fromEntries(statDefs.map((entry) => [entry.key, entry.label]));
+  const ROLE_STAT_WEIGHTS = {
+    commander: 0.4,
+    vice: 0.2,
+    aide: 0.1
+  };
+  const ROLE_ACTION_HINTS = {
+    commander: 1,
+    vice: 0.72,
+    aide: 0.34
+  };
 
   const SAMPLE_PRESETS = [
     {
@@ -178,6 +189,8 @@
     {
       key: "star-ouki",
       system: "将星",
+      confidence: "image",
+      sourceKeys: ["imageArchive"],
       characterName: "王騎",
       title: "王騎 将星の次凸コスト",
       summary: "次の将星凸で伸びる値と必要素材を、そのまま研究メモ化しました。",
@@ -191,6 +204,8 @@
     {
       key: "training-ouki",
       system: "練達",
+      confidence: "image",
+      sourceKeys: ["imageArchive"],
       characterName: "王騎",
       title: "王騎 練達の次上昇",
       summary: "練達は武将ごとに伸び方と素材配分がかなり違うと見て良さそうです。",
@@ -204,6 +219,8 @@
     {
       key: "training-tou",
       system: "練達",
+      confidence: "image",
+      sourceKeys: ["imageArchive"],
       characterName: "騰",
       title: "騰 練達の次上昇",
       summary: "同じSSR援でも、王騎と騰で必要素材と重点ステがはっきり違います。",
@@ -217,6 +234,8 @@
     {
       key: "equipment-shoukaku",
       system: "装備",
+      confidence: "image",
+      sourceKeys: ["imageArchive"],
       characterName: "昌珂",
       title: "装備解放レベルの確認",
       summary: "装備枠は一括解放ではなく、部位ごとにレベル解放がある前提でUIを考えるべきです。",
@@ -232,6 +251,133 @@
     "将星の各凸段階で、凸前と凸後が分かる画像",
     "練達で 0→1、1→2 の前後比較が分かる画像",
     "魅力込みの5ステが見える画像を、天賦900と800で数体ずつ"
+  ];
+  const TRAINING_RATE_HINTS = {
+    900: 0.02,
+    850: 0.021,
+    800: 0.022
+  };
+  const TRAINING_FOCUS_BY_TYPE = {
+    闘: ["attack", "war"],
+    援: ["attack", "war"],
+    護: ["attack", "defense"],
+    妨: ["strategy", "defense"],
+    智: ["strategy", "war"]
+  };
+  const NOTE_TRAINING_VALUE_HEROES = new Set(["干央", "同金", "鱗坊", "黄離弦", "徐完", "昌文君", "尚鹿", "ムタ", "楚水", "隆国"]);
+  const RESEARCH_SOURCE_DEFS = {
+    gwPower: {
+      label: "GameWith 戦闘力",
+      url: "https://gamewith.jp/kingdom-hadou/517732"
+    },
+    gwTraining: {
+      label: "GameWith 練達",
+      url: "https://gamewith.jp/kingdom-hadou/516762"
+    },
+    gwFormation: {
+      label: "GameWith 軍勢/編成",
+      url: "https://gamewith.jp/kingdom-hadou/517327"
+    },
+    gwAide: {
+      label: "GameWith 補佐一覧",
+      url: "https://gamewith.jp/kingdom-hadou/article/show/545445"
+    },
+    gwStar: {
+      label: "GameWith 将星",
+      url: "https://gamewith.jp/kingdom-hadou/516761"
+    },
+    noteTraining: {
+      label: "note 練達検証",
+      url: "https://note.com/sushihasabinuki/n/n05f24125e62d"
+    },
+    imageArchive: {
+      label: "手元画像"
+    }
+  };
+  const FACT_CHECK_FINDINGS = [
+    {
+      key: "power-index",
+      confidence: "verified",
+      title: "研究所の数値は実戦力ではなく比較指数",
+      summary: "GameWithでは部隊の戦力は最大兵力と各ステータスから算出。研究所は比較しやすい4ステ中心の研究指数として扱います。",
+      chips: ["最大兵力あり", "レベル/将星/練達反映"],
+      details: [
+        "総戦闘力を盛る育成は、天賦上位30体のレベル・将星・練達が優先。",
+        "ここでの指数は編成比較用で、ゲーム内戦力の完全再現ではありません。"
+      ],
+      sourceKeys: ["gwPower"]
+    },
+    {
+      key: "slot-impact",
+      confidence: "verified",
+      title: "主将を最重視し、副将、補佐の順で見る",
+      summary: "GameWithの軍勢解説に寄せて、主将40 / 副将20 / 補佐10 の重みを土台にしました。補佐は技能だけが発動する前提で扱います。",
+      chips: ["主将40", "副将20", "補佐10"],
+      details: [
+        "主将の戦法は必ず発動。",
+        "副将の戦法は連鎖率しだい。",
+        "補佐は技能のみで、戦法は発動しません。"
+      ],
+      sourceKeys: ["gwFormation", "gwAide"]
+    },
+    {
+      key: "training-priority",
+      confidence: "verified",
+      title: "練達は主将の要点ステから",
+      summary: "GameWithでは主将能力が戦法効果へ最も大きく影響。闘/援は攻撃・戦威、護は攻撃・防御、妨は策略・防御を先に見ます。",
+      chips: ["主将優先", "副将連鎖28%+"],
+      details: [
+        "主将は戦法の威力や効果量に直結。",
+        "副将は最低でも連鎖率28%以上を目指す考え方が紹介されています。"
+      ],
+      sourceKeys: ["gwTraining"]
+    },
+    {
+      key: "star-priority",
+      confidence: "verified",
+      title: "将星不足は大きな取りこぼし",
+      summary: "GameWithでは将星の上昇量はレベルや練達より大きめで、ランク4以上では秘伝も解放されます。主力の将星不足は別枠で重く見ます。",
+      chips: ["上昇量大きめ", "R4で秘伝"],
+      details: [
+        "主力の将星が止まっていると、研究所の編成点より実戦差が出やすいです。"
+      ],
+      sourceKeys: ["gwStar"]
+    },
+    {
+      key: "note-growth-rate",
+      confidence: "hypothesis",
+      title: "練達1回分は天賦帯で約2.0%〜2.2%",
+      summary: "note記事の画像検証では、天賦900/850/800でおおむね2.0%/2.1%/2.2%上昇。研究所では練達効率の目安としてだけ使います。",
+      chips: ["note画像", "補助仮説"],
+      details: [
+        "母数が高い武将は、率が同じでも実数の伸びが大きい前提です。",
+        "最高レベル時の値で決まるという記事仮説を、研究所では参考値にとどめています。"
+      ],
+      sourceKeys: ["noteTraining"]
+    },
+    {
+      key: "note-training-order",
+      confidence: "hypothesis",
+      title: "練達はまずLv1を広く、その後エースLv2",
+      summary: "note記事ではLv1のコスパが高く、複数編成で使うエースをLv2へ進める考え方でした。研究所でも同じ順番で優先候補を返します。",
+      chips: ["Lv1広く", "Lv2はエース"],
+      details: [
+        "記事ではLv1が10個、Lv2が20個、Lv3が50個という画像検証が紹介されています。",
+        "伸びが小さい苦手ステは無理に上げない方がよい、という判断も補助的に採用しています。"
+      ],
+      sourceKeys: ["noteTraining"]
+    },
+    {
+      key: "note-high-roi",
+      confidence: "hypothesis",
+      title: "天賦800でも練達効率が高い候補がいる",
+      summary: "note記事の候補は干央、同金、鱗坊、黄離弦、徐完、昌文君、尚鹿、ムタ、楚水、隆国。該当武将は練達候補で一段だけ押し上げます。",
+      chips: ["候補10体", "補助加点"],
+      details: [
+        "GameWith優先の技能解釈を崩さず、練達の投資順だけ補助する用途です。"
+      ],
+      sourceKeys: ["noteTraining"]
+    }
   ];
 
   function injectStyles() {
@@ -307,6 +453,20 @@
       .advanced-chip {
         padding: 6px 10px;
         font-size: 0.82rem;
+      }
+      .advanced-chip--verified {
+        border-color: rgba(123, 208, 157, 0.32);
+        background: rgba(61, 126, 91, 0.18);
+        color: #e2ffe8;
+      }
+      .advanced-chip--hypothesis {
+        border-color: rgba(135, 181, 255, 0.3);
+        background: rgba(63, 93, 145, 0.18);
+        color: #e5efff;
+      }
+      .advanced-chip--image {
+        border-color: rgba(240, 198, 95, 0.28);
+        background: rgba(142, 96, 31, 0.22);
       }
       .advanced-toolbar,
       .advanced-section,
@@ -425,6 +585,15 @@
           rgba(18, 18, 22, 0.9);
         box-shadow: 0 10px 28px rgba(0, 0, 0, 0.18);
       }
+      .advanced-study-card--verified {
+        border-color: rgba(123, 208, 157, 0.28);
+      }
+      .advanced-study-card--hypothesis {
+        border-color: rgba(135, 181, 255, 0.24);
+      }
+      .advanced-study-card--priority {
+        border-color: rgba(240, 198, 95, 0.32);
+      }
       .advanced-study-card h4,
       .advanced-study-card h5 {
         margin: 0;
@@ -484,6 +653,26 @@
         display: grid;
         gap: 8px;
         color: rgba(245, 235, 220, 0.8);
+      }
+      .advanced-source-links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      .advanced-source-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 10px;
+        border-radius: 999px;
+        border: 1px solid rgba(235, 196, 109, 0.22);
+        background: rgba(255, 248, 232, 0.04);
+        color: #fff1cb;
+        font-size: 0.82rem;
+        text-decoration: none;
+      }
+      .advanced-source-link:hover {
+        border-color: rgba(240, 198, 95, 0.42);
       }
       .advanced-member-card {
         display: grid;
@@ -874,7 +1063,10 @@
     );
     const baseStats = Object.fromEntries(statDefs.map((definition) => [definition.key, Number(character[definition.key] || 0)]));
     const totalBaseStats = sumStatMaps(baseStats, gearStats, member.flatBonus);
-    const investRate = 1 + member.training * 0.03 + member.star * 0.025 + member.extraRate / 100;
+    const trainingRateHint = TRAINING_RATE_HINTS[Number(character.talent || 0)] ?? 0.02;
+    const trainingRate = 1 + member.training * trainingRateHint;
+    const starRate = 1 + member.star * 0.025;
+    const investRate = trainingRate * starRate * (1 + member.extraRate / 100);
     const skillRate = 1 + (member.skillLevel - 1) * 0.018;
     const tacticRate = 1 + (member.tacticLevel - 1) * 0.024;
     const finalRate = investRate * skillRate * tacticRate;
@@ -926,6 +1118,8 @@
       effectiveStats,
       effectiveTopStats,
       investRate,
+      trainingRate,
+      starRate,
       skillRate,
       tacticRate,
       quality,
@@ -1044,7 +1238,9 @@
     for (let index = 0; index < profiles.length; index += 1) {
       for (let peerIndex = index + 1; peerIndex < profiles.length; peerIndex += 1) {
         const pair = buildPairSynergy(profiles[index], profiles[peerIndex]);
-        pairScore += pair.score;
+        const leftWeight = ROLE_ACTION_HINTS[profiles[index].memberDef.roleKey] ?? 0.34;
+        const rightWeight = ROLE_ACTION_HINTS[profiles[peerIndex].memberDef.roleKey] ?? 0.34;
+        pairScore += pair.score * ((leftWeight + rightWeight) / 2);
         pairNotes.push(...pair.notes);
       }
     }
@@ -1092,20 +1288,20 @@
     });
     const baseMetrics = profiles.reduce(
       (sum, profile) => ({
-        offense: sum.offense + profile.metrics.offense,
-        sustain: sum.sustain + profile.metrics.sustain,
-        support: sum.support + profile.metrics.support,
-        control: sum.control + profile.metrics.control,
-        siege: sum.siege + profile.metrics.siege
+        offense: sum.offense + profile.metrics.offense * (ROLE_STAT_WEIGHTS[profile.memberDef.roleKey] ?? 0.1),
+        sustain: sum.sustain + profile.metrics.sustain * (ROLE_STAT_WEIGHTS[profile.memberDef.roleKey] ?? 0.1),
+        support: sum.support + profile.metrics.support * (ROLE_STAT_WEIGHTS[profile.memberDef.roleKey] ?? 0.1),
+        control: sum.control + profile.metrics.control * (ROLE_STAT_WEIGHTS[profile.memberDef.roleKey] ?? 0.1),
+        siege: sum.siege + profile.metrics.siege * (ROLE_STAT_WEIGHTS[profile.memberDef.roleKey] ?? 0.1)
       }),
       { offense: 0, sustain: 0, support: 0, control: 0, siege: 0 }
     );
     const metrics = {
-      offense: baseMetrics.offense / profiles.length + formationMetricBonus.offense * 0.12,
-      sustain: baseMetrics.sustain / profiles.length + formationMetricBonus.sustain * 0.12,
-      support: baseMetrics.support / profiles.length + formationMetricBonus.support * 0.12,
-      control: baseMetrics.control / profiles.length + formationMetricBonus.control * 0.12,
-      siege: baseMetrics.siege / profiles.length + formationMetricBonus.siege * 0.12,
+      offense: baseMetrics.offense + formationMetricBonus.offense * 0.12,
+      sustain: baseMetrics.sustain + formationMetricBonus.sustain * 0.12,
+      support: baseMetrics.support + formationMetricBonus.support * 0.12,
+      control: baseMetrics.control + formationMetricBonus.control * 0.12,
+      siege: baseMetrics.siege + formationMetricBonus.siege * 0.12,
       synergy: pairScore / Math.max(1, profiles.length - 1) + roleCoverage.score + bestAssignment.assignmentScore * 0.38
     };
     const weights = getWeights(objectiveKey, presetKey);
@@ -1136,7 +1332,7 @@
         profiles: [],
         formations: [],
         bestFormation: null,
-        totalPower: 0,
+        totalIndex: 0,
         replacementCandidates: []
       };
     }
@@ -1152,7 +1348,7 @@
       .map((formation) => evaluateFormation(formation, profiles, typeCounts, currentState.objective, currentState.scorePreset))
       .sort((left, right) => right.totalScore - left.totalScore || left.formation.label.localeCompare(right.formation.label, "ja"));
     const bestFormation = formationReports[0] ?? null;
-    const totalPower = profiles.reduce(
+    const totalIndex = profiles.reduce(
       (sum, profile) =>
         sum +
         statValue(profile.effectiveStats, "attack") +
@@ -1166,7 +1362,7 @@
       typeCounts,
       formations: formationReports,
       bestFormation,
-      totalPower,
+      totalIndex,
       replacementCandidates: []
     };
     if (!options.skipReplacement && bestFormation) {
@@ -1275,8 +1471,193 @@
     }).join(" / ");
   }
 
-  function renderGrowthStudy(currentState) {
+  function getConfidenceMeta(confidence) {
+    if (confidence === "verified") {
+      return { label: "確認済み", className: "advanced-chip advanced-chip--verified" };
+    }
+    if (confidence === "image") {
+      return { label: "画像確認", className: "advanced-chip advanced-chip--image" };
+    }
+    return { label: "補助仮説", className: "advanced-chip advanced-chip--hypothesis" };
+  }
+
+  function renderSourceLinks(sourceKeys = []) {
+    const entries = uniqueValues(sourceKeys)
+      .map((key) => RESEARCH_SOURCE_DEFS[key])
+      .filter(Boolean);
+    if (!entries.length) {
+      return "";
+    }
+    return `
+      <div class="advanced-source-links">
+        ${entries
+          .map((entry) =>
+            entry.url
+              ? `<a class="advanced-source-link" href="${escapeHtml(entry.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(entry.label)}</a>`
+              : `<span class="advanced-source-link">${escapeHtml(entry.label)}</span>`
+          )
+          .join("")}
+      </div>
+    `;
+  }
+
+  function getTrainingFocusStatKeys(profile) {
+    if (!profile) {
+      return ["attack", "war"];
+    }
+    if (profile.featureSet.has("回復") || profile.featureSet.has("補助")) {
+      return ["strategy", "war"];
+    }
+    if (
+      profile.featureSet.has("恐怖") ||
+      profile.featureSet.has("弱化") ||
+      profile.featureSet.has("弱化・DOT") ||
+      profile.featureSet.has("control.fear") ||
+      profile.featureSet.has("control.dot")
+    ) {
+      return ["strategy", "defense"];
+    }
+    return TRAINING_FOCUS_BY_TYPE[profile.character.type] ?? ["attack", "war"];
+  }
+
+  function estimateTrainingGain(profile, statKey) {
+    const baseValue = Number(profile.character?.[statKey] || profile.baseStats?.[statKey] || 0);
+    const rate = TRAINING_RATE_HINTS[Number(profile.character?.talent || 0)] ?? 0.02;
+    return Math.max(1, Math.round(baseValue * rate));
+  }
+
+  function getTrainingPriorityStep(profile) {
+    if (profile.member.training < 1) {
+      return { label: "Lv1優先", boost: 22, stepLabel: "0→1" };
+    }
+    if (profile.member.training < 2) {
+      return { label: "Lv2候補", boost: 12, stepLabel: "1→2" };
+    }
+    if (profile.memberDef.roleKey === "commander" && profile.member.training < 4) {
+      return { label: "主将伸ばし", boost: 8, stepLabel: `${profile.member.training}→${profile.member.training + 1}` };
+    }
+    return { label: "後回し", boost: 0, stepLabel: `${profile.member.training}→${profile.member.training + 1}` };
+  }
+
+  function buildTrainingPriorityEntries(report) {
+    return [...(report.profiles ?? [])]
+      .map((profile) => {
+        const focusStats = getTrainingFocusStatKeys(profile);
+        const gains = focusStats.map((statKey) => ({
+          statKey,
+          label: statLabelByKey[statKey] ?? statKey,
+          value: estimateTrainingGain(profile, statKey)
+        }));
+        const weakStat = statDefs
+          .map((definition) => ({
+            key: definition.key,
+            label: statLabelByKey[definition.key] ?? definition.key,
+            value: estimateTrainingGain(profile, definition.key)
+          }))
+          .sort((left, right) => left.value - right.value)[0];
+        const step = getTrainingPriorityStep(profile);
+        const roleScore = ROLE_STAT_WEIGHTS[profile.memberDef.roleKey] ?? 0.1;
+        const focusMetric = focusStats.reduce((sum, statKey) => sum + statValue(profile.effectiveStats, statKey), 0) / 80;
+        const noteBonus = NOTE_TRAINING_VALUE_HEROES.has(profile.character.name) ? 4 : 0;
+        const priorityScore = step.boost + roleScore * 20 + focusMetric + gains.reduce((sum, entry) => sum + entry.value, 0) * 0.4 + noteBonus;
+        const reasonBits = [];
+        if (profile.memberDef.roleKey === "commander") {
+          reasonBits.push("主将補正");
+        }
+        if (NOTE_TRAINING_VALUE_HEROES.has(profile.character.name)) {
+          reasonBits.push("note候補");
+        }
+        if (step.label !== "後回し") {
+          reasonBits.push(step.label);
+        }
+        if (weakStat?.value <= 4) {
+          reasonBits.push(`${weakStat.label}は伸び幅小さめ`);
+        }
+        return {
+          characterName: profile.character.name,
+          roleLabel: ROLE_LABELS[profile.memberDef.roleKey] ?? profile.memberDef.label,
+          typeLabel: profile.character.type || "-",
+          stepLabel: step.stepLabel,
+          tierLabel: step.label,
+          priorityScore,
+          gains,
+          weakStat,
+          reason: reasonBits.join(" / ") || "役割どおりに投資",
+          sourceKeys: NOTE_TRAINING_VALUE_HEROES.has(profile.character.name) ? ["gwTraining", "noteTraining"] : ["gwTraining", "noteTraining"]
+        };
+      })
+      .sort((left, right) => right.priorityScore - left.priorityScore || left.characterName.localeCompare(right.characterName, "ja"));
+  }
+
+  function renderFindingCard(entry) {
+    const confidenceMeta = getConfidenceMeta(entry.confidence);
+    return `
+      <article class="advanced-study-card advanced-study-card--${escapeHtml(entry.confidence)}">
+        <div class="advanced-section__header">
+          <div>
+            <h4>${escapeHtml(entry.title)}</h4>
+            <p>${escapeHtml(entry.summary)}</p>
+          </div>
+          <div class="advanced-chip-row">
+            <span class="${escapeHtml(confidenceMeta.className)}">${escapeHtml(confidenceMeta.label)}</span>
+          </div>
+        </div>
+        <div class="advanced-chip-row">
+          ${(entry.chips ?? []).map((chip) => `<span class="advanced-chip">${escapeHtml(chip)}</span>`).join("")}
+        </div>
+        <ul>
+          ${(entry.details ?? []).map((detail) => `<li>${escapeHtml(detail)}</li>`).join("")}
+        </ul>
+        ${renderSourceLinks(entry.sourceKeys)}
+      </article>
+    `;
+  }
+
+  function renderTrainingPriorityCard(report) {
+    const entries = buildTrainingPriorityEntries(report).slice(0, 5);
+    const body = entries.length
+      ? `
+          <div class="advanced-study-delta-list">
+            ${entries
+              .map(
+                (entry, index) => `
+                  <div class="advanced-study-delta">
+                    <strong>${index + 1}. ${escapeHtml(entry.characterName)} / ${escapeHtml(entry.roleLabel)} / ${escapeHtml(entry.stepLabel)}</strong>
+                    <p>${escapeHtml(entry.reason)}</p>
+                    <div class="advanced-chip-row">
+                      ${entry.gains
+                        .map((gain) => `<span class="advanced-chip">${escapeHtml(`${gain.label} +${gain.value}`)}</span>`)
+                        .join("")}
+                    </div>
+                  </div>
+                `
+              )
+              .join("")}
+          </div>
+        `
+      : `<div class="advanced-study-delta"><strong>まだ育成優先を出せません</strong><p>武将を選ぶと、今の5人向けに練達順を出します。</p></div>`;
+    return `
+      <article class="advanced-study-card advanced-study-card--priority">
+        <div class="advanced-section__header">
+          <div>
+            <h4>今の5人の育成優先</h4>
+            <p>GameWithの主将重視と、note記事の「Lv1を広く→エースLv2」を合わせた順です。</p>
+          </div>
+          <div class="advanced-chip-row">
+            <span class="advanced-chip advanced-chip--verified">S3優先</span>
+            <span class="advanced-chip advanced-chip--hypothesis">note補助</span>
+          </div>
+        </div>
+        ${body}
+        ${renderSourceLinks(["gwTraining", "noteTraining"])}
+      </article>
+    `;
+  }
+
+  function renderGrowthStudy(currentState, report) {
     const selectedNames = new Set(currentState.members.map((member) => member.characterName).filter(Boolean));
+    const verifiedFindings = FACT_CHECK_FINDINGS.filter((entry) => entry.confidence === "verified");
+    const hypothesisFindings = FACT_CHECK_FINDINGS.filter((entry) => entry.confidence === "hypothesis");
     const levelGroups = Object.entries(
       GROWTH_STUDY_LEVEL_RECORDS.reduce((grouped, record) => {
         const groupKey = record.characterName || "その他";
@@ -1302,11 +1683,14 @@
       <section class="advanced-section">
         <div class="advanced-section__header">
           <div>
-            <h3>育成研究メモ</h3>
-            <p>添付画像から読み取れた実測を、上級編成研究所のすぐ下で見返せるようにしました。選択中の武将に近いメモが先頭へ来ます。</p>
+            <h3>研究ログ</h3>
+            <p>GameWithで確認できた仕様、note記事と画像からの補助仮説、手元画像の実測を分けて表示します。技能や基本仕様が食い違うときはGameWithを優先します。</p>
           </div>
         </div>
         <div class="advanced-study-grid">
+          ${verifiedFindings.map((entry) => renderFindingCard(entry)).join("")}
+          ${hypothesisFindings.map((entry) => renderFindingCard(entry)).join("")}
+          ${renderTrainingPriorityCard(report)}
           ${levelGroups
             .map(([characterName, records]) => {
               const deltaRows = records.slice(1).map((record, index) => ({
@@ -1322,6 +1706,7 @@
                       <p>${escapeHtml(records[0]?.label || "能力タブ")}の実測です。レベルごとの伸びは完全固定ではなく、丸めで1前後ぶれる可能性があります。</p>
                     </div>
                     <div class="advanced-chip-row">
+                      <span class="advanced-chip advanced-chip--image">画像確認</span>
                       ${selectedNames.has(characterName) ? '<span class="advanced-chip">編成内の武将</span>' : ""}
                       <span class="advanced-chip">Lv ${escapeHtml(`${records[0]?.order ?? "-"} -> ${records[records.length - 1]?.order ?? "-"}`)}</span>
                     </div>
@@ -1360,6 +1745,7 @@
                       )
                       .join("")}
                   </div>
+                  ${renderSourceLinks(["imageArchive"])}
                 </article>
               `;
             })
@@ -1367,13 +1753,14 @@
           ${sortedStudyNotes
             .map(
               (entry) => `
-                <article class="advanced-study-card">
+                <article class="advanced-study-card advanced-study-card--${escapeHtml(entry.confidence || "image")}">
                   <div class="advanced-section__header">
                     <div>
                       <h4>${escapeHtml(entry.title)}</h4>
                       <p>${escapeHtml(entry.summary)}</p>
                     </div>
                     <div class="advanced-chip-row">
+                      <span class="${escapeHtml(getConfidenceMeta(entry.confidence || "image").className)}">${escapeHtml(getConfidenceMeta(entry.confidence || "image").label)}</span>
                       <span class="advanced-chip">${escapeHtml(entry.system)}</span>
                       <span class="advanced-chip">${escapeHtml(entry.characterName)}</span>
                       ${selectedNames.has(entry.characterName) ? '<span class="advanced-chip">編成内の武将</span>' : ""}
@@ -1385,6 +1772,7 @@
                   <ul>
                     ${entry.details.map((detail) => `<li>${escapeHtml(detail)}</li>`).join("")}
                   </ul>
+                  ${renderSourceLinks(entry.sourceKeys)}
                 </article>
               `
             )
@@ -1615,7 +2003,7 @@
           </div>
           <div class="advanced-chip-row">
             <span class="advanced-chip">総合 <span class="advanced-score">${formatMetric(best.totalScore)}</span></span>
-            <span class="advanced-chip">部隊戦闘力目安 ${Math.round(report.totalPower).toLocaleString("ja-JP")}</span>
+            <span class="advanced-chip">研究用4ステ指数 ${Math.round(report.totalIndex).toLocaleString("ja-JP")}</span>
           </div>
         </div>
         <div class="advanced-summary-grid">
@@ -1795,6 +2183,7 @@
                     </div>
                   </div>
                   <div class="advanced-chip-row">
+                    <span class="advanced-chip">天賦 ${profile.character.talent ?? "-"}</span>
                     <span class="advanced-chip">練達 ${profile.member.training}</span>
                     <span class="advanced-chip">将星凸 ${profile.member.star}</span>
                     <span class="advanced-chip">技能Lv ${profile.member.skillLevel}</span>
@@ -1864,7 +2253,7 @@
       <div class="advanced-builder">
         ${renderToolbar()}
         ${renderSummary(report)}
-        ${renderGrowthStudy(state)}
+        ${renderGrowthStudy(state, report)}
         ${renderMemberInputs(state)}
         ${renderMetricCards(report)}
         ${renderFormationCards(report)}
