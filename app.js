@@ -30,6 +30,7 @@ const UI_STATE_STORAGE_KEY = "kh-site-ui-v1";
 const HERO_RECENT_STORAGE_KEY = "kh-hero-recent-v1";
 const FAVORITE_CHARACTERS_STORAGE_KEY = "kh-favorite-characters-v1";
 const FAVORITE_SKILLS_STORAGE_KEY = "kh-favorite-skills-v1";
+const COMMUNITY_POST_DRAFT_STORAGE_KEY = "kh-community-post-draft-v1";
 const SHARE_PARAM_KEY = "share";
 const SHARE_PAYLOAD_VERSION = 1;
 const BACKUP_VERSION = 1;
@@ -593,8 +594,8 @@ const ARMY_SEED_MODE_DEFS = [
 const ARMY_CONCEPT_DEFS = [
   {
     key: "balanced",
-    label: "対人勝率",
-    description: "前半20秒の噛み合い、継戦力、制圧力を均等に取りにいく対人の基準モードです。",
+    label: "対人基準",
+    description: "前半20秒の噛み合い、継戦力、制圧力を均等に見て、S3の対人で軸にしやすい形を狙います。",
     primaryObjective: "pvp",
     objectiveMix: { pvp: 0.65, defense: 0.2, siege: 0.1, gathering: 0.05 },
     recommendedFormation: "基本陣参",
@@ -633,8 +634,8 @@ const ARMY_CONCEPT_DEFS = [
   },
   {
     key: "powermax",
-    label: "現在戦力最大",
-    description: "今の手持ちと実測戦力を優先し、現時点で最も高い総戦力を出しやすい軍勢を狙います。",
+    label: "戦力重視",
+    description: "今の仕上がり武将だけで、現時点の総戦力を最も高くしやすい軍勢を狙います。",
     primaryObjective: "pvp",
     objectiveMix: { pvp: 0.5, defense: 0.2, siege: 0.2, gathering: 0.1 },
     recommendedFormation: "基本陣参",
@@ -670,8 +671,8 @@ const ARMY_CONCEPT_DEFS = [
   },
   {
     key: "siege",
-    label: "攻城DPS",
-    description: "対物、攻速、前半の火力支援を重ね、城や砦を削る速度を優先する軍勢です。",
+    label: "攻城速度",
+    description: "対物、攻速、前半の火力支援を重ね、城や砦を削る速さを優先する軍勢です。",
     primaryObjective: "siege",
     objectiveMix: { siege: 0.78, pvp: 0.12, defense: 0.1, gathering: 0 },
     recommendedFormation: "錐行陣参",
@@ -707,8 +708,8 @@ const ARMY_CONCEPT_DEFS = [
   },
   {
     key: "counter",
-    label: "最大見込み戦力",
-    description: "完成育成を前提に、潜在戦力が最も高くなる25体軍勢を優先するモードです。",
+    label: "完成形重視",
+    description: "完成後の伸びや最終形の厚みを見て、将来の仕上がりが強い25体軍勢を優先します。",
     primaryObjective: "pvp",
     objectiveMix: { pvp: 0.45, defense: 0.25, siege: 0.2, gathering: 0.1 },
     recommendedFormation: "基本陣参",
@@ -776,6 +777,46 @@ const ARMY_CONCEPT_DEFS = [
     preferred: [
       { tag: "control.fear", minUnits: 1, weight: 0.55 },
       { tag: "role.frontline-anchor", minUnits: 1, weight: 0.45 }
+    ]
+  },
+  {
+    key: "opener",
+    label: "初動20秒",
+    description: "S3の立ち上がりで主導権を握るため、早い戦法順、先手の支援、妨害密度を優先します。",
+    primaryObjective: "pvp",
+    objectiveMix: { pvp: 0.78, defense: 0.12, siege: 0.1, gathering: 0 },
+    recommendedFormation: "策謀陣参",
+    formationReason: "早い順で支援と妨害を重ねやすく、初動20秒の主導権を握りやすい陣形です。",
+    rowTarget: { front: 1, middle: 2, back: 2 },
+    commanderTypeBias: { 妨: 11, 援: 8, 闘: 5, 護: 4 },
+    orderWeights: { 早い: 1, 普通: 0.8, 遅い: 0.48 },
+    featureWeights: {
+      弱化効果付与: 18,
+      強化解除: 15,
+      攻速低下: 14,
+      強化効果付与: 12,
+      被ダメ軽減: 10,
+      回復: 8,
+      弱化解除: 7,
+      会心: 5
+    },
+    tagWeights: {
+      "role.disruptor": 20,
+      "role.flex-support": 18,
+      "control.buff-strip": 14,
+      "tempo.attack-speed-down": 12,
+      "support.cleanse": 10,
+      "role.frontline-anchor": 8
+    },
+    required: [
+      { tag: "role.disruptor", minUnits: 1, weight: 0.95 },
+      { tag: "role.flex-support", minUnits: 1, weight: 0.9 },
+      { tag: "role.frontline-anchor", minUnits: 1, weight: 0.65 }
+    ],
+    preferred: [
+      { tag: "control.buff-strip", minUnits: 1, weight: 0.6 },
+      { tag: "tempo.attack-speed-down", minUnits: 1, weight: 0.55 },
+      { tag: "support.cleanse", minUnits: 1, weight: 0.45 }
     ]
   },
   {
@@ -854,7 +895,7 @@ const ARMY_CONCEPT_DEFS = [
   },
   {
     key: "meta",
-    label: "世間採用寄り",
+    label: "採用傾向",
     description: "公開編成や推奨枠を弱い事前分布として使い、今の手持ちに寄せて無理なく採用形へ近づけます。",
     primaryObjective: "pvp",
     objectiveMix: { pvp: 0.6, defense: 0.25, siege: 0.15, gathering: 0 },
@@ -1262,9 +1303,244 @@ const SKILL_EFFECT_MAP = Object.fromEntries(
 const CHARACTER_FEATURE_MAP = Object.fromEntries(
   CHARACTER_FEATURE_DEFS.map((definition) => [definition.key, definition])
 );
+function mergeManualRecordsByName(baseRecords = [], extraRecords = []) {
+  const merged = [...(baseRecords ?? [])];
+  const indexByName = new Map(
+    merged.map((record, index) => [String(record?.name ?? ""), index]).filter(([name]) => name)
+  );
+
+  for (const record of extraRecords ?? []) {
+    const name = String(record?.name ?? "");
+    if (!name) {
+      continue;
+    }
+
+    if (indexByName.has(name)) {
+      const targetIndex = indexByName.get(name);
+      merged[targetIndex] = {
+        ...merged[targetIndex],
+        ...record
+      };
+      continue;
+    }
+
+    indexByName.set(name, merged.length);
+    merged.push(record);
+  }
+
+  return merged;
+}
+
+const MANUAL_EXTRA_CHARACTERS = [
+  {
+    id: 90,
+    name: "張唐",
+    rarity: "SSR",
+    tenpu: 850,
+    type: "護",
+    sourceUrl: "https://gamewith.jp/kingdom-hadou/552023",
+    sourceId: "552023",
+    imageUrl: "https://img.gamewith.jp/article_tools/kingdom-hadou/gacha/chara_90.png",
+    battleArtName: "不滅の闘魂",
+    battleArtEffects: [
+      "自部隊と同じ横列の部隊の防御を30%、攻撃と戦威を15%上昇",
+      "攻撃対象に戦威200%の攻撃（自部隊の兵力が30%以下の場合、300%に威力上昇）"
+    ],
+    battleArtType: "戦威",
+    battleArtChainOrder: "普通",
+    guide: {
+      evaluationPoints: [
+        "戦法で横列の防御・攻撃・戦威をまとめて伸ばせる護タイプ武将",
+        "汗明の副将や信(臨時千人将)の補佐として使いやすい"
+      ],
+      latestFormation: {
+        placements: [
+          { slot: "副将1", name: "臨武君" },
+          { slot: "主将", name: "汗明" },
+          { slot: "副将2", name: "張唐" },
+          { slot: "補佐1", name: "介子坊" },
+          { slot: "補佐2", name: "録嗚未" }
+        ],
+        selfSlot: "副将",
+        focusTitles: [
+          "前列で使うのがおすすめ",
+          "汗明や信の火力を横列バフで支える",
+          "シーズン3技能の攻陣を前列で活かしやすい"
+        ]
+      },
+      recommendedSecrets: {
+        items: [
+          {
+            name: "不撓不屈伝",
+            effect: "防御と戦威を伸ばしつつ、前列の受けと反撃を強化"
+          }
+        ],
+        tipTitles: [
+          "前列で受けながら横列支援を回す構成が扱いやすい",
+          "汗明・信のような火力主将を支える運用が安定"
+        ]
+      }
+    },
+    skills: ["頑健", "統制", "大勇"],
+    personalities: ["防御", "函谷関の戦い", "経験豊富", "基本戦術", "真面目", "武人"],
+    chainBase: 0.2,
+    attack: 630,
+    defense: 713,
+    war: 646,
+    strategy: 605
+  },
+  {
+    id: 91,
+    name: "桓騎",
+    rarity: "SSR",
+    tenpu: 900,
+    type: "妨",
+    sourceUrl: "https://gamewith.jp/kingdom-hadou/552051",
+    sourceId: "552051",
+    imageUrl: "https://img.gamewith.jp/article_tools/kingdom-hadou/gacha/chara_91.png",
+    battleArtName: "破戒悠戦",
+    battleArtEffects: [
+      "攻撃対象と同じ横列の部隊の防御を30%低下させ、自部隊より策略が低い場合は動揺を付与（自身が主将の場合、動揺を軍勢内の自部隊より策略が低い全部隊に付与。自身の将星ランク×1秒動揺の効果時間を延長）",
+      "攻撃対象と同じ横列の部隊に戦威150%の攻撃（将星ランク×20%威力上昇、効果最大で290%に威力上昇）"
+    ],
+    battleArtType: "戦威",
+    battleArtChainOrder: "遅い",
+    guide: {
+      evaluationPoints: [
+        "動揺で敵の戦法を封じる妨タイプ武将",
+        "高将星なら主将、低将星では李牧や王翦の副将で使いやすい"
+      ],
+      latestFormation: {
+        placements: [
+          { slot: "副将1", name: "羌瘣" },
+          { slot: "主将", name: "桓騎" },
+          { slot: "副将2", name: "呉鳳明" },
+          { slot: "補佐1", name: "王賁" },
+          { slot: "補佐2", name: "隆国" }
+        ],
+        selfSlot: "",
+        focusTitles: [
+          "前列で使うのがおすすめ",
+          "動揺で敵の戦法を封じる編成",
+          "錐行陣や鶴翼陣の1stで使いやすい"
+        ]
+      },
+      recommendedSecrets: {
+        items: [
+          {
+            name: "鬼手翻弄伝",
+            effect: "策略と妨害性能を伸ばし、動揺の押し付けを安定させる"
+          }
+        ],
+        tipTitles: [
+          "将星が高ければ主将運用、低い間は李牧や王翦の副将運用が安定",
+          "対人では横列への動揺付与を最優先で狙う"
+        ]
+      }
+    },
+    skills: ["俊才", "洞察", "詭道"],
+    personalities: ["殲滅", "函谷関の戦い", "桓騎軍", "奇策奇計", "戦術眼", "暗躍"],
+    chainBase: 0.2,
+    attack: 738,
+    defense: 609,
+    war: 625,
+    strategy: 816
+  }
+];
+
+const MANUAL_EXTRA_SEASON3_HEROES = [
+  {
+    slug: "choutou",
+    name: "張唐",
+    seasonKey: "s3",
+    masterRevision: "S3-R1",
+    rarity: "SSR",
+    talent: 850,
+    type: "護",
+    commanderScore: 76,
+    viceScore: 90,
+    aideScore: 64,
+    objectiveScores: {
+      pvp: 84,
+      siege: 42,
+      defense: 88,
+      gathering: 14
+    },
+    roleSummary: "横列へ攻撃・防御・戦威を同時に配れる前列向きの護将。汗明の副将や信の補佐で火力支援をしやすい。",
+    skillKeywords: ["頑健", "大勇", "攻陣"],
+    tags: [
+      "slot.commander-viable",
+      "slot.vice-chain",
+      "role.frontline-anchor",
+      "role.flex-support",
+      "obj.pvp",
+      "obj.defense"
+    ],
+    strengths: [
+      "横列の攻撃・防御・戦威をまとめて底上げできる",
+      "前列で攻陣を活かしやすく、汗明や信の火力支援に噛み合う",
+      "護タイプらしく受けも残しやすい"
+    ],
+    weaknesses: [
+      "主将単体で勝ち切るより、副将や補佐で光る",
+      "攻城の特化枠ほど建物相手の伸びは大きくない"
+    ],
+    bestUseCases: ["対人", "防衛"],
+    sourceUrls: [
+      "https://gamewith.jp/kingdom-hadou/552023",
+      "https://www.youtube.com/watch?v=CKLSC5wSbsA"
+    ]
+  },
+  {
+    slug: "kanki",
+    name: "桓騎",
+    seasonKey: "s3",
+    masterRevision: "S3-R1",
+    rarity: "SSR",
+    talent: 900,
+    type: "妨",
+    commanderScore: 84,
+    viceScore: 92,
+    aideScore: 24,
+    objectiveScores: {
+      pvp: 96,
+      siege: 24,
+      defense: 58,
+      gathering: 18
+    },
+    roleSummary: "動揺で敵の戦法を止める策略依存の妨害軸。高将星なら主将、低将星では李牧や王翦の副将で扱いやすい。",
+    skillKeywords: ["俊才", "洞察", "詭道"],
+    tags: [
+      "slot.commander-viable",
+      "slot.vice-chain",
+      "role.disruptor",
+      "tempo.opening-pressure",
+      "obj.pvp"
+    ],
+    strengths: [
+      "横列への動揺で敵戦法を止めやすい",
+      "策略が高く、妨害条件を満たしやすい",
+      "李牧や王翦の副将に置いても仕事をしやすい"
+    ],
+    weaknesses: [
+      "将星が低いと主将価値が安定しにくい",
+      "攻城目的では役割が薄くなりやすい"
+    ],
+    bestUseCases: ["対人"],
+    sourceUrls: [
+      "https://gamewith.jp/kingdom-hadou/552051",
+      "https://www.youtube.com/watch?v=YQ8zCkhbinI",
+      "https://www.youtube.com/watch?v=TkCD62WWjRE"
+    ]
+  }
+];
+
+const MERGED_RAW_CHARACTERS = mergeManualRecordsByName(RAW_CHARACTERS, MANUAL_EXTRA_CHARACTERS);
+const MERGED_SEASON3_HEROES = mergeManualRecordsByName(SEASON3.heroes, MANUAL_EXTRA_SEASON3_HEROES);
+
 const S3_TAG_MAP = Object.fromEntries(SEASON3.tags.map((tag) => [tag.key, tag]));
 const S3_OBJECTIVE_MAP = Object.fromEntries(SEASON3.objectives.map((objective) => [objective.key, objective]));
-const S3_HERO_RAW_BY_NAME = Object.fromEntries(SEASON3.heroes.map((hero) => [hero.name, hero]));
+const S3_HERO_RAW_BY_NAME = Object.fromEntries(MERGED_SEASON3_HEROES.map((hero) => [hero.name, hero]));
 const S3_SKILL_RAW_BY_NAME = Object.fromEntries(SEASON3.skills.map((skill) => [skill.name, skill]));
 const S3_TOOL_CATALOG = SEASON3.toolCatalog ?? [];
 const S3_POWER_BUILDER_CONFIG = SEASON3.powerBuilderConfig ?? {};
@@ -2025,7 +2301,7 @@ function getSkillRecord(skillName) {
   );
 }
 
-const preparedCharacters = RAW_CHARACTERS.map((character) => {
+const preparedCharacters = MERGED_RAW_CHARACTERS.map((character) => {
   const season3 = S3_HERO_RAW_BY_NAME[character.name] ?? null;
   const rankedStats = STAT_DEFS
     .map((stat, priority) => ({
@@ -2167,6 +2443,9 @@ const preparedCharacters = RAW_CHARACTERS.map((character) => {
 const characterByName = Object.fromEntries(
   preparedCharacters.map((character) => [character.name, character])
 );
+const characterById = Object.fromEntries(
+  preparedCharacters.map((character) => [String(character.id), character])
+);
 
 const EQUIPMENT_COMPATIBILITY_BY_NAME = buildEquipmentCompatibilityMap(RAW_EQUIPMENT_COMPATIBILITY);
 const EQUIPMENT_COMPATIBLE_SSR_NAMES = new Set(
@@ -2222,6 +2501,26 @@ const season3FeaturedSkills = preparedSkills.filter((skill) => skill.season3);
 const elements = {
   siteToolNav: document.querySelector("#siteToolNav"),
   siteShellModeLabel: document.querySelector("#siteShellModeLabel"),
+  siteDesignPanel: document.querySelector("#siteDesignPanel"),
+  siteDesignPreset: document.querySelector("#siteDesignPreset"),
+  siteDesignWidth: document.querySelector("#siteDesignWidth"),
+  siteDesignDensity: document.querySelector("#siteDesignDensity"),
+  siteDesignRadius: document.querySelector("#siteDesignRadius"),
+  siteDesignShadow: document.querySelector("#siteDesignShadow"),
+  siteDesignContrast: document.querySelector("#siteDesignContrast"),
+  siteDesignAccent: document.querySelector("#siteDesignAccent"),
+  siteDesignPaper: document.querySelector("#siteDesignPaper"),
+  siteDesignShell: document.querySelector("#siteDesignShell"),
+  siteDesignJson: document.querySelector("#siteDesignJson"),
+  siteDesignApplyJson: document.querySelector("#siteDesignApplyJson"),
+  siteDesignCopyJson: document.querySelector("#siteDesignCopyJson"),
+  siteDesignReset: document.querySelector("#siteDesignReset"),
+  siteDesignSummary: document.querySelector("#siteDesignSummary"),
+  siteDesignWidthValue: document.querySelector("#siteDesignWidthValue"),
+  siteDesignDensityValue: document.querySelector("#siteDesignDensityValue"),
+  siteDesignRadiusValue: document.querySelector("#siteDesignRadiusValue"),
+  siteDesignShadowValue: document.querySelector("#siteDesignShadowValue"),
+  siteDesignContrastValue: document.querySelector("#siteDesignContrastValue"),
   toolDirectoryGrid: document.querySelector("#toolDirectoryGrid"),
   sitePopularSummary: document.querySelector("#sitePopularSummary"),
   sitePopularTools: document.querySelector("#sitePopularTools"),
@@ -2233,6 +2532,12 @@ const elements = {
   viewPanels: Array.from(document.querySelectorAll(".app-view")),
   viewNav: document.querySelector(".view-nav"),
   statusToast: document.querySelector("#statusToast"),
+  sharedViewBanner: document.querySelector("#sharedViewBanner"),
+  sharedViewEyebrow: document.querySelector("#sharedViewEyebrow"),
+  sharedViewTitle: document.querySelector("#sharedViewTitle"),
+  sharedViewSummary: document.querySelector("#sharedViewSummary"),
+  sharedViewCopyButton: document.querySelector("#sharedViewCopyButton"),
+  sharedViewExitButton: document.querySelector("#sharedViewExitButton"),
   datasetCount: document.querySelector("#datasetCount"),
   ssrCount: document.querySelector("#ssrCount"),
   srCount: document.querySelector("#srCount"),
@@ -2295,6 +2600,21 @@ const elements = {
   powerCalcSummaryGrid: document.querySelector("#powerCalcSummaryGrid"),
   powerCalcFormula: document.querySelector("#powerCalcFormula"),
   powerCalcSampleMeta: document.querySelector("#powerCalcSampleMeta"),
+  heroPowerPreset: document.querySelector("#heroPowerPreset"),
+  heroPowerAttack: document.querySelector("#heroPowerAttack"),
+  heroPowerDefense: document.querySelector("#heroPowerDefense"),
+  heroPowerWar: document.querySelector("#heroPowerWar"),
+  heroPowerStrategy: document.querySelector("#heroPowerStrategy"),
+  heroPowerCharm: document.querySelector("#heroPowerCharm"),
+  heroPowerLevel: document.querySelector("#heroPowerLevel"),
+  heroPowerTenpu: document.querySelector("#heroPowerTenpu"),
+  heroPowerResetButton: document.querySelector("#heroPowerResetButton"),
+  heroPowerSummaryGrid: document.querySelector("#heroPowerSummaryGrid"),
+  heroPowerHypothesisGrid: document.querySelector("#heroPowerHypothesisGrid"),
+  heroPowerInvestmentGrid: document.querySelector("#heroPowerInvestmentGrid"),
+  heroPowerConclusion: document.querySelector("#heroPowerConclusion"),
+  heroPowerInvestmentConclusion: document.querySelector("#heroPowerInvestmentConclusion"),
+  heroPowerResearchMeta: document.querySelector("#heroPowerResearchMeta"),
   exactTitle: document.querySelector("#exactTitle"),
   exactDescription: document.querySelector("#exactDescription"),
   exactCount: document.querySelector("#exactCount"),
@@ -2402,6 +2722,13 @@ const elements = {
   armyPowerImportButton: document.querySelector("#armyPowerImportButton"),
   armyPowerClearButton: document.querySelector("#armyPowerClearButton"),
   armyPowerImportSummaryGrid: document.querySelector("#armyPowerImportSummaryGrid"),
+  armyImageImportInput: document.querySelector("#armyImageImportInput"),
+  armyImageImportButton: document.querySelector("#armyImageImportButton"),
+  armyImageImportApplyButton: document.querySelector("#armyImageImportApplyButton"),
+  armyImageImportClearButton: document.querySelector("#armyImageImportClearButton"),
+  armyImageImportStatus: document.querySelector("#armyImageImportStatus"),
+  armyImageImportPreview: document.querySelector("#armyImageImportPreview"),
+  armyImageImportResult: document.querySelector("#armyImageImportResult"),
   armyRosterSearch: document.querySelector("#armyRosterSearch"),
   armyDefaultInvestment: document.querySelector("#armyDefaultInvestment"),
   armyDefaultEquipment: document.querySelector("#armyDefaultEquipment"),
@@ -2423,11 +2750,16 @@ const elements = {
   armySummary: document.querySelector("#armySummary"),
   armyValidation: document.querySelector("#armyValidation"),
   armyTopCount: document.querySelector("#armyTopCount"),
+  armyTimelineCount: document.querySelector("#armyTimelineCount"),
   armyExportImageButton: document.querySelector("#armyExportImageButton"),
   armyShareImageButton: document.querySelector("#armyShareImageButton"),
   armyOverviewGrid: document.querySelector("#armyOverviewGrid"),
   armyAuditGrid: document.querySelector("#armyAuditGrid"),
   armyUnitGrid: document.querySelector("#armyUnitGrid"),
+  armyTimeline: document.querySelector("#armyTimeline"),
+  armyBoardLegend: document.querySelector("#armyBoardLegend"),
+  armyBoardGrid: document.querySelector("#armyBoardGrid"),
+  armyActiveEffects: document.querySelector("#armyActiveEffects"),
   armyCommanderGrid: document.querySelector("#armyCommanderGrid"),
   armyViceGrid: document.querySelector("#armyViceGrid"),
   armyAlternativeGrid: document.querySelector("#armyAlternativeGrid"),
@@ -2472,17 +2804,308 @@ function writeStoredJson(key, value) {
   }
 }
 
+function readSessionJson(key, fallback) {
+  try {
+    const raw = window.sessionStorage.getItem(key);
+    return raw ? JSON.parse(raw) : fallback;
+  } catch (error) {
+    return fallback;
+  }
+}
+
+function writeSessionJson(key, value) {
+  try {
+    window.sessionStorage.setItem(key, JSON.stringify(value));
+  } catch (error) {
+    // Ignore storage failures so the app stays usable in private mode.
+  }
+}
+
+function removeSessionValue(key) {
+  try {
+    window.sessionStorage.removeItem(key);
+  } catch (error) {
+    // Ignore storage failures so the app stays usable in private mode.
+  }
+}
+
 function getUiState() {
   return readStoredJson(UI_STATE_STORAGE_KEY, {});
 }
 
-function saveUiState(patch) {
+function saveUiState(patch, options = {}) {
   const nextState = {
     ...getUiState(),
     ...patch
   };
-  writeStoredJson(UI_STATE_STORAGE_KEY, nextState);
+  if (options.persist !== false) {
+    writeStoredJson(UI_STATE_STORAGE_KEY, nextState);
+  }
   return nextState;
+}
+
+const SITE_DESIGN_PRESET_DEFS = [
+  {
+    key: "war",
+    label: "軍議卓",
+    summary: "黒と羊皮紙を軸にした、キングダム覇道らしい標準。",
+    values: {
+      skin: "war",
+      pageWidth: 1180,
+      density: 100,
+      radius: 18,
+      shadow: 58,
+      contrast: 100,
+      accent: "#9f6a31",
+      paperColor: "#f2e8da",
+      shellColor: "#15110e"
+    }
+  },
+  {
+    key: "archive",
+    label: "攻略ノート",
+    summary: "紙の攻略メモ寄りで、落ち着いた一覧性を優先。",
+    values: {
+      skin: "archive",
+      pageWidth: 1240,
+      density: 96,
+      radius: 14,
+      shadow: 36,
+      contrast: 96,
+      accent: "#7d5531",
+      paperColor: "#f6efe4",
+      shellColor: "#191613"
+    }
+  },
+  {
+    key: "quiet",
+    label: "静音整理",
+    summary: "装飾を減らし、表やカードを読みやすくする整理用。",
+    values: {
+      skin: "quiet",
+      pageWidth: 1280,
+      density: 92,
+      radius: 12,
+      shadow: 22,
+      contrast: 92,
+      accent: "#6d5a45",
+      paperColor: "#f4f0ea",
+      shellColor: "#17181b"
+    }
+  }
+];
+
+const SITE_DESIGN_DEFAULT_STATE = {
+  preset: "war",
+  ...SITE_DESIGN_PRESET_DEFS[0].values
+};
+
+let activeSiteDesignState = null;
+
+function clampSiteDesignValue(value, min, max) {
+  return Math.min(Math.max(Number(value) || 0, min), max);
+}
+
+function normalizeSiteDesignColor(value, fallback) {
+  const text = String(value ?? "").trim();
+  if (/^#[0-9a-f]{6}$/iu.test(text) || /^#[0-9a-f]{3}$/iu.test(text)) {
+    return text;
+  }
+  return fallback;
+}
+
+function getSiteDesignPreset(key) {
+  return SITE_DESIGN_PRESET_DEFS.find((preset) => preset.key === key) ?? SITE_DESIGN_PRESET_DEFS[0];
+}
+
+function sanitizeSiteDesignState(state = null) {
+  const source = state && typeof state === "object" ? state : {};
+  const preset = getSiteDesignPreset(source.preset ?? SITE_DESIGN_DEFAULT_STATE.preset);
+  const merged = {
+    preset: preset.key,
+    ...preset.values,
+    ...source
+  };
+  const nextState = {
+    preset: merged.preset,
+    skin: ["war", "archive", "quiet"].includes(merged.skin) ? merged.skin : preset.values.skin,
+    pageWidth: clampSiteDesignValue(merged.pageWidth, 980, 1440),
+    density: clampSiteDesignValue(merged.density, 88, 118),
+    radius: clampSiteDesignValue(merged.radius, 8, 30),
+    shadow: clampSiteDesignValue(merged.shadow, 0, 100),
+    contrast: clampSiteDesignValue(merged.contrast, 88, 125),
+    accent: normalizeSiteDesignColor(merged.accent, preset.values.accent),
+    paperColor: normalizeSiteDesignColor(merged.paperColor, preset.values.paperColor),
+    shellColor: normalizeSiteDesignColor(merged.shellColor, preset.values.shellColor)
+  };
+  const exactPreset = SITE_DESIGN_PRESET_DEFS.find((entry) =>
+    Object.entries(entry.values).every(([key, value]) => nextState[key] === value)
+  );
+  nextState.preset = exactPreset?.key ?? "custom";
+  return nextState;
+}
+
+function getSiteDesignState() {
+  return activeSiteDesignState ?? sanitizeSiteDesignState(getUiState().siteDesign);
+}
+
+function buildSiteDesignSummary(state) {
+  const preset = SITE_DESIGN_PRESET_DEFS.find((entry) => entry.key === state.preset);
+  const lead = preset ? `${preset.label}: ${preset.summary}` : "カスタム: 共有URLにも載せられる手動調整。";
+  return `${lead} 幅${state.pageWidth}px / 密度${state.density}% / 角丸${state.radius}px / 影${state.shadow}% / コントラスト${state.contrast}%`;
+}
+
+function renderSiteDesignControls(state = getSiteDesignState()) {
+  if (!elements.siteDesignPreset) {
+    return;
+  }
+  elements.siteDesignPreset.innerHTML = [
+    ...SITE_DESIGN_PRESET_DEFS.map(
+      (preset) => `<option value="${preset.key}">${escapeHtml(preset.label)}</option>`
+    ),
+    '<option value="custom">カスタム</option>'
+  ].join("");
+  elements.siteDesignPreset.value = state.preset;
+  if (elements.siteDesignWidth) {
+    elements.siteDesignWidth.value = String(state.pageWidth);
+  }
+  if (elements.siteDesignDensity) {
+    elements.siteDesignDensity.value = String(state.density);
+  }
+  if (elements.siteDesignRadius) {
+    elements.siteDesignRadius.value = String(state.radius);
+  }
+  if (elements.siteDesignShadow) {
+    elements.siteDesignShadow.value = String(state.shadow);
+  }
+  if (elements.siteDesignContrast) {
+    elements.siteDesignContrast.value = String(state.contrast);
+  }
+  if (elements.siteDesignAccent) {
+    elements.siteDesignAccent.value = state.accent;
+  }
+  if (elements.siteDesignPaper) {
+    elements.siteDesignPaper.value = state.paperColor;
+  }
+  if (elements.siteDesignShell) {
+    elements.siteDesignShell.value = state.shellColor;
+  }
+  if (elements.siteDesignWidthValue) {
+    elements.siteDesignWidthValue.textContent = `${state.pageWidth}px`;
+  }
+  if (elements.siteDesignDensityValue) {
+    elements.siteDesignDensityValue.textContent = `${state.density}%`;
+  }
+  if (elements.siteDesignRadiusValue) {
+    elements.siteDesignRadiusValue.textContent = `${state.radius}px`;
+  }
+  if (elements.siteDesignShadowValue) {
+    elements.siteDesignShadowValue.textContent = `${state.shadow}%`;
+  }
+  if (elements.siteDesignContrastValue) {
+    elements.siteDesignContrastValue.textContent = `${state.contrast}%`;
+  }
+  if (elements.siteDesignJson) {
+    elements.siteDesignJson.value = JSON.stringify(state, null, 2);
+  }
+  if (elements.siteDesignSummary) {
+    elements.siteDesignSummary.textContent = buildSiteDesignSummary(state);
+  }
+}
+
+function applySiteDesignState(state, options = {}) {
+  const nextState = sanitizeSiteDesignState(state);
+  activeSiteDesignState = nextState;
+  document.body.dataset.siteSkin = nextState.skin;
+  document.documentElement.style.setProperty("--site-page-width", `${nextState.pageWidth}px`);
+  document.documentElement.style.setProperty("--site-density-scale", (nextState.density / 100).toFixed(2));
+  document.documentElement.style.setProperty("--site-radius-scale", (nextState.radius / 18).toFixed(3));
+  document.documentElement.style.setProperty("--site-shadow-strength", (nextState.shadow / 100).toFixed(3));
+  document.documentElement.style.setProperty("--site-contrast-strength", (nextState.contrast / 100).toFixed(3));
+  document.documentElement.style.setProperty("--site-accent", nextState.accent);
+  document.documentElement.style.setProperty("--site-paper-color", nextState.paperColor);
+  document.documentElement.style.setProperty("--site-shell-color", nextState.shellColor);
+  if (options.syncControls !== false) {
+    renderSiteDesignControls(nextState);
+  }
+  if (options.persist) {
+    saveUiState(
+      {
+        siteDesign: nextState
+      },
+      {
+        persist: options.persistUiState ?? !isSharedSnapshotMode()
+      }
+    );
+  }
+  return nextState;
+}
+
+function updateSiteDesignState(patch) {
+  return applySiteDesignState(
+    {
+      ...getSiteDesignState(),
+      ...patch
+    },
+    { persist: true }
+  );
+}
+
+function bindSiteDesignControls() {
+  if (!elements.siteDesignPreset) {
+    return;
+  }
+  elements.siteDesignPreset.addEventListener("change", () => {
+    if (elements.siteDesignPreset.value === "custom") {
+      updateSiteDesignState({ preset: "custom" });
+      return;
+    }
+    const preset = getSiteDesignPreset(elements.siteDesignPreset.value);
+    updateSiteDesignState({
+      preset: preset.key,
+      ...preset.values
+    });
+  });
+  [
+    ["siteDesignWidth", "pageWidth"],
+    ["siteDesignDensity", "density"],
+    ["siteDesignRadius", "radius"],
+    ["siteDesignShadow", "shadow"],
+    ["siteDesignContrast", "contrast"]
+  ].forEach(([elementKey, stateKey]) => {
+    elements[elementKey]?.addEventListener("input", () => {
+      updateSiteDesignState({ preset: "custom", [stateKey]: Number(elements[elementKey].value) || 0 });
+    });
+  });
+  [
+    ["siteDesignAccent", "accent"],
+    ["siteDesignPaper", "paperColor"],
+    ["siteDesignShell", "shellColor"]
+  ].forEach(([elementKey, stateKey]) => {
+    elements[elementKey]?.addEventListener("input", () => {
+      updateSiteDesignState({ preset: "custom", [stateKey]: elements[elementKey].value });
+    });
+  });
+  elements.siteDesignCopyJson?.addEventListener("click", async () => {
+    await copyTextToClipboard(JSON.stringify(getSiteDesignState(), null, 2));
+    showStatusToast("画面調整JSONをコピーしました。");
+  });
+  elements.siteDesignApplyJson?.addEventListener("click", () => {
+    try {
+      const parsed = JSON.parse(elements.siteDesignJson?.value || "{}");
+      updateSiteDesignState(parsed);
+      showStatusToast("画面調整JSONを反映しました。");
+    } catch (error) {
+      showStatusToast("画面調整JSONを読めませんでした。");
+    }
+  });
+  elements.siteDesignReset?.addEventListener("click", () => {
+    const preset = getSiteDesignPreset(SITE_DESIGN_DEFAULT_STATE.preset);
+    updateSiteDesignState({
+      preset: preset.key,
+      ...preset.values
+    });
+  });
 }
 
 function getHeroRecentEntries() {
@@ -3184,7 +3807,7 @@ function setActiveView(viewKey, options = {}) {
   const nextView = VIEW_KEYS.includes(viewKey) ? viewKey : "power";
   if (PAGE_MODE === "tool" && PAGE_TOOL_VIEW && nextView !== PAGE_TOOL_VIEW) {
     window.location.href = buildToolPageUrl(nextView, {
-      search: window.location.search,
+      search: getCarryoverSearchForView(nextView),
       hash: nextView
     });
     return;
@@ -3192,6 +3815,7 @@ function setActiveView(viewKey, options = {}) {
 
   const updateHash = options.updateHash !== false;
   const scrollToNav = options.scrollToNav === true;
+  const persistUiState = options.persistUiState ?? !isSharedSnapshotMode();
 
   elements.viewButtons.forEach((button) => {
     const isActive = button.dataset.viewTab === nextView;
@@ -3203,9 +3827,10 @@ function setActiveView(viewKey, options = {}) {
     panel.hidden = panel.id !== `view-${nextView}`;
   });
 
-  saveUiState({ activeView: nextView });
+  saveUiState({ activeView: nextView }, { persist: persistUiState });
   updateSiteShell(nextView);
   updateShareScopeNote(nextView);
+  renderSharedViewBanner(nextView);
 
   if (updateHash) {
     const nextHash = `#${nextView}`;
@@ -5000,6 +5625,43 @@ function summarizeBuilderCellEffects(effects) {
   return labels.length === 1 ? labels[0] : `${labels[0]} +${labels.length - 1}`;
 }
 
+function isBuilderEffectActiveAtSecond(effect, second) {
+  const startSecond =
+    effect.clippedStart ?? effect.startSecond ?? 0;
+  const endSecond =
+    effect.clippedEnd ?? effect.endSecond ?? startSecond;
+
+  return (
+    second >= startSecond &&
+    (second < endSecond ||
+      (endSecond === BUILDER_TIMELINE_MAX_SECOND && second === BUILDER_TIMELINE_MAX_SECOND))
+  );
+}
+
+function getBuilderEffectTargetLabels(effect, state) {
+  return resolveBuilderEffectTargetSlots(
+    effect,
+    state.formation,
+    state.formationSlot.key,
+    state.targetSlotKey
+  )
+    .map((slotKey) => formationSlotLabelFor(slotKey))
+    .join(" / ");
+}
+
+function summarizeBuilderCurrentEffects(effects, emptyLabel = "効果なし") {
+  const labels = uniqueValues(
+    effects.map((effect) => `${effect.characterName} ${effect.shortLabel}`)
+  );
+  if (!labels.length) {
+    return emptyLabel;
+  }
+  if (labels.length <= 2) {
+    return labels.join(" / ");
+  }
+  return `${labels.slice(0, 2).join(" / ")} ほか${labels.length - 2}件`;
+}
+
 function buildBuilderMiniBoardCells(state, side) {
   const cells = Array.from({ length: 9 }, (_, index) => ({
     x: index % 3,
@@ -5172,8 +5834,12 @@ function buildBuilderState() {
   overviewNotes.push(`${formation.label} は ${formatFormationTiming(formation)} で回る想定です。`);
 
   const activeEffects = timelineWindows
-    .filter((effect) => previewSecond >= effect.startSecond && previewSecond < effect.endSecond)
+    .filter((effect) => isBuilderEffectActiveAtSecond(effect, previewSecond))
     .sort(compareBuilderEffects);
+  const activeEffectsBySide = {
+    ally: activeEffects.filter((effect) => effect.side === "ally"),
+    enemy: activeEffects.filter((effect) => effect.side === "enemy")
+  };
 
   return {
     formation,
@@ -5195,6 +5861,7 @@ function buildBuilderState() {
     timelineSegments,
     timelineRows,
     activeEffects,
+    activeEffectsBySide,
     boardCells: buildBuilderBoardSnapshot({
       formation,
       formationSlot,
@@ -5725,13 +6392,13 @@ function renderBuilderView() {
       `列: ${builderRowLabelFor(state.rowKey)}`,
       `主将: ${state.commander?.name ?? "未選択"}`,
       `選択枠: ${state.selectedEntries.length}/${BUILDER_SLOT_DEFS.length}`,
-      `対象位置: ${state.timelineRows.length}マス`,
+      `味方/敵対象: ${state.timelineRows.filter((row) => row.side === "ally").length}/${state.timelineRows.filter((row) => row.side === "enemy").length}マス`,
       `現在: ${state.previewSecond}秒`
     ],
     "編成条件を指定してください。"
   );
   setBuilderValidation(validationMessages.join(" / "));
-  elements.builderTimelineCount.textContent = `0～${BUILDER_TIMELINE_MAX_SECOND}秒 / ${state.timelineRows.length}マス`;
+  elements.builderTimelineCount.textContent = `0～${BUILDER_TIMELINE_MAX_SECOND}秒 / 味方${state.timelineRows.filter((row) => row.side === "ally").length}マス / 敵${state.timelineRows.filter((row) => row.side === "enemy").length}マス`;
   if (elements.builderPreviewSecondLabel) {
     elements.builderPreviewSecondLabel.textContent = `${state.previewSecond}秒時点の3×3盤面を表示します。効果帯を押すとその秒へ移動します。`;
   }
@@ -5759,7 +6426,7 @@ function renderBuilderView() {
 
 function renderBuilderTimeline(state) {
   if (!state.commander) {
-    return renderEmptyState("主将を選ぶと、0～50秒でどの位置に効果が乗るかをまとめて表示します。");
+    return renderEmptyState("主将を選ぶと、0～50秒で味方と敵のどの位置へ何が残るかを一画面で確認できます。");
   }
 
   if (!state.timelineRows.length) {
@@ -5770,79 +6437,128 @@ function renderBuilderTimeline(state) {
     { length: BUILDER_TIMELINE_MAX_SECOND / 10 + 1 },
     (_, index) => `<span>${index * 10}秒</span>`
   ).join("");
-  const rowMarkup = state.timelineRows
-    .map((row) => {
-      const currentEffects = row.effects.filter(
-        (effect) =>
-          state.previewSecond >= effect.clippedStart &&
-          (state.previewSecond < effect.clippedEnd ||
-            (effect.clippedEnd === BUILDER_TIMELINE_MAX_SECOND && state.previewSecond === BUILDER_TIMELINE_MAX_SECOND))
-      );
-      const isActive = currentEffects.length > 0;
-      const barMarkup = row.segments
-        .map(
-          (segment) => `
-            <span
-              class="builder-timeline-bar tone-${escapeHtml(segment.tone || "utility")} ${segment.estimated ? "is-estimated" : ""}"
-              style="--start:${segment.startSecond}; --end:${segment.endSecond}; --lane:0"
-              title="${escapeHtml(
-                segment.activeEffects
-                  .map((effect) => `${effect.characterName} / ${effect.shortLabel} / ${effect.startSecond}～${effect.endSecond}秒`)
-                  .join(" | ")
-              )}"
-              data-builder-preview-second="${segment.previewSecond}"
-            >
-              <span>${escapeHtml(segment.label)}</span>
-            </span>
-          `
-        )
-        .join("");
-      const effectMetaMarkup = currentEffects.length
-        ? currentEffects
-            .map(
-              (effect) => `
-                <span class="timeline-effect-chip tone-${escapeHtml(effect.tone || "utility")}">
-                  <strong>${escapeHtml(`${effect.characterName} / ${effect.shortLabel}`)}</strong>
-                  <small>${escapeHtml(`${effect.startSecond}～${effect.endSecond}秒 / ${getBuilderEffectScopeLabel(effect)}`)}</small>
-                </span>
-              `
-            )
-            .join("")
-        : `<span class="timeline-effect-chip is-empty"><strong>${escapeHtml(`${state.previewSecond}秒は効果なし`)}</strong><small>${escapeHtml(
-            row.title
-          )}</small></span>`;
-
+  const secondButtonMarkup = Array.from(
+    { length: BUILDER_TIMELINE_MAX_SECOND / 5 + 1 },
+    (_, index) => {
+      const second = index * 5;
       return `
         <button
-          class="builder-timeline-row ${isActive ? "is-active" : ""}"
           type="button"
-          data-builder-preview-second="${row.previewSecond}"
-        >
-          <div class="builder-timeline-row-head">
+          class="builder-second-pill ${second === state.previewSecond ? "is-active" : ""}"
+          data-builder-preview-second="${second}"
+        >${second}秒</button>
+      `;
+    }
+  ).join("");
+
+  const rowGroups = [
+    {
+      side: "ally",
+      title: "味方に残る影響",
+      description: "味方3×3のどの位置に支援や回復が残っているか",
+      rows: state.timelineRows.filter((row) => row.side === "ally")
+    },
+    {
+      side: "enemy",
+      title: "敵に与えている影響",
+      description: "敵3×3のどの位置にデバフやダメージが残っているか",
+      rows: state.timelineRows.filter((row) => row.side === "enemy")
+    }
+  ];
+
+  const groupMarkup = rowGroups
+    .map((group) => {
+      const activeRowCount = group.rows.filter((row) =>
+        row.effects.some((effect) => isBuilderEffectActiveAtSecond(effect, state.previewSecond))
+      ).length;
+      const activeEffectCount = group.rows.reduce(
+        (sum, row) =>
+          sum +
+          row.effects.filter((effect) => isBuilderEffectActiveAtSecond(effect, state.previewSecond)).length,
+        0
+      );
+
+      const rowsMarkup = group.rows
+        .map((row) => {
+          const currentEffects = row.effects.filter((effect) =>
+            isBuilderEffectActiveAtSecond(effect, state.previewSecond)
+          );
+          const currentSummary = summarizeBuilderCurrentEffects(currentEffects);
+          const barMarkup = row.segments
+            .map(
+              (segment) => `
+                <button
+                  type="button"
+                  class="builder-timeline-bar tone-${escapeHtml(segment.tone || "utility")} ${segment.estimated ? "is-estimated" : ""}"
+                  style="--start:${segment.startSecond}; --end:${segment.endSecond}; --lane:0"
+                  title="${escapeHtml(
+                    segment.activeEffects
+                      .map(
+                        (effect) =>
+                          `${effect.characterName} / ${effect.shortLabel} / ${effect.startSecond}～${effect.endSecond}秒 / ${effect.text}`
+                      )
+                      .join(" | ")
+                  )}"
+                  data-builder-preview-second="${segment.previewSecond}"
+                >
+                  <span>${escapeHtml(segment.label)}</span>
+                </button>
+              `
+            )
+            .join("");
+
+          return `
+            <div class="builder-timeline-rowline ${currentEffects.length ? "is-active" : ""}">
+              <div class="builder-timeline-rowline-label">
+                <strong>${escapeHtml(row.slotLabel)}</strong>
+                <small>${escapeHtml(row.subtitle || builderRowLabelFor(row.rowKey))}</small>
+              </div>
+              <div class="builder-timeline-track" style="--lanes:1">
+                ${barMarkup}
+                <div class="builder-timeline-now" style="--at:${state.previewSecond}"></div>
+              </div>
+              <div class="builder-timeline-rowline-current">
+                <strong>${escapeHtml(`${state.previewSecond}秒`)}</strong>
+                <span>${escapeHtml(
+                  currentEffects.length ? `${currentEffects.length}件 / ${currentSummary}` : "効果なし"
+                )}</span>
+              </div>
+            </div>
+          `;
+        })
+        .join("");
+
+      return `
+        <section class="builder-timeline-group is-${escapeHtml(group.side)}">
+          <div class="builder-timeline-group-head">
             <div>
-              <div class="builder-timeline-source">${escapeHtml(row.subtitle || "対象スロット")}</div>
-              <strong class="builder-timeline-title">${escapeHtml(row.title)}</strong>
+              <strong>${escapeHtml(group.title)}</strong>
+              <span>${escapeHtml(group.description)}</span>
             </div>
             <div class="builder-timeline-meta">
-              <span>${escapeHtml(`${row.segments.length}区間`)}</span>
-              <span>${escapeHtml(`累計 ${row.effects.length}件`)}</span>
-              <span>${escapeHtml(isActive ? `${state.previewSecond}秒で ${currentEffects.length}件` : `${state.previewSecond}秒はなし`)}</span>
+              <span>${escapeHtml(`${state.previewSecond}秒で ${activeEffectCount}件`)}</span>
+              <span>${escapeHtml(`${activeRowCount}/${group.rows.length}マスに残存`)}</span>
             </div>
           </div>
-          <div class="builder-timeline-track" style="--lanes:1">
-            ${barMarkup}
-            <div class="builder-timeline-now" style="--at:${state.previewSecond}"></div>
-          </div>
-          <div class="builder-timeline-row-foot">${effectMetaMarkup}</div>
-        </button>
+          <div class="builder-timeline-rows builder-timeline-rows--dense">${rowsMarkup}</div>
+        </section>
       `;
     })
     .join("");
 
   return `
     <div class="builder-timeline-shell">
+      <div class="builder-timeline-toolbar">
+        <div class="builder-timeline-current">
+          <strong>${escapeHtml(`${state.previewSecond}秒時点`)}</strong>
+          <span>${escapeHtml(
+            `味方 ${state.activeEffectsBySide.ally.length}件 / 敵 ${state.activeEffectsBySide.enemy.length}件`
+          )}</span>
+        </div>
+        <div class="builder-timeline-second-pills">${secondButtonMarkup}</div>
+      </div>
       <div class="builder-timeline-axis">${axisMarkup}</div>
-      <div class="builder-timeline-rows">${rowMarkup}</div>
+      <div class="builder-timeline-groups">${groupMarkup}</div>
     </div>
   `;
 }
@@ -5918,47 +6634,96 @@ function renderBuilderBoard(state) {
 }
 
 function renderBuilderActiveEffects(state) {
-  if (!state.activeEffects.length) {
+  const sideGroups = [
+    {
+      side: "ally",
+      title: "味方に与えている影響",
+      description: "防御・会心・回復など、自軍へ残っている効果",
+      effects: state.activeEffectsBySide.ally
+    },
+    {
+      side: "enemy",
+      title: "敵に与えている影響",
+      description: "デバフ・ダメージ・行動阻害など、敵へ残っている効果",
+      effects: state.activeEffectsBySide.enemy
+    }
+  ];
+
+  const totalActiveEffects = sideGroups.reduce((sum, group) => sum + group.effects.length, 0);
+  if (!totalActiveEffects) {
     return `
       <div class="builder-effect-stream">
         <div class="builder-effect-stream-head">
           <strong>${escapeHtml(`${state.previewSecond}秒時点の継続効果 0件`)}</strong>
-          <span>この秒には残っているバフ / デバフはありません。</span>
+          <span>秒数ボタンか帯を押すと、その時点の味方/敵への影響をここへまとめます。</span>
         </div>
       </div>
     `;
   }
 
-  const items = state.activeEffects
-    .map((effect) => {
-      const targetSlots = resolveBuilderEffectTargetSlots(
-        effect,
-        state.formation,
-        state.formationSlot.key,
-        state.targetSlotKey
-      )
-        .map((slotKey) => formationSlotLabelFor(slotKey))
-        .join(" / ");
+  const items = sideGroups
+    .map((group) => {
+      const affectedSlots = uniqueValues(
+        group.effects.flatMap((effect) =>
+          resolveBuilderEffectTargetSlots(
+            effect,
+            state.formation,
+            state.formationSlot.key,
+            state.targetSlotKey
+          ).map((slotKey) => formationSlotLabelFor(slotKey))
+        )
+      );
+
+      const effectMarkup = group.effects.length
+        ? group.effects
+            .map((effect) => {
+              const targetSlots = getBuilderEffectTargetLabels(effect, state);
+              return `
+                <article class="builder-effect-item tone-${escapeHtml(effect.tone || "utility")}">
+                  <div class="builder-effect-item-head">
+                    <strong>${escapeHtml(`${effect.characterName} / ${effect.shortLabel}`)}</strong>
+                    <span>${escapeHtml(`${effect.startSecond}～${effect.endSecond}秒`)}</span>
+                  </div>
+                  <div class="army-list-row">
+                    <span>対象</span>
+                    <span>${escapeHtml(`${getBuilderEffectScopeLabel(effect)} / ${targetSlots}`)}</span>
+                  </div>
+                  <div class="army-list-row">
+                    <span>連鎖率</span>
+                    <span>${escapeHtml(
+                      effect.sourceLabel === "主将" ? "100% / 主将" : formatPercent(effect.activationRate)
+                    )}</span>
+                  </div>
+                  <div class="army-list-row">
+                    <span>内容</span>
+                    <span>${escapeHtml(effect.text)}</span>
+                  </div>
+                  <div class="army-list-row">
+                    <span>戦法</span>
+                    <span>${escapeHtml(effect.battleArtName)}</span>
+                  </div>
+                </article>
+              `;
+            })
+            .join("")
+        : `<div class="builder-effect-empty">${escapeHtml(`${state.previewSecond}秒は影響なし`)}</div>`;
 
       return `
-        <article class="builder-effect-item tone-${escapeHtml(effect.tone || "utility")}">
-          <div class="builder-effect-item-head">
-            <strong>${escapeHtml(`${effect.characterName} / ${effect.shortLabel}`)}</strong>
-            <span>${escapeHtml(`${effect.startSecond}～${effect.endSecond}秒`)}</span>
+        <section class="builder-effect-column is-${escapeHtml(group.side)}">
+          <div class="builder-effect-column-head">
+            <div>
+              <strong>${escapeHtml(group.title)}</strong>
+              <span>${escapeHtml(group.description)}</span>
+            </div>
+            <div class="builder-timeline-meta">
+              <span>${escapeHtml(`${group.effects.length}件`)}</span>
+              <span>${escapeHtml(
+                affectedSlots.length ? `${affectedSlots.join(" / ")}` : "対象マスなし"
+              )}</span>
+            </div>
           </div>
-          <div class="army-list-row">
-            <span>対象</span>
-            <span>${escapeHtml(`${effect.side === "ally" ? "味方" : "敵"} / ${getBuilderEffectScopeLabel(effect)} / ${targetSlots}`)}</span>
-          </div>
-          <div class="army-list-row">
-            <span>連鎖率</span>
-            <span>${escapeHtml(effect.sourceLabel === "主将" ? "100% / 主将" : formatPercent(effect.activationRate))}</span>
-          </div>
-          <div class="army-list-row">
-            <span>内容</span>
-            <span>${escapeHtml(effect.text)}</span>
-          </div>
-        </article>
+          ${effectMarkup}
+        </section>
       `;
     })
     .join("");
@@ -5966,10 +6731,10 @@ function renderBuilderActiveEffects(state) {
   return `
     <div class="builder-effect-stream">
       <div class="builder-effect-stream-head">
-        <strong>${escapeHtml(`${state.previewSecond}秒時点の継続効果 ${state.activeEffects.length}件`)}</strong>
-        <span>タイムライン行と敵盤面を押すと表示が連動します。</span>
+        <strong>${escapeHtml(`${state.previewSecond}秒時点の継続効果 ${totalActiveEffects}件`)}</strong>
+        <span>秒数帯、秒数ボタン、敵盤面のどこを触ってもここが連動します。</span>
       </div>
-      ${items}
+      <div class="builder-effect-columns">${items}</div>
     </div>
   `;
 }
@@ -6016,7 +6781,7 @@ function renderBuilderView() {
       heading.textContent = "0～50秒の効果帯";
     }
     if (description) {
-      description.textContent = "戦法ごとではなく、味方3×3と敵3×3のどこに何秒から何秒まで効果が残るかを位置別にまとめます。";
+      description.textContent = "味方3×3と敵3×3への影響を一画面の時間軸に重ねます。秒数ボタンか帯を押すと、その秒の影響が下へ連動します。";
     }
   }
   if (boardSection) {
@@ -6036,7 +6801,7 @@ function renderBuilderView() {
     }
   }
   if (elements.builderPreviewSecondLabel) {
-    elements.builderPreviewSecondLabel.textContent = `${state.previewSecond}秒時点の盤面と継続効果を表示します。効果帯を押すとその秒へ移動します。`;
+    elements.builderPreviewSecondLabel.textContent = `${state.previewSecond}秒時点の味方/敵への影響を表示します。スライダー、秒数ボタン、効果帯のどこからでも移動できます。`;
   }
   if (elements.builderBoardLegend) {
     elements.builderBoardLegend.innerHTML = renderBuilderBoardLegend();
@@ -7785,6 +8550,86 @@ function getCurrentViewKey() {
   );
 }
 
+function getActiveSharedPayload() {
+  return window.__KH_ACTIVE_SHARED_PAYLOAD ?? null;
+}
+
+function isSharedSnapshotMode() {
+  return Boolean(getActiveSharedPayload());
+}
+
+function getCarryoverSearchForView(viewKey) {
+  const currentUrl = new URL(window.location.href);
+  const payload = getActiveSharedPayload();
+  if (!payload || payload.view === viewKey) {
+    return currentUrl.search;
+  }
+
+  currentUrl.searchParams.delete(SHARE_PARAM_KEY);
+  const nextSearch = currentUrl.searchParams.toString();
+  return nextSearch ? `?${nextSearch}` : "";
+}
+
+function buildSharedSnapshotSummary(activeView = getCurrentViewKey()) {
+  const payload = getActiveSharedPayload();
+  if (!payload || !VIEW_KEYS.includes(payload.view)) {
+    return "";
+  }
+
+  const sharedMeta = VIEW_META[payload.view] ?? VIEW_META.power;
+  const activeMeta = VIEW_META[activeView] ?? sharedMeta;
+  const hint = SHARE_VIEW_HINTS[payload.view] ?? SHARE_VIEW_HINTS.power;
+
+  if (payload.view === activeView) {
+    return `${sharedMeta.label} の共有条件を固定表示中です。${hint} URLの状態を優先するので、誰が開いても同じ画面から始まります。`;
+  }
+
+  return `このURLは ${sharedMeta.label} の共有条件を含んでいます。今は ${activeMeta.label} を表示していますが、共有の起点は ${sharedMeta.label} です。`;
+}
+
+function renderSharedViewBanner(activeView = getCurrentViewKey()) {
+  if (!elements.sharedViewBanner) {
+    return;
+  }
+
+  const payload = getActiveSharedPayload();
+  if (!payload || !VIEW_KEYS.includes(payload.view)) {
+    elements.sharedViewBanner.hidden = true;
+    return;
+  }
+
+  const sharedMeta = VIEW_META[payload.view] ?? VIEW_META.power;
+  elements.sharedViewBanner.hidden = false;
+  if (elements.sharedViewEyebrow) {
+    elements.sharedViewEyebrow.textContent = `共有固定表示 / ${sharedMeta.shortLabel ?? sharedMeta.label}`;
+  }
+  if (elements.sharedViewTitle) {
+    elements.sharedViewTitle.textContent =
+      payload.view === activeView
+        ? `${sharedMeta.label} を共有URLどおりに表示中`
+        : `${sharedMeta.label} の共有条件を保持しています`;
+  }
+  if (elements.sharedViewSummary) {
+    elements.sharedViewSummary.textContent = buildSharedSnapshotSummary(activeView);
+  }
+}
+
+function clearSharedSnapshotMode() {
+  const currentView = getCurrentViewKey();
+  const nextUrl = new URL(window.location.href);
+  nextUrl.searchParams.delete(SHARE_PARAM_KEY);
+  nextUrl.hash = VIEW_KEYS.includes(currentView) ? `#${currentView}` : "";
+  window.__KH_ACTIVE_SHARED_PAYLOAD = null;
+  window.__KH_PENDING_SHARE_PAYLOAD = null;
+  history.replaceState(null, "", `${nextUrl.pathname}${nextUrl.search}${nextUrl.hash}`);
+  saveUiState({ activeView: currentView });
+  renderSharedViewBanner(currentView);
+  updateSiteShell(currentView);
+  updateShareScopeNote(currentView);
+  updateBackupMeta();
+  showStatusToast("共有固定表示を解除しました。");
+}
+
 function updateTrustSnapshot() {
   if (!elements.trustSnapshot) {
     return;
@@ -7805,7 +8650,7 @@ function renderSiteToolNav(activeView = getCurrentViewKey()) {
   }
 
   const links = [
-    `<a class="site-tool-link ${PAGE_MODE === "hub" ? "is-active" : ""}" href="./index.html">ツール一覧</a>`,
+    `<a class="site-tool-link ${PAGE_MODE === "hub" ? "is-active" : ""}" href="./index.html">軍議卓</a>`,
     ...TOOL_PAGE_DEFS.map((entry) => {
       const meta = VIEW_META[entry.key] ?? { label: entry.key };
       const isActive = PAGE_MODE === "tool" && activeView === entry.key;
@@ -7829,10 +8674,13 @@ function updateSiteShell(activeView = getCurrentViewKey()) {
   renderSiteToolNav(activeView);
 
   if (elements.siteShellModeLabel) {
-    elements.siteShellModeLabel.textContent =
+    const baseModeLabel =
       PAGE_MODE === "tool"
         ? `専用ページ / ${VIEW_META[activeView]?.label ?? activeView}`
-        : "ツール一覧";
+        : "軍議卓 / ツール一覧";
+    elements.siteShellModeLabel.textContent = isSharedSnapshotMode()
+      ? `${baseModeLabel} / 共有固定`
+      : baseModeLabel;
   }
 
   if (!elements.toolPageBanner || !elements.toolPageTitle || !elements.toolPageSummary) {
@@ -7849,7 +8697,10 @@ function updateSiteShell(activeView = getCurrentViewKey()) {
   elements.toolPageBanner.hidden = false;
   elements.toolPageEyebrow.textContent = entry?.category ?? "攻略ツール";
   elements.toolPageTitle.textContent = meta.label;
-  elements.toolPageSummary.textContent = entry?.description ?? meta.summary ?? "";
+  const baseSummary = entry?.description ?? meta.summary ?? "";
+  elements.toolPageSummary.textContent = isSharedSnapshotMode()
+    ? `${baseSummary} 共有リンクの条件を優先して表示しています。`
+    : `${baseSummary} 固定URLを共有すると同じ条件から開けます。`;
 }
 
 function updateShareScopeNote(viewKey = getCurrentViewKey()) {
@@ -7859,7 +8710,9 @@ function updateShareScopeNote(viewKey = getCurrentViewKey()) {
 
   const meta = VIEW_META[viewKey] ?? VIEW_META.power;
   const hint = SHARE_VIEW_HINTS[viewKey] ?? SHARE_VIEW_HINTS.power;
-  elements.shareScopeNote.textContent = `${meta.label}: ${hint}`;
+  elements.shareScopeNote.textContent = isSharedSnapshotMode()
+    ? `${meta.label}: 共有リンクの条件を固定表示中です。端末保存より URL の条件を優先します。`
+    : `${meta.label}: ${hint}`;
 }
 
 let statusToastTimer = null;
@@ -8081,7 +8934,8 @@ function collectCurrentSharePayload() {
   return {
     version: SHARE_PAYLOAD_VERSION,
     view,
-    state
+    state,
+    siteDesign: getSiteDesignState()
   };
 }
 
@@ -8090,6 +8944,103 @@ function buildShareUrl(payload) {
   url.searchParams.set(SHARE_PARAM_KEY, encodeJsonToBase64Url(payload));
   url.hash = payload.view;
   return url.toString();
+}
+
+function buildCommunityPostDraftForView(view, state, shareUrl) {
+  if (!shareUrl) {
+    return null;
+  }
+
+  if (view === "builder") {
+    const viceNames = [state.vice1, state.vice2].filter(Boolean);
+    const aideNames = [state.aide1, state.aide2].filter(Boolean);
+    const lines = [];
+    if (state.commander) {
+      lines.push(`主将: ${state.commander}`);
+    }
+    if (viceNames.length) {
+      lines.push(`副将: ${viceNames.join(" / ")}`);
+    }
+    if (aideNames.length) {
+      lines.push(`補佐: ${aideNames.join(" / ")}`);
+    }
+    if (state.formation) {
+      lines.push(`陣形: ${state.formation}`);
+    }
+    lines.push("共有URL");
+    lines.push(shareUrl);
+    return {
+      categoryKey: "formation",
+      serverScope: "all",
+      title: `編成共有: ${state.commander || "主将未設定"}`,
+      body: lines.join("\n")
+    };
+  }
+
+  if (view === "army") {
+    const selectedCommanderNames = (state.selectedCommanders ?? [])
+      .map((characterId) => characterById[String(characterId)]?.name)
+      .filter(Boolean);
+    const titleNames = selectedCommanderNames.slice(0, 2).join(" / ");
+    const lines = [];
+    if (selectedCommanderNames.length) {
+      lines.push(`主将候補: ${selectedCommanderNames.join(" / ")}`);
+    }
+    if (state.concept) {
+      lines.push(`方針: ${state.concept}`);
+    }
+    if (state.formation) {
+      lines.push(`陣形: ${state.formation}`);
+    }
+    lines.push("共有URL");
+    lines.push(shareUrl);
+    return {
+      categoryKey: "formation",
+      serverScope: "all",
+      title: `軍勢共有: ${titleNames || "編成案"}`,
+      body: lines.join("\n")
+    };
+  }
+
+  if (view === "advanced") {
+    return {
+      categoryKey: "formation",
+      serverScope: "all",
+      title: "育成共有",
+      body: ["共有URL", shareUrl].join("\n")
+    };
+  }
+
+  return null;
+}
+
+function prepareCommunityPostDraftForCurrentView() {
+  const payload = collectCurrentSharePayload();
+  if (!["builder", "army", "advanced"].includes(payload.view)) {
+    showStatusToast("編成投稿は編成ページで使えます。");
+    return null;
+  }
+  const draft = buildCommunityPostDraftForView(payload.view, payload.state ?? {}, buildShareUrl(payload));
+  if (!draft) {
+    showStatusToast("投稿用の編成情報を作れませんでした。");
+    return null;
+  }
+  writeSessionJson(COMMUNITY_POST_DRAFT_STORAGE_KEY, draft);
+  return draft;
+}
+
+function openCommunityPostComposer() {
+  const draft = prepareCommunityPostDraftForCurrentView();
+  if (!draft) {
+    return;
+  }
+
+  if (getCurrentViewKey() === "community" && window.KH_COMMUNITY_BOARD_API?.applyPostDraft) {
+    window.KH_COMMUNITY_BOARD_API.applyPostDraft(draft, { showToast: true });
+    return;
+  }
+
+  window.location.href = buildToolPageUrl("community", { hash: "community" });
 }
 
 function readSharedPayloadFromLocation() {
@@ -8237,9 +9188,15 @@ function applySharedPayload(payload, options = {}) {
     return false;
   }
 
+  window.__KH_ACTIVE_SHARED_PAYLOAD = payload;
+  if (payload.siteDesign) {
+    applySiteDesignState(payload.siteDesign, { persist: false });
+  }
+
   if (payload.view === "army") {
     if (window.KH_ARMY_SHARE_API?.applyShareState) {
       window.KH_ARMY_SHARE_API.applyShareState(payload.state ?? {}, options);
+      renderSharedViewBanner(payload.view);
       return true;
     }
     window.__KH_PENDING_SHARE_PAYLOAD = payload;
@@ -8249,6 +9206,7 @@ function applySharedPayload(payload, options = {}) {
   if (payload.view === "advanced") {
     if (window.KH_ADVANCED_BUILDER_API?.applyShareState) {
       window.KH_ADVANCED_BUILDER_API.applyShareState(payload.state ?? {}, options);
+      renderSharedViewBanner(payload.view);
       return true;
     }
     window.__KH_PENDING_SHARE_PAYLOAD = payload;
@@ -8258,6 +9216,7 @@ function applySharedPayload(payload, options = {}) {
   if (payload.view === "gacha") {
     if (window.KH_GACHA_SIM_API?.applyShareState) {
       window.KH_GACHA_SIM_API.applyShareState(payload.state ?? {}, options);
+      renderSharedViewBanner(payload.view);
       return true;
     }
     window.__KH_PENDING_SHARE_PAYLOAD = payload;
@@ -8267,6 +9226,7 @@ function applySharedPayload(payload, options = {}) {
   if (payload.view === "ranking") {
     if (window.KH_RANKING_BOARD_API?.applyShareState) {
       window.KH_RANKING_BOARD_API.applyShareState(payload.state ?? {}, options);
+      renderSharedViewBanner(payload.view);
       return true;
     }
     window.__KH_PENDING_SHARE_PAYLOAD = payload;
@@ -8276,6 +9236,7 @@ function applySharedPayload(payload, options = {}) {
   if (payload.view === "community") {
     if (window.KH_COMMUNITY_BOARD_API?.applyShareState) {
       window.KH_COMMUNITY_BOARD_API.applyShareState(payload.state ?? {}, options);
+      renderSharedViewBanner(payload.view);
       return true;
     }
     window.__KH_PENDING_SHARE_PAYLOAD = payload;
@@ -8320,6 +9281,7 @@ function applySharedPayload(payload, options = {}) {
   if (options.showToast !== false) {
     showStatusToast("共有リンクの条件を復元しました。");
   }
+  renderSharedViewBanner(payload.view);
   return true;
 }
 
@@ -8328,18 +9290,9 @@ function updateBackupMeta() {
     return;
   }
 
-  const ownedCount = window.KH_ARMY_SHARE_API?.getOwnedCount?.() ?? 0;
-  const rankingCount = window.KH_RANKING_BOARD_API?.getEntryCount?.() ?? 0;
-  elements.backupMeta.textContent = formatSummaryText(
-    [
-      `お気に入り ${getFavoriteCharacterNames().length + getFavoriteSkillNames().length}件`,
-      `比較 ${getComparedCharacterNames().length}体`,
-      `最近使った項目 ${getHeroRecentEntries().length}件`,
-      `手持ち ${ownedCount}体`,
-      `ランキング投稿 ${rankingCount}件`
-    ],
-    "共有は現在のタブ条件、JSON はお気に入り・比較・最近使った項目・手持ち入力・ランキング投稿のバックアップに使えます。"
-  );
+  elements.backupMeta.textContent = isSharedSnapshotMode()
+    ? "共有固定表示中です。お気に入りや下書きよりも、URLに入った条件を優先して表示しています。"
+    : "共有URLは条件だけを固定し、お気に入り・比較・下書きなどの個人メモはこの端末だけに保存されます。";
 }
 
 function buildBackupPayload() {
@@ -8357,6 +9310,7 @@ function buildBackupPayload() {
 }
 
 function refreshUiAfterExternalState(targetView) {
+  applySiteDesignState(getUiState().siteDesign, { persist: false });
   renderHeroCommand();
   setToggleButtonState(elements.characterFavoriteToggle, Boolean(getUiState().characterFavoritesOnly));
   setToggleButtonState(elements.skillFavoriteToggle, Boolean(getUiState().skillFavoritesOnly));
@@ -8443,6 +9397,7 @@ function clearBrowserStoredData() {
   window.KH_ADVANCED_BUILDER_API?.clearState?.({ rerender: false, removeStorage: true });
   window.KH_RANKING_BOARD_API?.clearState?.({ rerender: false });
   window.KH_COMMUNITY_BOARD_API?.clearState?.({ rerender: false });
+  removeSessionValue(COMMUNITY_POST_DRAFT_STORAGE_KEY);
 
   resetPowerSearch();
   resetEquipmentMatch();
@@ -8481,9 +9436,18 @@ function bindUtilityActions() {
     }
   });
   elements.clearBrowserDataButton?.addEventListener("click", clearBrowserStoredData);
+  elements.sharedViewCopyButton?.addEventListener("click", async () => {
+    try {
+      await copyCurrentStateLink();
+    } catch (error) {
+      showStatusToast("共有リンクのコピーに失敗しました。");
+    }
+  });
+  elements.sharedViewExitButton?.addEventListener("click", clearSharedSnapshotMode);
 }
 
 window.__KH_PENDING_SHARE_PAYLOAD = readSharedPayloadFromLocation();
+window.__KH_ACTIVE_SHARED_PAYLOAD = window.__KH_PENDING_SHARE_PAYLOAD;
 window.KH_APP_API = {
   updateBackupMeta,
   showStatusToast,
@@ -8629,6 +9593,10 @@ function bindGlobalActions() {
         elements.backupImportInput?.click();
         return;
       }
+      if (action === "community-post") {
+        openCommunityPostComposer();
+        return;
+      }
     }
 
     const skillButton = event.target.closest("[data-skill-name]");
@@ -8643,7 +9611,7 @@ function bindGlobalActions() {
       const currentView = getCurrentViewKey();
       if (PAGE_MODE === "hub" || (PAGE_MODE === "tool" && targetView !== currentView)) {
         window.location.href = buildToolPageUrl(targetView, {
-          search: window.location.search,
+          search: getCarryoverSearchForView(targetView),
           hash: targetView
         });
         return;
@@ -8784,6 +9752,7 @@ function populateCounts() {
 }
 
 function boot() {
+  applySiteDesignState(getUiState().siteDesign, { persist: false });
   populateStatSelect(elements.primaryStat, "ステータスを選択");
   populateStatSelect(elements.secondaryStat, "なし");
   populateSimpleSelect(elements.characterSort, CHARACTER_SORT_DEFS, "rarityTenpu");
@@ -8822,6 +9791,7 @@ function boot() {
   renderFeatureBoard();
   bindViewTabs();
   bindGlobalActions();
+  bindSiteDesignControls();
   bindHeroCommand();
   renderToolDirectory();
   bindUtilityActions();
@@ -8929,7 +9899,7 @@ function boot() {
   if (PAGE_MODE === "hub" && VIEW_KEYS.includes(requestedHubView)) {
     window.location.replace(
       buildToolPageUrl(requestedHubView, {
-        search: window.location.search,
+        search: getCarryoverSearchForView(requestedHubView),
         hash: requestedHubView
       })
     );
@@ -8940,7 +9910,7 @@ function boot() {
     window.__KH_PENDING_SHARE_PAYLOAD?.view ||
     window.location.hash.replace(/^#/, "") ||
     PAGE_TOOL_VIEW ||
-    getUiState().activeView ||
+    (PAGE_MODE === "hub" ? "power" : getUiState().activeView) ||
     "power";
   setActiveView(initialView, { updateHash: false });
   initializeDynamicSiteFeatures(initialView).catch(() => {
