@@ -4,8 +4,9 @@
     return;
   }
 
-  const STORAGE_KEY = "kh-gacha-sim-s3-v1";
-  const SHARE_STATE_VERSION = 1;
+  const STORAGE_KEY = "kh-gacha-sim-s3-v2";
+  const LEGACY_STORAGE_KEYS = ["kh-gacha-sim-s3-v1"];
+  const SHARE_STATE_VERSION = 2;
   const DRAW_ANIMATION_MS = 4700;
   const PULL_PRICE_YEN = 150;
   const TEN_PULL_HISTORY_LIMIT = 12;
@@ -139,7 +140,7 @@
     }
   };
 
-  const normalGroups = [
+  const BASE_NORMAL_GROUPS = [
     { rarity: "SSR", tenpu: 900, rate: 0.041, names: ["王翦", "オルド", "汗明", "李牧"] },
     { rarity: "SSR", tenpu: 900, rate: 0.005, names: ["嬴政", "王騎", "羌瘣", "バジオウ", "麃公"] },
     { rarity: "SSR", tenpu: 850, rate: 0.15, names: ["成恢", "臨武君"] },
@@ -156,7 +157,7 @@
     { rarity: "R", tenpu: 550, rate: 3.333, names: ["魏興", "慶", "竭氏", "昂", "左慈", "朱鬼", "澤圭", "田孝", "東美", "尾到", "尾平", "麻鬼", "友里", "竜有", "魯延"] }
   ];
 
-  const ssrGuaranteeGroups = [
+  const BASE_SSR_GUARANTEE_GROUPS = [
     { rarity: "SSR", tenpu: 900, rate: 1.5, names: ["王翦", "オルド", "汗明", "李牧"] },
     { rarity: "SSR", tenpu: 900, rate: 0.666, names: ["嬴政", "王騎", "羌瘣", "バジオウ", "麃公", "楊端和"] },
     { rarity: "SSR", tenpu: 850, rate: 5, names: ["成恢", "臨武君"] },
@@ -170,7 +171,7 @@
     }
   ];
 
-  const ssr900GuaranteeGroups = [
+  const BASE_SSR900_GUARANTEE_GROUPS = [
     { rarity: "SSR", tenpu: 900, rate: 16.667, names: ["王翦", "オルド", "汗明", "李牧"] },
     { rarity: "SSR", tenpu: 900, rate: 5.555, names: ["嬴政", "王騎", "羌瘣", "バジオウ", "麃公", "楊端和"] }
   ];
@@ -313,34 +314,179 @@
     }));
   }
 
-  const banner = {
-    key: "s3-eiketsu",
-    label: "シーズン3 英傑登用",
-    normalPool: createPreparedPool(expandGroups(normalGroups)),
-    ssrGuaranteePool: createPreparedPool(expandGroups(ssrGuaranteeGroups)),
-    ssr900GuaranteePool: createPreparedPool(expandGroups(ssr900GuaranteeGroups)),
-    normalSummary: createGroupSummary(normalGroups),
-    ssrGuaranteeSummary: createGroupSummary(ssrGuaranteeGroups),
-    ssr900GuaranteeSummary: createGroupSummary(ssr900GuaranteeGroups)
-  };
+  function cloneGroups(groups = []) {
+    return groups
+      .filter((group) => group && Array.isArray(group.names))
+      .map((group) => ({
+        rarity: String(group.rarity || ""),
+        tenpu: Number(group.tenpu || 0),
+        rate: Number(group.rate || 0),
+        names: group.names.map((name) => String(name))
+      }));
+  }
 
-  const normalRatesByRarity = normalGroups.reduce(
-    (totals, group) => {
-      totals[group.rarity] = (totals[group.rarity] || 0) + group.rate * group.names.length;
-      return totals;
-    },
-    { SSR: 0, SR: 0, R: 0 }
-  );
+  function computeRatesByRarity(groups = []) {
+    return groups.reduce(
+      (totals, group) => {
+        totals[group.rarity] = (totals[group.rarity] || 0) + Number(group.rate || 0) * group.names.length;
+        return totals;
+      },
+      { SSR: 0, SR: 0, R: 0 }
+    );
+  }
 
-  function createDefaultState() {
+  function normalizePityRules(pity = {}) {
     return {
-      bannerKey: banner.key,
+      ssrEvery: Math.max(0, Number(pity.ssrEvery ?? 20)),
+      ssrLabel: String(pity.ssrLabel || "SSR武将"),
+      ssr900Every: Math.max(0, Number(pity.ssr900Every ?? 100)),
+      ssr900Label: String(pity.ssr900Label || "SSR武将(天賦900)")
+    };
+  }
+
+  const BUILTIN_BANNER_DEFINITIONS = [
+    {
+      key: "s3-eiketsu",
+      kind: "standard",
+      label: "シーズン3 英傑登用",
+      eyebrow: "Season 3 / 英傑",
+      stageTitle: "人材 / 英傑登用",
+      stageSubtitle: "公開されている提供割合と 20回ごとのSSR確定、100回ごとの天賦900確定を反映します。",
+      controlNote: "常設英傑の提供割合を基準にした本番用バナーです。",
+      cautionText: "",
+      crest: "英",
+      featuredNames: ["王翦", "オルド", "汗明", "李牧"],
+      normalGroups: BASE_NORMAL_GROUPS,
+      ssrGuaranteeGroups: BASE_SSR_GUARANTEE_GROUPS,
+      ssr900GuaranteeGroups: BASE_SSR900_GUARANTEE_GROUPS,
+      videoUrl: VIDEO_URL
+    },
+    {
+      key: "s3-limited-template",
+      kind: "limited",
+      label: "限定登用 ひな形",
+      eyebrow: "Season 3 / 限定",
+      stageTitle: "人材 / 限定登用",
+      stageSubtitle: "限定登用をあとから差し替えるための基盤です。現在は英傑登用の確率表を仮置きしています。",
+      controlNote: "限定武将の実データが集まったら、このバナー定義に提供割合を入れ替えられます。",
+      cautionText: "現在は仮置きです。抽選確率は英傑登用ベースで動いています。",
+      crest: "限",
+      featuredNames: [],
+      videoUrl: VIDEO_URL
+    },
+    {
+      key: "s3-kessen-template",
+      kind: "limited",
+      label: "決戦登用 ひな形",
+      eyebrow: "Season 3 / 決戦",
+      stageTitle: "人材 / 決戦登用",
+      stageSubtitle: "決戦登用を切り替えられるようにする土台です。今は英傑登用の確率表を仮置きしています。",
+      controlNote: "決戦バナー固有の提供割合や注目武将を、あとから個別に差し替えられます。",
+      cautionText: "現在は仮置きです。抽選確率は英傑登用ベースで動いています。",
+      crest: "決",
+      featuredNames: [],
+      videoUrl: VIDEO_URL
+    },
+    {
+      key: "s3-senbatsu-template",
+      kind: "limited",
+      label: "選抜登用 ひな形",
+      eyebrow: "Season 3 / 選抜",
+      stageTitle: "人材 / 選抜登用",
+      stageSubtitle: "選抜登用を選べるようにする土台です。今は英傑登用の確率表を仮置きしています。",
+      controlNote: "選抜バナーのピックアップ情報が揃ったら、そのまま差し替えられます。",
+      cautionText: "現在は仮置きです。抽選確率は英傑登用ベースで動いています。",
+      crest: "選",
+      featuredNames: [],
+      videoUrl: VIDEO_URL
+    }
+  ];
+
+  function prepareBannerDefinition(definition) {
+    if (!definition || !definition.key) {
+      return null;
+    }
+
+    const normalGroups =
+      Array.isArray(definition.normalGroups) && definition.normalGroups.length
+        ? cloneGroups(definition.normalGroups)
+        : cloneGroups(BASE_NORMAL_GROUPS);
+    const ssrGuaranteeGroups =
+      Array.isArray(definition.ssrGuaranteeGroups) && definition.ssrGuaranteeGroups.length
+        ? cloneGroups(definition.ssrGuaranteeGroups)
+        : cloneGroups(BASE_SSR_GUARANTEE_GROUPS);
+    const ssr900GuaranteeGroups =
+      Array.isArray(definition.ssr900GuaranteeGroups) && definition.ssr900GuaranteeGroups.length
+        ? cloneGroups(definition.ssr900GuaranteeGroups)
+        : cloneGroups(BASE_SSR900_GUARANTEE_GROUPS);
+    const kind = definition.kind === "limited" ? "limited" : "standard";
+
+    return {
+      key: String(definition.key),
+      kind,
+      label: String(definition.label || definition.stageTitle || definition.key),
+      eyebrow: String(definition.eyebrow || (kind === "limited" ? "Season 3 / 限定" : "Season 3 / 英傑")),
+      stageTitle: String(definition.stageTitle || definition.label || "人材 / 英傑登用"),
+      stageSubtitle: String(
+        definition.stageSubtitle || "本家の10連結果画面を参考に、最後の結果を大きく表示します。"
+      ),
+      controlNote: String(definition.controlNote || ""),
+      cautionText: String(definition.cautionText || ""),
+      crest: String(definition.crest || (kind === "limited" ? "限" : "英")).slice(0, 2),
+      featuredNames: Array.isArray(definition.featuredNames)
+        ? definition.featuredNames.map((name) => String(name)).filter(Boolean)
+        : [],
+      videoUrl: String(definition.videoUrl || VIDEO_URL),
+      pity: normalizePityRules(definition.pity || {}),
+      normalGroups,
+      ssrGuaranteeGroups,
+      ssr900GuaranteeGroups,
+      normalPool: createPreparedPool(expandGroups(normalGroups)),
+      ssrGuaranteePool: createPreparedPool(expandGroups(ssrGuaranteeGroups)),
+      ssr900GuaranteePool: createPreparedPool(expandGroups(ssr900GuaranteeGroups)),
+      normalSummary: createGroupSummary(normalGroups),
+      ssrGuaranteeSummary: createGroupSummary(ssrGuaranteeGroups),
+      ssr900GuaranteeSummary: createGroupSummary(ssr900GuaranteeGroups),
+      normalRatesByRarity: computeRatesByRarity(normalGroups)
+    };
+  }
+
+  // Site owners can inject real limited banner data through window.KH_GACHA_BANNER_LIBRARY.
+  function getExternalBannerDefinitions() {
+    return Array.isArray(window.KH_GACHA_BANNER_LIBRARY) ? window.KH_GACHA_BANNER_LIBRARY : [];
+  }
+
+  function buildBannerLibrary() {
+    const bannerMap = new Map();
+    for (const definition of [...BUILTIN_BANNER_DEFINITIONS, ...getExternalBannerDefinitions()]) {
+      const prepared = prepareBannerDefinition(definition);
+      if (prepared) {
+        bannerMap.set(prepared.key, prepared);
+      }
+    }
+    return [...bannerMap.values()];
+  }
+
+  const BANNERS = buildBannerLibrary();
+  const DEFAULT_BANNER = BANNERS[0];
+  const BANNER_LOOKUP = new Map(BANNERS.map((entry) => [entry.key, entry]));
+
+  function resolveBannerKey(rawKey) {
+    const key = String(rawKey || "");
+    return BANNER_LOOKUP.has(key) ? key : DEFAULT_BANNER.key;
+  }
+
+  function getBannerByKey(key) {
+    return BANNER_LOOKUP.get(resolveBannerKey(key)) || DEFAULT_BANNER;
+  }
+
+  function createEmptyBannerProgress() {
+    return {
       totalPulls: 0,
       pullCounts: {},
       lastBatch: [],
       tenPullHistory: [],
-      selectedTenPullId: "",
-      animationEnabled: true
+      selectedTenPullId: ""
     };
   }
 
@@ -380,54 +526,126 @@
     };
   }
 
-  function sanitizeState(raw) {
-    const nextState = createDefaultState();
+  function sanitizeBannerProgress(raw) {
+    const nextProgress = createEmptyBannerProgress();
     if (!raw || typeof raw !== "object") {
-      return nextState;
+      return nextProgress;
     }
 
-    nextState.bannerKey = raw.bannerKey === banner.key ? raw.bannerKey : banner.key;
-    nextState.totalPulls = Math.max(0, Number(raw.totalPulls || 0));
-    nextState.animationEnabled = raw.animationEnabled !== false;
+    nextProgress.totalPulls = Math.max(0, Number(raw.totalPulls || 0));
 
     if (raw.pullCounts && typeof raw.pullCounts === "object") {
       for (const [name, count] of Object.entries(raw.pullCounts)) {
         const safeCount = Math.max(0, Number(count || 0));
         if (safeCount > 0) {
-          nextState.pullCounts[name] = safeCount;
+          nextProgress.pullCounts[name] = safeCount;
         }
       }
     }
 
     if (Array.isArray(raw.lastBatch)) {
-      nextState.lastBatch = raw.lastBatch.map(sanitizeResult).filter(Boolean).slice(-10);
+      nextProgress.lastBatch = raw.lastBatch.map(sanitizeResult).filter(Boolean).slice(-10);
     }
 
     if (Array.isArray(raw.tenPullHistory)) {
-      nextState.tenPullHistory = raw.tenPullHistory
+      nextProgress.tenPullHistory = raw.tenPullHistory
         .map(sanitizeHistoryEntry)
         .filter(Boolean)
         .slice(0, TEN_PULL_HISTORY_LIMIT);
     }
 
     const selectedId = String(raw.selectedTenPullId || "");
-    nextState.selectedTenPullId = nextState.tenPullHistory.some((entry) => entry.id === selectedId) ? selectedId : "";
+    nextProgress.selectedTenPullId = nextProgress.tenPullHistory.some((entry) => entry.id === selectedId) ? selectedId : "";
 
-    const countedPulls = Object.values(nextState.pullCounts).reduce((sum, count) => sum + Number(count), 0);
-    if (countedPulls > 0 && nextState.totalPulls < countedPulls) {
-      nextState.totalPulls = countedPulls;
+    const countedPulls = Object.values(nextProgress.pullCounts).reduce((sum, count) => sum + Number(count), 0);
+    if (countedPulls > 0 && nextProgress.totalPulls < countedPulls) {
+      nextProgress.totalPulls = countedPulls;
     }
 
+    return nextProgress;
+  }
+
+  function serializeBannerProgress(progress) {
+    return {
+      totalPulls: progress.totalPulls,
+      pullCounts: progress.pullCounts,
+      lastBatch: progress.lastBatch.map(serializeResult),
+      tenPullHistory: progress.tenPullHistory.map((entry) => ({
+        id: entry.id,
+        endedAtPull: entry.endedAtPull,
+        batch: entry.batch.map(serializeResult)
+      })),
+      selectedTenPullId: progress.selectedTenPullId
+    };
+  }
+
+  function hasBannerProgressData(progress) {
+    return Boolean(
+      progress.totalPulls > 0 ||
+        Object.keys(progress.pullCounts).length ||
+        progress.lastBatch.length ||
+        progress.tenPullHistory.length
+    );
+  }
+
+  function ensureBannerProgress(targetState, key = targetState.bannerKey) {
+    const safeKey = resolveBannerKey(key);
+    if (!targetState.banners[safeKey]) {
+      targetState.banners[safeKey] = createEmptyBannerProgress();
+    }
+    return targetState.banners[safeKey];
+  }
+
+  function createDefaultState() {
+    return {
+      bannerKey: DEFAULT_BANNER.key,
+      banners: {
+        [DEFAULT_BANNER.key]: createEmptyBannerProgress()
+      },
+      animationEnabled: true
+    };
+  }
+
+  function sanitizeState(raw) {
+    const nextState = createDefaultState();
+    if (!raw || typeof raw !== "object") {
+      return nextState;
+    }
+
+    nextState.bannerKey = resolveBannerKey(raw.bannerKey);
+    nextState.animationEnabled = raw.animationEnabled !== false;
+    nextState.banners = {};
+
+    if (raw.banners && typeof raw.banners === "object") {
+      for (const [bannerKey, progress] of Object.entries(raw.banners)) {
+        const safeKey = resolveBannerKey(bannerKey);
+        nextState.banners[safeKey] = sanitizeBannerProgress(progress);
+      }
+    }
+
+    if (raw.bannerProgress && typeof raw.bannerProgress === "object") {
+      nextState.banners[nextState.bannerKey] = sanitizeBannerProgress(raw.bannerProgress);
+    } else {
+      const legacyProgress = sanitizeBannerProgress(raw);
+      if (hasBannerProgressData(legacyProgress)) {
+        nextState.banners[nextState.bannerKey] = legacyProgress;
+      }
+    }
+
+    ensureBannerProgress(nextState, nextState.bannerKey);
     return nextState;
   }
 
   function loadState() {
     try {
-      const stored = window.localStorage.getItem(STORAGE_KEY);
-      if (!stored) {
-        return createDefaultState();
+      for (const key of [STORAGE_KEY, ...LEGACY_STORAGE_KEYS]) {
+        const stored = window.localStorage.getItem(key);
+        if (!stored) {
+          continue;
+        }
+        return sanitizeState(JSON.parse(stored));
       }
-      return sanitizeState(JSON.parse(stored));
+      return createDefaultState();
     } catch (error) {
       return createDefaultState();
     }
@@ -436,20 +654,15 @@
   function saveState() {
     const serializable = {
       bannerKey: state.bannerKey,
-      totalPulls: state.totalPulls,
-      pullCounts: state.pullCounts,
-      lastBatch: state.lastBatch.map(serializeResult),
-      tenPullHistory: state.tenPullHistory.map((entry) => ({
-        id: entry.id,
-        endedAtPull: entry.endedAtPull,
-        batch: entry.batch.map(serializeResult)
-      })),
-      selectedTenPullId: state.selectedTenPullId,
+      banners: Object.fromEntries(Object.entries(state.banners).map(([key, progress]) => [key, serializeBannerProgress(progress)])),
       animationEnabled: state.animationEnabled
     };
 
     try {
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(serializable));
+      for (const legacyKey of LEGACY_STORAGE_KEYS) {
+        window.localStorage.removeItem(legacyKey);
+      }
     } catch (error) {
       // ignore persistence failures
     }
@@ -475,6 +688,14 @@
   let shareActionBusy = false;
   let drawAnimationTimer = null;
 
+  function getActiveBanner() {
+    return getBannerByKey(state.bannerKey);
+  }
+
+  function getActiveBannerProgress() {
+    return ensureBannerProgress(state, state.bannerKey);
+  }
+
   root.innerHTML = `
     <div class="gacha-shell">
       <div class="gacha-stage-column">
@@ -482,10 +703,10 @@
           <div class="gacha-stage" id="gachaStage">
             <div class="gacha-stage__header">
               <div class="gacha-stage__title-group">
-                <span class="gacha-stage__crest">◇◇</span>
+                <span class="gacha-stage__crest" id="gachaBannerCrest">英</span>
                 <div>
-                  <p class="gacha-stage__eyebrow">Season 3限定</p>
-                  <h3 class="gacha-stage__title">人材 / 英傑登用</h3>
+                  <p class="gacha-stage__eyebrow" id="gachaBannerEyebrow">Season 3 / 英傑</p>
+                  <h3 class="gacha-stage__title" id="gachaBannerTitle">人材 / 英傑登用</h3>
                 </div>
               </div>
               <button class="gacha-stage__close" id="gachaResetStageButton" type="button" aria-label="結果をリセット">×</button>
@@ -493,7 +714,7 @@
 
             <div class="gacha-stage__subhead">
               <div>
-                <p class="gacha-stage__subtitle">本家の10連結果画面を参考に、最後の結果を大きく表示します。</p>
+                <p class="gacha-stage__subtitle" id="gachaStageSubtitle">本家の10連結果画面を参考に、最後の結果を大きく表示します。</p>
                 <p class="gacha-stage__hint" id="gachaLatestSummary">まだ登用していません。右側のボタンから開始してください。</p>
               </div>
               <div class="gacha-stage__meta">
@@ -556,18 +777,10 @@
           <div class="result-header">
             <div>
               <h2>提供割合</h2>
-              <p>通常枠、20回ごとのSSR確定枠、100回ごとの天賦900確定枠は、タップした時だけ詳細を開きます。</p>
+              <p>選択中のバナーに合わせて、通常枠と確定枠の内訳を切り替えます。</p>
             </div>
           </div>
-          <div class="gacha-probability-grid">
-            ${renderProbabilityDisclosure(
-              "通常時",
-              `SSR ${normalRatesByRarity.SSR.toFixed(3)}% / SR ${normalRatesByRarity.SR.toFixed(3)}% / R ${normalRatesByRarity.R.toFixed(3)}%`,
-              "gachaNormalRates"
-            )}
-            ${renderProbabilityDisclosure("20回ごとのSSR確定", "20回目はSSRのみを抽選します。", "gachaGuaranteeRates")}
-            ${renderProbabilityDisclosure("100回ごとの天賦900確定", "100回目は天賦900のSSRのみを抽選します。", "gachaGuarantee900Rates")}
-          </div>
+          <div class="gacha-probability-grid" id="gachaProbabilityGrid"></div>
         </section>
 
         <section class="result-section partial-section gacha-history-card">
@@ -587,10 +800,17 @@
           <div class="panel-header">
             <div>
               <h2>登用操作</h2>
-              <p>10連1500円換算で、累計回数に応じた概算課金額も自動計算します。</p>
+              <p>通常・限定・決戦・選抜の各バナーを切り替えながら、個別に回数を積み上げられます。</p>
             </div>
           </div>
           <div class="gacha-control-stack">
+            <div class="field">
+              <label for="gachaBannerSelect">対象バナー</label>
+              <select id="gachaBannerSelect"></select>
+              <p class="field-note" id="gachaBannerControlNote">限定バナーのひな形もここから切り替えます。</p>
+            </div>
+            <div class="status-pills" id="gachaBannerMeta"></div>
+            <div class="status-pills" id="gachaBannerFeatured" hidden></div>
             <label class="gacha-toggle">
               <input id="gachaAnimationToggle" type="checkbox">
               <span>実機録画ベースの動画演出を流す</span>
@@ -600,6 +820,7 @@
               <button class="secondary-button gacha-draw-button" id="gachaDrawOneButton" type="button">1回引く</button>
               <button class="secondary-button gacha-draw-button" id="gachaResetButton" type="button">履歴をリセット</button>
             </div>
+            <div class="toolbar-summary" id="gachaBannerSummary"></div>
             <div class="toolbar-summary" id="gachaControlSummary"></div>
           </div>
         </section>
@@ -630,9 +851,19 @@
 
   const elements = {
     stage: root.querySelector("#gachaStage"),
+    bannerCrest: root.querySelector("#gachaBannerCrest"),
+    bannerEyebrow: root.querySelector("#gachaBannerEyebrow"),
+    bannerTitle: root.querySelector("#gachaBannerTitle"),
+    stageSubtitle: root.querySelector("#gachaStageSubtitle"),
     animationOverlay: root.querySelector("#gachaAnimationOverlay"),
     animationVideo: root.querySelector("#gachaAnimationVideo"),
     animationStatus: root.querySelector("#gachaAnimationStatus"),
+    bannerSelect: root.querySelector("#gachaBannerSelect"),
+    bannerControlNote: root.querySelector("#gachaBannerControlNote"),
+    bannerMeta: root.querySelector("#gachaBannerMeta"),
+    bannerFeatured: root.querySelector("#gachaBannerFeatured"),
+    bannerSummary: root.querySelector("#gachaBannerSummary"),
+    probabilityGrid: root.querySelector("#gachaProbabilityGrid"),
     animationToggle: root.querySelector("#gachaAnimationToggle"),
     drawOneButton: root.querySelector("#gachaDrawOneButton"),
     drawTenButton: root.querySelector("#gachaDrawTenButton"),
@@ -655,36 +886,128 @@
     pullCounts: root.querySelector("#gachaPullCounts"),
     historyCount: root.querySelector("#gachaHistoryCount"),
     historyList: root.querySelector("#gachaHistoryList"),
-    normalRates: root.querySelector("#gachaNormalRates"),
-    guaranteeRates: root.querySelector("#gachaGuaranteeRates"),
-    guarantee900Rates: root.querySelector("#gachaGuarantee900Rates")
+    normalRates: null,
+    guaranteeRates: null,
+    guarantee900Rates: null
   };
+
+  function renderBannerSelectOptions() {
+    elements.bannerSelect.innerHTML = BANNERS.map((banner) => {
+      const prefix = banner.kind === "limited" ? "限定" : "常設";
+      return `<option value="${escapeHtml(banner.key)}">${escapeHtml(prefix)} / ${escapeHtml(banner.label)}</option>`;
+    }).join("");
+  }
+
+  function renderProbabilityPanels() {
+    const activeBanner = getActiveBanner();
+    const ssrPityText = activeBanner.pity.ssrEvery
+      ? `${activeBanner.pity.ssrEvery}回目は${activeBanner.pity.ssrLabel}のみを抽選します。`
+      : "このバナーにSSR確定枠はありません。";
+    const ssr900PityText = activeBanner.pity.ssr900Every
+      ? `${activeBanner.pity.ssr900Every}回目は${activeBanner.pity.ssr900Label}のみを抽選します。`
+      : "このバナーに天賦900確定枠はありません。";
+
+    elements.probabilityGrid.innerHTML = `
+      ${renderProbabilityDisclosure(
+        "通常時",
+        `SSR ${activeBanner.normalRatesByRarity.SSR.toFixed(3)}% / SR ${activeBanner.normalRatesByRarity.SR.toFixed(3)}% / R ${activeBanner.normalRatesByRarity.R.toFixed(3)}%`,
+        "gachaNormalRates"
+      )}
+      ${renderProbabilityDisclosure(
+        activeBanner.pity.ssrEvery ? `${activeBanner.pity.ssrEvery}回ごとのSSR確定` : "SSR確定枠",
+        ssrPityText,
+        "gachaGuaranteeRates"
+      )}
+      ${renderProbabilityDisclosure(
+        activeBanner.pity.ssr900Every ? `${activeBanner.pity.ssr900Every}回ごとの天賦900確定` : "天賦900確定枠",
+        ssr900PityText,
+        "gachaGuarantee900Rates"
+      )}
+    `;
+
+    elements.normalRates = root.querySelector("#gachaNormalRates");
+    elements.guaranteeRates = root.querySelector("#gachaGuaranteeRates");
+    elements.guarantee900Rates = root.querySelector("#gachaGuarantee900Rates");
+
+    renderRateGroups(elements.normalRates, activeBanner.normalSummary);
+    renderRateGroups(elements.guaranteeRates, activeBanner.ssrGuaranteeSummary);
+    renderRateGroups(elements.guarantee900Rates, activeBanner.ssr900GuaranteeSummary);
+  }
+
+  function renderBannerChrome() {
+    const activeBanner = getActiveBanner();
+    const metaPills = [
+      `<span class="count-pill">${escapeHtml(activeBanner.kind === "limited" ? "限定バナー" : "常設バナー")}</span>`
+    ];
+
+    if (activeBanner.pity.ssrEvery) {
+      metaPills.push(`<span class="count-pill">${escapeHtml(`${activeBanner.pity.ssrEvery}回ごとSSR確定`)}</span>`);
+    }
+    if (activeBanner.pity.ssr900Every) {
+      metaPills.push(`<span class="count-pill">${escapeHtml(`${activeBanner.pity.ssr900Every}回ごと天賦900確定`)}</span>`);
+    }
+    if (activeBanner.cautionText) {
+      metaPills.push('<span class="count-pill">仮置き</span>');
+    }
+
+    elements.bannerCrest.textContent = activeBanner.crest;
+    elements.bannerEyebrow.textContent = activeBanner.eyebrow;
+    elements.bannerTitle.textContent = activeBanner.stageTitle;
+    elements.stageSubtitle.textContent = activeBanner.stageSubtitle;
+    elements.bannerSelect.value = activeBanner.key;
+    elements.bannerControlNote.textContent = activeBanner.controlNote || "バナーごとの進捗を分けて保存します。";
+    elements.bannerMeta.innerHTML = metaPills.join("");
+    elements.bannerSummary.textContent =
+      activeBanner.cautionText || `${activeBanner.label}として保存中です。履歴と累計回数はこのバナー単位で分けて保持します。`;
+
+    if (activeBanner.featuredNames.length) {
+      elements.bannerFeatured.hidden = false;
+      elements.bannerFeatured.innerHTML = activeBanner.featuredNames
+        .map((name) => `<span class="count-pill">${escapeHtml(name)}</span>`)
+        .join("");
+    } else {
+      elements.bannerFeatured.hidden = true;
+      elements.bannerFeatured.innerHTML = "";
+    }
+
+    if (elements.animationVideo) {
+      const currentSrc = elements.animationVideo.getAttribute("src") || "";
+      if (currentSrc !== activeBanner.videoUrl) {
+        elements.animationVideo.setAttribute("src", activeBanner.videoUrl);
+        elements.animationVideo.load?.();
+      }
+    }
+
+    renderProbabilityPanels();
+  }
 
   function buildTenPullHistoryId(batch) {
     return `ten-${batch.at(-1)?.sequence || 0}`;
   }
 
   function recordTenPullHistory(batch) {
+    const progress = getActiveBannerProgress();
     const entry = {
       id: buildTenPullHistoryId(batch),
       endedAtPull: Number(batch.at(-1)?.sequence || 0),
       batch: batch.map((result) => sanitizeResult(result)).filter(Boolean)
     };
-    state.tenPullHistory = [
+    progress.tenPullHistory = [
       entry,
-      ...state.tenPullHistory.filter((current) => current.id !== entry.id)
+      ...progress.tenPullHistory.filter((current) => current.id !== entry.id)
     ].slice(0, TEN_PULL_HISTORY_LIMIT);
     return entry;
   }
 
   function getSelectedTenPullEntry() {
-    return state.selectedTenPullId
-      ? state.tenPullHistory.find((entry) => entry.id === state.selectedTenPullId) ?? null
+    const progress = getActiveBannerProgress();
+    return progress.selectedTenPullId
+      ? progress.tenPullHistory.find((entry) => entry.id === progress.selectedTenPullId) ?? null
       : null;
   }
 
   function getDisplayBatch() {
-    return getSelectedTenPullEntry()?.batch ?? state.lastBatch;
+    return getSelectedTenPullEntry()?.batch ?? getActiveBannerProgress().lastBatch;
   }
 
   function getBatchRangeLabel(batch) {
@@ -714,27 +1037,30 @@
   }
 
   function getNextGuaranteeKind(pullNumber) {
-    if (pullNumber % 100 === 0) {
+    const activeBanner = getActiveBanner();
+    if (activeBanner.pity.ssr900Every > 0 && pullNumber % activeBanner.pity.ssr900Every === 0) {
       return "ssr900";
     }
-    if (pullNumber % 20 === 0) {
+    if (activeBanner.pity.ssrEvery > 0 && pullNumber % activeBanner.pity.ssrEvery === 0) {
       return "ssr";
     }
     return "";
   }
 
   function getPoolForGuarantee(guaranteeKind) {
+    const activeBanner = getActiveBanner();
     if (guaranteeKind === "ssr900") {
-      return banner.ssr900GuaranteePool;
+      return activeBanner.ssr900GuaranteePool;
     }
     if (guaranteeKind === "ssr") {
-      return banner.ssrGuaranteePool;
+      return activeBanner.ssrGuaranteePool;
     }
-    return banner.normalPool;
+    return activeBanner.normalPool;
   }
 
   function pullOne() {
-    const nextPullNumber = state.totalPulls + 1;
+    const progress = getActiveBannerProgress();
+    const nextPullNumber = progress.totalPulls + 1;
     const guaranteeKind = getNextGuaranteeKind(nextPullNumber);
     const pool = getPoolForGuarantee(guaranteeKind);
     const entry = pickWeightedEntry(pool);
@@ -743,23 +1069,24 @@
       sequence: nextPullNumber
     });
 
-    state.totalPulls = nextPullNumber;
-    state.pullCounts[result.name] = (state.pullCounts[result.name] || 0) + 1;
+    progress.totalPulls = nextPullNumber;
+    progress.pullCounts[result.name] = (progress.pullCounts[result.name] || 0) + 1;
 
     return result;
   }
 
   function drawBatch(count) {
+    const progress = getActiveBannerProgress();
     const batch = [];
     for (let index = 0; index < count; index += 1) {
       batch.push(pullOne());
     }
-    state.lastBatch = batch;
+    progress.lastBatch = batch;
     if (count >= 10) {
       const historyEntry = recordTenPullHistory(batch);
-      state.selectedTenPullId = historyEntry.id;
+      progress.selectedTenPullId = historyEntry.id;
     } else {
-      state.selectedTenPullId = "";
+      progress.selectedTenPullId = "";
     }
     saveState();
     return batch;
@@ -833,16 +1160,34 @@
   }
 
   function buildPityNotice() {
-    const remaining20 = pullsUntil(20, state.totalPulls);
-    const remaining100 = pullsUntil(100, state.totalPulls);
-    return `あと${remaining20}回でSSR武将、${remaining100}回でSSR武将(天賦900)を獲得`;
+    const activeBanner = getActiveBanner();
+    const progress = getActiveBannerProgress();
+    const notices = [];
+
+    if (activeBanner.pity.ssrEvery) {
+      notices.push(`あと${pullsUntil(activeBanner.pity.ssrEvery, progress.totalPulls)}回で${activeBanner.pity.ssrLabel}`);
+    }
+    if (activeBanner.pity.ssr900Every) {
+      notices.push(`あと${pullsUntil(activeBanner.pity.ssr900Every, progress.totalPulls)}回で${activeBanner.pity.ssr900Label}`);
+    }
+
+    return notices.length ? notices.join("、") : "このバナーに確定枠はありません。";
   }
 
   function buildDrawControlSummary() {
-    const next20 = pullsUntil(20, state.totalPulls);
-    const next100 = pullsUntil(100, state.totalPulls);
-    const approximateSpend = getApproximateSpend(state.totalPulls);
-    return `累計 ${formatCount(state.totalPulls)}回 / 概算 ${formatCurrencyYen(approximateSpend)} / 次のSSR確定まで ${next20}回 / 次の天賦900確定まで ${next100}回`;
+    const activeBanner = getActiveBanner();
+    const progress = getActiveBannerProgress();
+    const approximateSpend = getApproximateSpend(progress.totalPulls);
+    const parts = [`累計 ${formatCount(progress.totalPulls)}回`, `概算 ${formatCurrencyYen(approximateSpend)}`];
+
+    if (activeBanner.pity.ssrEvery) {
+      parts.push(`次のSSR確定まで ${pullsUntil(activeBanner.pity.ssrEvery, progress.totalPulls)}回`);
+    }
+    if (activeBanner.pity.ssr900Every) {
+      parts.push(`次の天賦900確定まで ${pullsUntil(activeBanner.pity.ssr900Every, progress.totalPulls)}回`);
+    }
+
+    return parts.join(" / ");
   }
 
   function getShareableBatch() {
@@ -873,12 +1218,13 @@
   }
 
   function buildResultCard(record, index) {
+    const activeBanner = getActiveBanner();
     const rarityClass = `is-${record.rarity.toLowerCase()}`;
     const guaranteeLabel =
       record.guaranteeKind === "ssr900"
-        ? '<span class="gacha-result-card__badge is-ssr900">100回確定</span>'
+        ? `<span class="gacha-result-card__badge is-ssr900">${escapeHtml(activeBanner.pity.ssr900Every || 100)}回確定</span>`
         : record.guaranteeKind === "ssr"
-          ? '<span class="gacha-result-card__badge is-ssr">20回確定</span>'
+          ? `<span class="gacha-result-card__badge is-ssr">${escapeHtml(activeBanner.pity.ssrEvery || 20)}回確定</span>`
           : "";
     const typeLabel = record.type || "？";
     const typeClass = TYPE_THEME[record.type] ? ` is-${TYPE_THEME[record.type]}` : "";
@@ -939,16 +1285,17 @@
       return;
     }
 
-    elements.historyCount.textContent = state.tenPullHistory.length ? `${state.tenPullHistory.length}件` : "";
-    if (!state.tenPullHistory.length) {
+    const progress = getActiveBannerProgress();
+    elements.historyCount.textContent = progress.tenPullHistory.length ? `${progress.tenPullHistory.length}件` : "";
+    if (!progress.tenPullHistory.length) {
       elements.historyList.innerHTML = '<p class="toolbar-summary">10連を引くと、ここに結果履歴が残ります。</p>';
       return;
     }
 
-    elements.historyList.innerHTML = state.tenPullHistory
+    elements.historyList.innerHTML = progress.tenPullHistory
       .map((entry) => {
         const counts = countBatchRarities(entry.batch);
-        const isActive = entry.id === state.selectedTenPullId;
+        const isActive = entry.id === progress.selectedTenPullId;
         return `
           <article class="gacha-history-entry${isActive ? " is-active" : ""}">
             <div class="gacha-history-entry__head">
@@ -984,7 +1331,7 @@
   }
 
   function getPulledRecords({ rarity = "" } = {}) {
-    return Object.entries(state.pullCounts)
+    return Object.entries(getActiveBannerProgress().pullCounts)
       .map(([name, count]) => ({
         ...findPulledRecord(name),
         name,
@@ -1044,21 +1391,29 @@
   }
 
   function renderStatGrid() {
+    const activeBanner = getActiveBanner();
+    const progress = getActiveBannerProgress();
     const allPulledRecords = getPulledRecords();
     const ssrPulledRecords = allPulledRecords.filter((record) => record.rarity === "SSR");
     const ssrTotal = ssrPulledRecords.reduce((sum, record) => sum + Number(record.count || 0), 0);
     const ssr900Total = ssrPulledRecords
       .filter((record) => Number(record.tenpu) === 900)
       .reduce((sum, record) => sum + Number(record.count || 0), 0);
-    const latestSsrCount = state.lastBatch.filter((entry) => entry.rarity === "SSR").length;
+    const latestSsrCount = progress.lastBatch.filter((entry) => entry.rarity === "SSR").length;
 
     const cards = [
-      buildStatCard("累計回数", `${formatCount(state.totalPulls)}回`, "is-gold"),
-      buildStatCard("概算課金額", formatCurrencyYen(getApproximateSpend(state.totalPulls)), "is-bronze"),
+      buildStatCard("累計回数", `${formatCount(progress.totalPulls)}回`, "is-gold"),
+      buildStatCard("概算課金額", formatCurrencyYen(getApproximateSpend(progress.totalPulls)), "is-bronze"),
       buildStatCard("累計SSR", `${formatCount(ssrTotal)}体`),
       buildStatCard("累計天賦900", `${formatCount(ssr900Total)}体`),
-      buildStatCard("次のSSR確定", `あと${pullsUntil(20, state.totalPulls)}回`),
-      buildStatCard("次の900確定", `あと${pullsUntil(100, state.totalPulls)}回`),
+      buildStatCard(
+        "次のSSR確定",
+        activeBanner.pity.ssrEvery ? `あと${pullsUntil(activeBanner.pity.ssrEvery, progress.totalPulls)}回` : "なし"
+      ),
+      buildStatCard(
+        "次の900確定",
+        activeBanner.pity.ssr900Every ? `あと${pullsUntil(activeBanner.pity.ssr900Every, progress.totalPulls)}回` : "なし"
+      ),
       buildStatCard("直近結果", `${formatCount(latestSsrCount)}体 SSR`),
       buildStatCard("獲得SSR武将数", `${formatCount(ssrPulledRecords.length)}体`)
     ];
@@ -1159,6 +1514,7 @@
   }
 
   function buildShareResultCard(record, inlineImageUrl, index, x, y) {
+    const activeBanner = getActiveBanner();
     const width = 236;
     const centerX = x + width / 2;
     const centerY = y + 92;
@@ -1184,12 +1540,16 @@
       record.guaranteeKind === "ssr900"
         ? `
             <rect x="${x + 148}" y="${y + 12}" width="76" height="26" rx="13" fill="#612515" stroke="rgba(255,244,212,0.18)" />
-            <text x="${x + 186}" y="${y + 30}" fill="#fff3c5" font-size="12" font-weight="800" text-anchor="middle">100回確定</text>
+            <text x="${x + 186}" y="${y + 30}" fill="#fff3c5" font-size="12" font-weight="800" text-anchor="middle">${escapeHtml(
+              `${activeBanner.pity.ssr900Every || 100}回確定`
+            )}</text>
           `
         : record.guaranteeKind === "ssr"
           ? `
               <rect x="${x + 148}" y="${y + 12}" width="76" height="26" rx="13" fill="rgba(21,9,9,0.82)" stroke="rgba(255,244,212,0.18)" />
-              <text x="${x + 186}" y="${y + 30}" fill="#ffe6aa" font-size="12" font-weight="800" text-anchor="middle">20回確定</text>
+              <text x="${x + 186}" y="${y + 30}" fill="#ffe6aa" font-size="12" font-weight="800" text-anchor="middle">${escapeHtml(
+                `${activeBanner.pity.ssrEvery || 20}回確定`
+              )}</text>
             `
           : "";
 
@@ -1222,6 +1582,8 @@
   }
 
   function buildGachaShareCardSvg(batch) {
+    const activeBanner = getActiveBanner();
+    const progress = getActiveBannerProgress();
     const currentDate = new Date().toLocaleString("ja-JP", {
       month: "short",
       day: "numeric",
@@ -1229,7 +1591,7 @@
       minute: "2-digit"
     });
     const ssrCount = batch.filter((entry) => entry.rarity === "SSR").length;
-    const topLine = `累計 ${formatCount(state.totalPulls)}回 / 概算 ${formatCurrencyYen(getApproximateSpend(state.totalPulls))}`;
+    const topLine = `累計 ${formatCount(progress.totalPulls)}回 / 概算 ${formatCurrencyYen(getApproximateSpend(progress.totalPulls))}`;
     const pityText = buildPityNotice();
     const batchTitle = getSelectedTenPullEntry() ? `${getBatchRangeLabel(batch)}の結果` : "直近10連結果";
     const cardMarkup = batch
@@ -1241,7 +1603,7 @@
       .join("");
 
     return `<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="${SHARE_IMAGE_WIDTH}" height="${SHARE_IMAGE_HEIGHT}" viewBox="0 0 ${SHARE_IMAGE_WIDTH} ${SHARE_IMAGE_HEIGHT}" role="img" aria-label="キングダム覇道 英傑登用 10連結果">
+<svg xmlns="http://www.w3.org/2000/svg" width="${SHARE_IMAGE_WIDTH}" height="${SHARE_IMAGE_HEIGHT}" viewBox="0 0 ${SHARE_IMAGE_WIDTH} ${SHARE_IMAGE_HEIGHT}" role="img" aria-label="キングダム覇道 ${escapeHtml(activeBanner.label)} 10連結果">
   <defs>
     <linearGradient id="gacha-share-bg" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0%" stop-color="#8d2017" />
@@ -1271,7 +1633,7 @@
 
   <rect x="1148" y="72" width="336" height="44" rx="22" fill="rgba(13,6,6,0.56)" />
   <text x="1316" y="101" fill="#ffe9c2" font-size="22" font-weight="700" text-anchor="middle">${escapeHtml(topLine)}</text>
-  <text x="96" y="146" fill="rgba(255,233,194,0.92)" font-size="26">Season 3 英傑登用 / ${escapeHtml(currentDate)}</text>
+  <text x="96" y="146" fill="rgba(255,233,194,0.92)" font-size="26">${escapeHtml(activeBanner.label)} / ${escapeHtml(currentDate)}</text>
   <text x="96" y="182" fill="#fff5eb" font-size="30" font-weight="800">${escapeHtml(batchTitle)}</text>
   <text x="96" y="212" fill="#ffe49d" font-size="20" font-weight="700">SSR ${ssrCount}体 / 共有カード</text>
 
@@ -1369,10 +1731,11 @@
   async function shareGachaShareImage() {
     const asset = await createGachaShareImageAsset();
     const file = new File([asset.blob], asset.filename, { type: "image/png" });
+    const activeBanner = getActiveBanner();
     const batchScope = getSelectedTenPullEntry() ? `${getBatchRangeLabel(asset.batch)} / ` : "直近10連結果 / ";
     const shareData = {
       files: [file],
-      title: "キングダム覇道 英傑登用 10連結果",
+      title: `キングダム覇道 ${activeBanner.label} 10連結果`,
       text: `${batchScope}SSR ${asset.batch.filter((entry) => entry.rarity === "SSR").length}体`
     };
 
@@ -1414,14 +1777,16 @@
   }
 
   function renderAll() {
+    const progress = getActiveBannerProgress();
     const hasShareableBatch = getShareableBatch().length === 10;
     const displayBatch = getDisplayBatch();
     const selectedEntry = getSelectedTenPullEntry();
     const hasResults = displayBatch.length > 0;
+    renderBannerChrome();
     elements.animationToggle.checked = state.animationEnabled;
     elements.stage.classList.toggle("is-result-view", hasResults);
-    elements.totalPullsStat.textContent = formatCount(state.totalPulls);
-    elements.approxSpendStat.textContent = formatCurrencyYen(getApproximateSpend(state.totalPulls));
+    elements.totalPullsStat.textContent = formatCount(progress.totalPulls);
+    elements.approxSpendStat.textContent = formatCurrencyYen(getApproximateSpend(progress.totalPulls));
     elements.latestSummary.textContent = summarizeBatch(
       displayBatch,
       selectedEntry ? { label: `${getBatchRangeLabel(displayBatch)}の結果` } : {}
@@ -1433,7 +1798,7 @@
     elements.drawTenButton.disabled = isDrawing || shareActionBusy;
     elements.stageDrawOneButton.disabled = isDrawing || shareActionBusy;
     elements.stageDrawTenButton.disabled = isDrawing || shareActionBusy;
-    elements.stageHistoryButton.disabled = isDrawing || shareActionBusy || !state.tenPullHistory.length;
+    elements.stageHistoryButton.disabled = isDrawing || shareActionBusy || !progress.tenPullHistory.length;
     elements.resetButton.disabled = isDrawing || shareActionBusy;
     elements.resetStageButton.disabled = isDrawing || shareActionBusy;
     elements.exportImageButton.disabled = isDrawing || shareActionBusy || !hasShareableBatch;
@@ -1445,12 +1810,7 @@
   }
 
   function resetState() {
-    state.bannerKey = banner.key;
-    state.totalPulls = 0;
-    state.pullCounts = {};
-    state.lastBatch = [];
-    state.tenPullHistory = [];
-    state.selectedTenPullId = "";
+    state.banners[state.bannerKey] = createEmptyBannerProgress();
     saveState();
     renderAll();
   }
@@ -1469,31 +1829,44 @@
   }
 
   function collectShareState() {
+    const progress = getActiveBannerProgress();
     return {
       version: SHARE_STATE_VERSION,
       bannerKey: state.bannerKey,
-      totalPulls: state.totalPulls,
-      pullCounts: state.pullCounts,
+      bannerProgress: serializeBannerProgress({
+        ...progress,
+        lastBatch: getDisplayBatch().map(sanitizeResult).filter(Boolean)
+      }),
+      totalPulls: progress.totalPulls,
+      pullCounts: progress.pullCounts,
       lastBatch: getDisplayBatch().map(serializeResult),
       animationEnabled: state.animationEnabled
     };
   }
 
   function applyShareState(payload = {}) {
-    const nextState = sanitizeState(payload);
-    state.bannerKey = nextState.bannerKey;
-    state.totalPulls = nextState.totalPulls;
-    state.pullCounts = nextState.pullCounts;
-    state.lastBatch = nextState.lastBatch;
-    state.tenPullHistory = nextState.tenPullHistory;
-    state.selectedTenPullId = nextState.selectedTenPullId;
-    state.animationEnabled = nextState.animationEnabled;
+    const nextBannerKey = resolveBannerKey(payload.bannerKey || state.bannerKey);
+    state.bannerKey = nextBannerKey;
+    state.banners[nextBannerKey] = sanitizeBannerProgress(payload.bannerProgress || payload);
+    state.animationEnabled = payload.animationEnabled !== false;
     saveState();
     renderAll();
   }
 
   elements.animationToggle.addEventListener("change", () => {
     state.animationEnabled = elements.animationToggle.checked;
+    saveState();
+    renderAll();
+  });
+
+  elements.bannerSelect.addEventListener("change", () => {
+    if (isDrawing || shareActionBusy) {
+      return;
+    }
+    clearAnimationState();
+    isDrawing = false;
+    state.bannerKey = resolveBannerKey(elements.bannerSelect.value);
+    ensureBannerProgress(state, state.bannerKey);
     saveState();
     renderAll();
   });
@@ -1528,10 +1901,11 @@
   });
 
   elements.resetStageButton.addEventListener("click", () => {
-    if (state.selectedTenPullId) {
-      state.selectedTenPullId = "";
+    const progress = getActiveBannerProgress();
+    if (progress.selectedTenPullId) {
+      progress.selectedTenPullId = "";
     } else {
-      state.lastBatch = [];
+      progress.lastBatch = [];
     }
     saveState();
     renderAll();
@@ -1542,7 +1916,7 @@
     if (!historyButton) {
       return;
     }
-    state.selectedTenPullId = historyButton.dataset.gachaHistoryId || "";
+    getActiveBannerProgress().selectedTenPullId = historyButton.dataset.gachaHistoryId || "";
     saveState();
     renderAll();
     elements.stage?.scrollIntoView?.({ behavior: "smooth", block: "start" });
@@ -1556,9 +1930,7 @@
     runShareAction(shareGachaShareImage, "10連結果画像の共有に失敗しました。");
   });
 
-  renderRateGroups(elements.normalRates, banner.normalSummary);
-  renderRateGroups(elements.guaranteeRates, banner.ssrGuaranteeSummary);
-  renderRateGroups(elements.guarantee900Rates, banner.ssr900GuaranteeSummary);
+  renderBannerSelectOptions();
   renderAll();
 
   window.KH_GACHA_SIM_API = {
